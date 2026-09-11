@@ -27,7 +27,7 @@ def cli():
 @click.option("--alias", help="Short alias for this genome")
 @click.option("--outdir", type=click.Path(), default="NCBI", help="Output directory")
 @click.option("--manifest", type=click.Path(), default="manifest.csv", help="Manifest CSV")
-def fetch_cmd(accession, species, strain, alias, outdir, manifest):
+def fetch(accession, species, strain, alias, outdir, manifest):
     """Fetch genome from NCBI, optionally check TriTrypDB."""
     outdir = Path(outdir)
     manifest_obj = Manifest(Path(manifest))
@@ -78,7 +78,7 @@ def fetch_cmd(accession, species, strain, alias, outdir, manifest):
 @click.option("--clean", is_flag=True, help="Keep only chr-anchored contigs + kinetoplast")
 @click.option("--manifest", type=click.Path(), default="manifest.csv", help="Manifest CSV")
 @click.option("--ragtag-bin", help="Path to ragtag.py (auto-detect if not given)")
-def scaffold_cmd(query, reference, outdir, alias, clean, manifest, ragtag_bin):
+def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
     """Run ragtag scaffold on query against reference."""
     query = Path(query)
     outdir = Path(outdir)
@@ -155,7 +155,7 @@ def scaffold_cmd(query, reference, outdir, alias, clean, manifest, ragtag_bin):
 @click.option("--manifest", type=click.Path(), default="manifest.csv")
 @click.option("--outdir", type=click.Path(), default=".", help="Base directory to scan")
 @click.option("--dry-run", is_flag=True, help="Show what would be added, don't modify manifest")
-def backfill_cmd(manifest, outdir, dry_run):
+def backfill(manifest, outdir, dry_run):
     """Scan existing files and backfill manifest."""
     outdir = Path(outdir)
     manifest_obj = Manifest(Path(manifest))
@@ -232,7 +232,7 @@ def backfill_cmd(manifest, outdir, dry_run):
 @click.option("--scaffold", type=click.Path(exists=True), required=True, help="Scaffold fasta file")
 @click.option("--manifest", type=click.Path(), default="manifest.csv")
 @click.option("--confirm", is_flag=True, help="Actually publish (else dry-run)")
-def publish_cmd(scaffold, manifest, confirm):
+def publish(scaffold, manifest, confirm):
     """Publish scaffold to Zenodo (requires ZENODO_TOKEN)."""
     scaffold = Path(scaffold)
     click.echo(f"Zenodo publishing: {scaffold.name} (dry-run, add --confirm to publish)")
@@ -244,7 +244,7 @@ def publish_cmd(scaffold, manifest, confirm):
 @cli.command()
 @click.option("--manifest", type=click.Path(), default="manifest.csv")
 @click.option("--alias", help="Look up specific alias")
-def info_cmd(manifest, alias):
+def info(manifest, alias):
     """Display manifest info."""
     manifest_obj = Manifest(Path(manifest))
     rows = manifest_obj.read()

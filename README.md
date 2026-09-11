@@ -129,13 +129,13 @@ Scan disk for existing NCBI, MyAssemblies, and Scaffold files; compute md5sums; 
 
 ```bash
 # Preview what will be added
-leish-backfill --dry-run
+leishdb backfill --dry-run
 
 # Actually add to manifest.csv
-leish-backfill
+leishdb backfill
 
 # Check manifest
-leish-info
+leishdb info
 ```
 
 Example output:
@@ -155,14 +155,14 @@ Downloads fasta + GFF from NCBI using `datasets` CLI; extracts metadata (sequenc
 
 ```bash
 # Fetch *L. tropica* L590 from NCBI
-leish-fetch \
+leishdb fetch \
   --accession GCA_000410715.1 \
   --species Leishmania_tropica \
   --strain L590 \
   --alias Ltropica.L590
 
 # Check result
-leish-info --alias Ltropica.L590
+leishdb info --alias Ltropica.L590
 ```
 
 Files created:
@@ -176,7 +176,7 @@ Run ragtag to scaffold query fasta against reference; optionally clean (prune un
 
 ```bash
 # Scaffold query onto Ld1S reference
-leish-scaffold \
+leishdb scaffold \
   --query MyAssemblies/LtropicaCDC/assembly.fasta \
   --reference Ld1S \
   --alias Ltropica.CDC.onLd1S \
@@ -200,11 +200,11 @@ Create a Zenodo deposition for a single scaffold (fasta + AGP), upload, publish,
 
 ```bash
 # Dry-run (preview)
-leish-publish --scaffold Scaffold/Ltropica.CDC.onLd1S.fa
+leishdb publish --scaffold Scaffold/Ltropica.CDC.onLd1S.fa
 
 # Actually publish (requires ZENODO_TOKEN env var)
 export ZENODO_TOKEN="your-zenodo-api-token"
-leish-publish --scaffold Scaffold/Ltropica.CDC.onLd1S.fa --confirm
+leishdb publish --scaffold Scaffold/Ltropica.CDC.onLd1S.fa --confirm
 ```
 
 Result:
@@ -217,10 +217,10 @@ Result:
 
 ```bash
 # All genomes
-leish-info
+leishdb info
 
 # Single alias
-leish-info --alias Ld1S
+leishdb info --alias Ld1S
 
 # Output:
 # filename: Ld1S.fa
@@ -250,10 +250,10 @@ leish-info --alias Ld1S
 
 ```bash
 # 1. Fetch from NCBI
-leish-fetch --accession GCA_000410715.1 --alias Ltropica.L590
+leishdb fetch --accession GCA_000410715.1 --alias Ltropica.L590
 
 # 2. Scaffold onto Ld1S (assumes Ld1S alias exists and points to NCBI/Ld1S.fa)
-leish-scaffold \
+leishdb scaffold \
   --query NCBI/GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna \
   --reference Ld1S \
   --clean \
@@ -261,10 +261,10 @@ leish-scaffold \
 
 # 3. Publish scaffold to Zenodo
 export ZENODO_TOKEN="..."
-leish-publish --scaffold Scaffold/Ltropica.L590.onLd1S.fa --confirm
+leishdb publish --scaffold Scaffold/Ltropica.L590.onLd1S.fa --confirm
 
 # 4. View manifest
-leish-info
+leishdb info
 ```
 
 ### Backfill existing custom assembly + check
@@ -275,13 +275,13 @@ mkdir -p MyAssemblies/MyStrain
 cp ~/my_assembly.fasta MyAssemblies/MyStrain/
 
 # 2. Backfill
-leish-backfill
+leishdb backfill
 
 # 3. Edit aliases.csv to add short name
 # Add: MyStrain,MyAssemblies/MyStrain/my_assembly.fasta
 
 # 4. Scaffold onto reference
-leish-scaffold --query MyAssemblies/MyStrain/my_assembly.fasta --reference Ld1S --clean --alias MyStrain.onLd1S
+leishdb scaffold --query MyAssemblies/MyStrain/my_assembly.fasta --reference Ld1S --clean --alias MyStrain.onLd1S
 ```
 
 ---

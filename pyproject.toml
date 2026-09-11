@@ -26,12 +26,7 @@ dev = [
 ]
 
 [project.scripts]
-leish-fetch = "leishdb.cli:fetch_cmd"
-leish-scaffold = "leishdb.cli:scaffold_cmd"
-leish-clean = "leishdb.cli:clean_cmd"
-leish-publish = "leishdb.cli:publish_cmd"
-leish-backfill = "leishdb.cli:backfill_cmd"
-leish-info = "leishdb.cli:info_cmd"
+leishdb = "leishdb.cli:cli"
 
 [tool.poetry]
 name = "leishdb"
