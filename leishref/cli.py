@@ -6,13 +6,14 @@ from pathlib import Path
 
 import rich_click as click
 
+from leishref.agp import derive_agp, write_agp
 from leishref.aliases import Aliases
 from leishref.checksums import contig_count, gc_percent, md5_file, sequence_length
-from leishref.manifest import Manifest, ManifestRow
+from leishref.manifest import DATA_DIRS, Manifest, ManifestRow, resolve_path
 from leishref.ncbi import fetch_fasta_gff, fetch_metadata
 from leishref.scaffold import clean_scaffolded_fasta, parse_agp, run_scaffold
 from leishref.tritrypdb import download_fasta_gff as tritrypdb_download
-from leishref.zenodo import create_deposition, upload_file, update_metadata, publish_deposition, ZenodoError
+from leishref.zenodo import ZenodoError, create_deposition, publish_deposition, update_metadata, upload_file
 
 
 @click.group()
@@ -475,6 +476,129 @@ def publish(scaffold, manifest, version, confirm, sandbox):
     except ZenodoError as e:
         click.echo(f"Zenodo error: {e}", err=True)
         return
+
+
+@cli.command()
+@click.option("--manifest", type=click.Path(), default="manifest.csv")
+@click.option("--basedir", type=click.Path(), default=".", help="Root to resolve filenames against")
+@click.option("--quick", is_flag=True, help="Check presence only, skip checksums")
+def verify(manifest, basedir, quick):
+    """Check that files on disk still match the manifest.
+
+    Examples:
+      leishref verify
+      leishref verify --quick
+    """
+    manifest_obj = Manifest(Path(manifest))
+    rows = manifest_obj.read()
+    basedir = Path(basedir)
+
+    missing, mismatch, ok = [], [], 0
+
+    for row in rows:
+        for kind, name_col, md5_col in (
+            ("fasta", "filename", "md5sum_fasta"),
+            ("gff", "gff_filename", "md5sum_gff"),
+        ):
+            name = row.get(name_col)
+            if not name:
+                continue
+            path = resolve_path(name, basedir)
+            if path is None:
+                missing.append((name, kind))
+                continue
+            recorded = row.get(md5_col)
+            if quick or not recorded:
+                ok += 1
+                continue
+            if md5_file(path) != recorded:
+                mismatch.append((name, kind, path))
+            else:
+                ok += 1
+
+    click.echo(f"Checked {len(rows)} manifest rows")
+    click.echo(f"  ok:       {ok}")
+    click.echo(f"  missing:  {len(missing)}")
+    click.echo(f"  mismatch: {len(mismatch)}")
+
+    if missing:
+        click.echo("\nMISSING (in manifest, not on disk):", err=True)
+        for name, kind in missing:
+            click.echo(f"  {name}  [{kind}]", err=True)
+
+    if mismatch:
+        click.echo("\nCHECKSUM MISMATCH (file changed since it was recorded):", err=True)
+        for name, kind, path in mismatch:
+            click.echo(f"  {path}  [{kind}]", err=True)
+
+    if missing or mismatch:
+        raise SystemExit(1)
+
+
+@cli.command("derive-agp")
+@click.argument("parent", type=click.Path())
+@click.argument("child", type=click.Path())
+@click.option("--out", type=click.Path(), help="AGP output path (default AGP/<child stem>.agp)")
+@click.option("--basedir", type=click.Path(), default=".", help="Root to resolve filenames against")
+@click.option("--manifest", type=click.Path(), default="manifest.csv")
+@click.option("--record", is_flag=True, help="Write derived_from + agp_filename to the child's manifest row")
+@click.option("--probe-len", default=60, show_default=True, help="Anchor length used to locate blocks")
+def derive_agp_cmd(parent, child, out, basedir, manifest, record, probe_len):
+    """Derive an AGP showing how CHILD was laid out from PARENT sequences.
+
+    Reconstructs the layout (order, orientation, gaps) of a re-scaffolded assembly
+    relative to its source. Lets a third-party layout be stored as coordinates
+    instead of redistributed sequence.
+
+    Examples:
+      leishref derive-agp NCBI/GCA_000410715.1_..._genomic.fna TriTryDB68/TriTrypDB-68_LtropicaL590_Genome.fasta
+      leishref derive-agp parent.fna child.fasta --record
+    """
+    basedir = Path(basedir)
+    parent_path = resolve_path(parent, basedir) or Path(parent)
+    child_path = resolve_path(child, basedir) or Path(child)
+
+    for label, path in (("parent", parent_path), ("child", child_path)):
+        if not path.exists():
+            click.echo(f"{label} not found: {path}", err=True)
+            raise SystemExit(1)
+
+    click.echo(f"parent: {parent_path}")
+    click.echo(f"child:  {child_path}")
+    click.echo("Deriving layout (this scans both assemblies)...")
+
+    lines, stats = derive_agp(parent_path, child_path, probe_len=probe_len)
+
+    out_path = Path(out) if out else basedir / "AGP" / f"{child_path.stem}.agp"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    write_agp(out_path, lines)
+
+    click.echo("")
+    click.echo(f"  parent sequences:  {stats['parent_sequences']} ({stats['parent_sequences_placed']} placed)")
+    click.echo(f"  child sequences:   {stats['child_sequences']} ({stats['child_sequences_used']} used)")
+    click.echo(f"  blocks placed:     {stats['blocks_placed']}/{stats['blocks_total']}")
+    click.echo(f"  orientation:       {stats['forward']} forward, {stats['reverse']} reverse")
+    click.echo(f"  coverage:          {stats['coverage_of_non_n_parent']}% of non-N parent bases")
+    if stats["blocks_unplaced"]:
+        click.echo(f"  unplaced:          {stats['blocks_unplaced']} blocks, {stats['unplaced_bases']:,} bases")
+    click.echo(f"\nWrote {out_path} ({len(lines)} lines)")
+
+    if stats["coverage_of_non_n_parent"] >= 95:
+        click.echo("Same sequence, different layout: child is a re-scaffolding of parent.")
+    else:
+        click.echo("Low coverage: these are likely genuinely different assemblies.")
+
+    if record:
+        manifest_obj = Manifest(Path(manifest))
+        rows = manifest_obj.read()
+        target = next((r for r in rows if r.get("filename") == child_path.name), None)
+        if target is None:
+            click.echo(f"No manifest row for {child_path.name}; add it first", err=True)
+            raise SystemExit(1)
+        target["derived_from"] = parent_path.name
+        target["agp_filename"] = out_path.name
+        manifest_obj.write(rows)
+        click.echo(f"Recorded derived_from={parent_path.name} agp_filename={out_path.name}")
 
 
 @cli.command()

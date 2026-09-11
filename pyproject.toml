@@ -51,6 +51,12 @@ isort = "^5.0"
 flake8 = "^6.0"
 pre-commit = "^3.0"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# pytest-asyncio in the ambient conda env is incompatible with this pytest and
+# breaks collection on import; nothing here is async.
+addopts = "-p no:asyncio"
+
 [tool.black]
 line-length = 120
 

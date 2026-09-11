@@ -24,10 +24,21 @@ TriTryDB68/*.fai
 MyAssemblies/**/*.fa
 MyAssemblies/**/*.fasta
 MyAssemblies/**/*.fai
-Scaffold/*.fa
-Scaffold/*.fasta
-Scaffold/*.agp
-Scaffold/*.fai
+Scaffold/**/*.fa
+Scaffold/**/*.fna
+Scaffold/**/*.fasta
+Scaffold/**/*.fai
+Scaffold/**/*.paf
+Scaffold/**/*.log
+Scaffold/**/*.err
+Scaffold/**/*.stats
+Scaffold/**/*.confidence.txt
+# AGP files describe layout as coordinates, not sequence, so they stay tracked:
+# they are what makes a scaffolded assembly reproducible from its parent.
+!AGP/
+!AGP/*.agp
+!Scaffold/**/*.agp
+
 *.swp
 *.swo
 .DS_Store

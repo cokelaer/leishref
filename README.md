@@ -5,7 +5,8 @@ Manage Leishmania genomes from NCBI, TriTrypDB, and custom assemblies with full 
 **Key features:**
 - Single `manifest.csv` index tracking all genomes with source, accession, md5sums, sequencing metadata
 - User aliases for easy reference (e.g., `Ld1S` instead of full filename)
-- NCBI-first strategy: fetch from NCBI, fall back to TriTrypDB if missing, cross-check length if both exist
+- Layouts recorded as derivations (parent assembly + AGP) rather than as separate genomes
+- `verify` re-hashes everything on disk against the manifest
 - Ragtag scaffolding with AGP-based cleaning to remove unplaced contigs while preserving chromosome-anchored sequences and kinetoplast (maxicircle/kDNA)
 - Per-scaffold Zenodo publishing for reproducible DOI provenance
 - Git-tracked code + manifest; sequence data on disk (ignored by git)
@@ -50,6 +51,8 @@ Leishmania/
 │       ├── Ltropica.Ld1S.scaffold.flye.fasta
 │       ├── Ltropica.Ld1S.scaffold.pecat.fasta
 │       └── README.rst
+├── AGP/                      # Derived layouts (git-TRACKED — coordinates, not sequence)
+│   └── TriTrypDB-68_LtropicaL590_Genome.agp
 ├── Scaffold/                 # Ragtag outputs (not git-tracked)
 │   ├── Species.Strain.on.RefAlias.fa
 │   ├── Species.Strain.on.RefAlias.agp
@@ -62,6 +65,7 @@ Leishmania/
 │   ├── checksums.py          # md5/sequence_length/contig_count
 │   ├── ncbi.py               # datasets CLI wrapper
 │   ├── tritrypdb.py          # TriTrypDB release-68 download
+│   ├── agp.py                # AGP derivation, reconstruction
 │   ├── scaffold.py           # ragtag wrapper + AGP cleaning
 │   ├── zenodo.py             # Zenodo deposition management
 │   └── cli.py                # CLI entry points
@@ -77,7 +81,7 @@ Leishmania/
 
 ## Manifest Schema
 
-Single CSV with 22 columns, one row per genome/scaffold:
+Single CSV with 27 columns, one row per genome/scaffold:
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -96,6 +100,8 @@ Single CSV with 22 columns, one row per genome/scaffold:
 | `scaffold_tool_version` | str | ragtag.py version |
 | `cleaned` | bool | True if pruned to chr-anchored + kinetoplast |
 | `cleaned_from` | str | Filename of original (unclean) scaffold |
+| `derived_from` | str | Parent assembly this is a re-layout of (see Derivation model) |
+| `agp_filename` | str | AGP describing the layout relative to `derived_from` |
 | `zenodo_doi` | str | Zenodo deposition DOI (if published) |
 | `sequencing_technology` | str | Sequencing method from NCBI metadata |
 | `bioproject` | str | NCBI BioProject accession |
@@ -154,9 +160,8 @@ Added 5 rows to manifest
 Downloads fasta + GFF from NCBI using `datasets` CLI; extracts metadata (sequencing tech, BioProject, BioSample); appends manifest row.
 
 ```bash
-# Fetch *L. tropica* L590 from NCBI
-leishref fetch \
-  --accession GCA_000410715.1 \
+# Fetch *L. tropica* L590 from NCBI (accession is positional)
+leishref fetch GCA_000410715.1 \
   --species Leishmania_tropica \
   --strain L590 \
   --alias Ltropica.L590
@@ -244,14 +249,73 @@ leishref info --alias Ld1S
 
 ---
 
-## Data Source Priority
+## Derivation model
 
-1. **NCBI** (primary) — try to fetch fasta + GFF
-2. **TriTrypDB** (fallback) — if not on NCBI
-3. **Cross-check** — if both exist:
-   - Compare total assembly length
-   - Match → keep NCBI row only, note "TriTrypDB skipped, length matches NCBI"
-   - Differ → keep both rows, cross-reference in notes (e.g., "length differs from GCA_...")
+Contig counts differ wildly between sources for the same organism. For *L. tropica* L590:
+
+| source | sequences |
+|---|---|
+| NCBI `GCA_000410715.1` | 448 (182 scaffolds + 266 WGS contigs) |
+| TriTrypDB-68 | 160 (36 chromosomes + 124 supercontigs) |
+| ragtag on Ld1S | 140 |
+
+These are **not three genomes**. They are one sequence with three chromosome
+assignments. Measured on the NCBI/TriTrypDB pair: non-N content differs by 324 bases
+in 31.3 Mb (0.001%), and every large NCBI scaffold appears inside the TriTrypDB
+assembly — about half of them reverse-complemented, joined with 100-N padding.
+
+So leishref records a layout as a **derivation**, not as a new genome:
+
+- `derived_from` — the parent assembly supplying the sequence
+- `agp_filename` — an AGP giving order, orientation and gaps relative to that parent
+
+Two consequences:
+
+1. **Choosing what to use** becomes an explicit choice of layout over one lineage,
+   not a guess about which FASTA is "better".
+2. **Third-party sequence never needs redistributing.** An AGP is coordinates —
+   a few hundred KB of facts. `leishref derive-agp` produces one; `apply_agp()`
+   regenerates the child FASTA from parent + AGP. Zenodo depositions therefore
+   only ever carry your own assemblies, your AGPs, and the manifest.
+
+```bash
+leishref derive-agp \
+  NCBI/GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna \
+  TriTryDB68/TriTrypDB-68_LtropicaL590_Genome.fasta \
+  --record
+
+#   parent sequences:  448 (441 placed)
+#   child sequences:   160 (158 used)
+#   blocks placed:     1894/1938
+#   orientation:       969 forward, 925 reverse
+#   coverage:          97.556% of non-N parent bases
+#   Same sequence, different layout: child is a re-scaffolding of parent.
+```
+
+Coverage below ~95% means the two really are different assemblies, not a re-layout.
+
+The residual on this pair (2.4% N from unplaced blocks, 0.026% true mismatch on
+round-trip) is TriTrypDB's own sequence editing — visible precisely *because* the
+layout is now explicit.
+
+### TriTrypDB access
+
+TriTrypDB downloads now require a login, so `leishref fetch-tritrypdb` cannot fetch
+unattended. Download the release by hand, then register each genome as a derivation
+of its NCBI parent with `derive-agp --record`. Their GFF is in chromosome
+coordinates and NCBI's is in scaffold coordinates; the same AGP is what relates them.
+
+---
+
+## Integrity checking
+
+```bash
+leishref verify           # re-hash every file, compare against the manifest
+leishref verify --quick   # presence only, skip checksums
+```
+
+Reports missing files and checksum mismatches, and exits non-zero if either is
+found, so it can gate CI or run from cron.
 
 ---
 
@@ -261,7 +325,7 @@ leishref info --alias Ld1S
 
 ```bash
 # 1. Fetch from NCBI
-leishref fetch --accession GCA_000410715.1 --alias Ltropica.L590
+leishref fetch GCA_000410715.1 --alias Ltropica.L590
 
 # 2. Scaffold onto Ld1S (assumes Ld1S alias exists and points to NCBI/Ld1S.fa)
 leishref scaffold \
@@ -272,7 +336,7 @@ leishref scaffold \
 
 # 3. Publish scaffold to Zenodo
 export ZENODO_TOKEN="..."
-leishref publish --scaffold Scaffold/Ltropica.L590.onLd1S.fa --confirm
+leishref publish Scaffold/Ltropica.L590.onLd1S.fa --confirm
 
 # 4. View manifest
 leishref info
@@ -299,22 +363,16 @@ leishref scaffold --query MyAssemblies/MyStrain/my_assembly.fasta --reference Ld
 
 ## Development
 
-### Run tests (manual, pytest env issue with conda py311)
+### Run tests
 
 ```bash
-# Via python directly
-python3 -c "
-import tempfile
-from pathlib import Path
-from leishref.manifest import Manifest, ManifestRow
-
-with tempfile.TemporaryDirectory() as tmpdir:
-    m = Manifest(Path(tmpdir) / 'test.csv')
-    m.append(ManifestRow(filename='test.fa', source='NCBI'))
-    assert len(m.read()) == 1
-    print('Test passed!')
-"
+poetry run pytest
+poetry run pytest --cov=leishref --cov-report=term-missing
+poetry run pytest tests/test_agp.py::test_agp_roundtrip_reconstructs_child -xvs
 ```
+
+`pytest-asyncio` in the ambient conda env is incompatible with this pytest and breaks
+collection; `addopts = "-p no:asyncio"` in `pyproject.toml` disables it.
 
 ### Lint & format
 
@@ -327,7 +385,7 @@ flake8 leishref/ tests/
 
 ### Add a new source
 
-Edit `leishref/fetch.py` (orchestrator) to handle new source. Add new module (e.g., `leishref/newsource.py`) with download function.
+Add a module (e.g. `leishref/newsource.py`) exposing a download function, then wire a subcommand in `leishref/cli.py`.
 
 ---
 

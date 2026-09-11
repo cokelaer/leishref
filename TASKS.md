@@ -22,8 +22,25 @@
 - [x] Manifest update by filename for scaffolds (no accession fallback)
 - [x] Rich-click CLI formatting (improved help text with better layout)
 - [x] TriTrypDB fetch command (leishref fetch-tritrypdb <species_strain>)
+- [x] **`verify` command** — re-hash files against manifest, non-zero exit on drift
+- [x] **AGP derivation model** — `derived_from` + `agp_filename` columns, `leishref derive-agp`
+- [x] `apply_agp()` reconstruction: child FASTA regenerable from parent + AGP
+- [x] Path resolution for bare manifest filenames (`resolve_path`)
+- [x] pytest runnable again (`-p no:asyncio`); AGP test suite added
 
 ## In Progress / High Priority 🚧
+
+- [ ] **Register TriTrypDB-68 as derivations** (login now required, so no auto-fetch):
+  - [ ] `derive-agp --record` each local TriTrypDB genome against its NCBI parent
+  - [ ] Map TriTrypDB genome -> NCBI accession (no explicit cross-reference in their FASTA)
+  - [ ] **Compare GFFs**: TriTrypDB annotates in chromosome coords, NCBI in scaffold coords;
+        lift over via the derived AGP, then measure real annotation differences
+  - [ ] Speed: derivation is ~50 s per genome pair; ~69 genomes = ~1 h batch
+
+- [ ] **`leishref diff A B`** — surface the derivation comparison without writing an AGP
+
+- [ ] **`leishref materialize <alias>`** — rebuild a child FASTA from parent + AGP,
+      so the repo is distributable without shipping third-party sequence
 
 - [ ] **Download subcommand** (fetch genomes from manifest URIs):
   - [ ] Add `fasta_uri`, `gff_uri` columns to manifest
@@ -63,7 +80,6 @@
 
 ## Known Issues 🐛
 
-- pytest environment conflict with conda py311: use `poetry run pytest` instead
 - ragtag.py only in py311 env, not sequana_tools (auto-locate works)
 
 ## Notes

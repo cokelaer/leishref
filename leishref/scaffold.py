@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional, Set
 
-from leishref.checksums import md5_file, contig_count
+from leishref.checksums import contig_count, md5_file
 
 
 class RagtagError(Exception):
@@ -14,8 +14,8 @@ class RagtagError(Exception):
 
 def find_ragtag_bin() -> str:
     """Find ragtag.py in PATH or known conda envs."""
-    import shutil
     import os
+    import shutil
 
     if shutil.which("ragtag.py"):
         return "ragtag.py"
@@ -88,9 +88,7 @@ def parse_agp(agp_file: Path) -> dict[str, list[tuple[int, int, str]]]:
     return placements
 
 
-def clean_scaffolded_fasta(
-    fasta_file: Path, agp_file: Path, keep_patterns: Optional[list[str]] = None
-) -> str:
+def clean_scaffolded_fasta(fasta_file: Path, agp_file: Path, keep_patterns: Optional[list[str]] = None) -> str:
     """Filter fasta to keep only contigs anchored to reference chromosomes + whitelisted contigs.
 
     Args:

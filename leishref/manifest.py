@@ -5,6 +5,28 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+DATA_DIRS = ["NCBI", "TriTryDB68", "MyAssemblies", "Scaffold"]
+
+
+def resolve_path(filename: str, basedir: Path = Path(".")) -> Optional[Path]:
+    """Locate a manifest filename on disk. Manifest stores bare names; data lives in DATA_DIRS."""
+    if not filename:
+        return None
+    basedir = Path(basedir)
+    direct = basedir / filename
+    if direct.exists():
+        return direct
+    for d in DATA_DIRS:
+        cand = basedir / d / filename
+        if cand.exists():
+            return cand
+    for d in DATA_DIRS:
+        root = basedir / d
+        if root.is_dir():
+            for hit in root.rglob(filename):
+                return hit
+    return None
+
 
 MANIFEST_COLUMNS = [
     "filename",
@@ -22,6 +44,8 @@ MANIFEST_COLUMNS = [
     "scaffold_tool_version",
     "cleaned",
     "cleaned_from",
+    "derived_from",
+    "agp_filename",
     "zenodo_doi",
     "sequencing_technology",
     "bioproject",
