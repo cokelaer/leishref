@@ -198,20 +198,31 @@ leishref scaffold \
 
 Create a Zenodo deposition for a single scaffold (fasta + AGP), upload, publish, and get DOI.
 
-```bash
-# Dry-run (preview)
-leishref publish --scaffold Scaffold/Ltropica.CDC.onLd1S.fa
+**Setup (one-time):**
+1. Get API token from https://zenodo.org/account/settings/applications/tokens/new (or sandbox.zenodo.org for testing)
+2. Set environment variable:
+   - **Bash/Zsh:** `export ZENODO_TOKEN="your-token"`
+   - **Fish:** `set -x ZENODO_TOKEN your-token` (note: `-x` to export)
+3. For sandbox testing: `ZENODO_SANDBOX_TOKEN` (separate token from sandbox.zenodo.org)
 
-# Actually publish (requires ZENODO_TOKEN env var)
-export ZENODO_TOKEN="your-zenodo-api-token"
-leishref publish --scaffold Scaffold/Ltropica.CDC.onLd1S.fa --confirm
+**Usage:**
+```bash
+# Dry-run (preview, no token needed)
+leishref publish Scaffold/Ltropica.CDC.onLd1S.fa
+
+# Publish to sandbox for testing
+leishref publish Scaffold/Ltropica.CDC.onLd1S.fa --sandbox --confirm
+
+# Publish to production
+leishref publish Scaffold/Ltropica.CDC.onLd1S.fa --version v1.0 --confirm
 ```
 
 Result:
-- Deposition created on Zenodo with metadata (title, description, creators)
+- Deposition created on Zenodo with title + metadata
 - Files uploaded (`.fa` + `.agp`)
 - Published (made public) with DOI
-- DOI written back to manifest.csv in `zenodo_doi` column
+- DOI written to manifest.csv `zenodo_doi` column
+- Version tracked if `--version` provided
 
 ### 5. Look up in manifest
 
