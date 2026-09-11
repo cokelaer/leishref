@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional, Set
 
-from leishdb.checksums import md5_file, contig_count
+from leishref.checksums import md5_file, contig_count
 
 
 class RagtagError(Exception):

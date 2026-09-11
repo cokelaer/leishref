@@ -1,4 +1,4 @@
-"""CLI entry points for leishdb."""
+"""CLI entry points for leishref."""
 
 import shutil
 import tempfile
@@ -6,17 +6,17 @@ from pathlib import Path
 
 import click
 
-from leishdb.aliases import Aliases
-from leishdb.checksums import contig_count, md5_file, sequence_length
-from leishdb.manifest import Manifest, ManifestRow
-from leishdb.ncbi import fetch_fasta_gff, fetch_metadata
-from leishdb.scaffold import clean_scaffolded_fasta, parse_agp, run_scaffold
-from leishdb.tritrypdb import download_fasta_gff as tritrypdb_download
+from leishref.aliases import Aliases
+from leishref.checksums import contig_count, md5_file, sequence_length
+from leishref.manifest import Manifest, ManifestRow
+from leishref.ncbi import fetch_fasta_gff, fetch_metadata
+from leishref.scaffold import clean_scaffolded_fasta, parse_agp, run_scaffold
+from leishref.tritrypdb import download_fasta_gff as tritrypdb_download
 
 
 @click.group()
 def cli():
-    """Leishmania genome database."""
+    """Leishmania reference genome database."""
     pass
 
 

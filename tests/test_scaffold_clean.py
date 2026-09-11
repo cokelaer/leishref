@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from leishdb.scaffold import clean_scaffolded_fasta, parse_agp
+from leishref.scaffold import clean_scaffolded_fasta, parse_agp
 
 
 def test_parse_agp():

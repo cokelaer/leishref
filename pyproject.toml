@@ -3,9 +3,9 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [project]
-name = "leishdb"
+name = "leishref"
 version = "0.1.0"
-description = "Leishmania genome database with NCBI/TriTrypDB provenance, aliasing, and scaffolding"
+description = "Leishmania reference genome database with NCBI/TriTrypDB provenance, aliasing, and scaffolding"
 authors = [{name = "Cokelaer", email = "cokelaer@gmail.com"}]
 readme = "README.md"
 license = "MIT"
@@ -26,15 +26,15 @@ dev = [
 ]
 
 [project.scripts]
-leishdb = "leishdb.cli:cli"
+leishref = "leishref.cli:cli"
 
 [tool.poetry]
-name = "leishdb"
+name = "leishref"
 version = "0.1.0"
-description = "Leishmania genome database"
+description = "Leishmania reference genome database"
 authors = ["Cokelaer <cokelaer@gmail.com>"]
 readme = "README.md"
-packages = [{include = "leishdb"}]
+packages = [{include = "leishref"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"

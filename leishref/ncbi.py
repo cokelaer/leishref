@@ -7,7 +7,7 @@ import zipfile
 from pathlib import Path
 from typing import Optional
 
-from leishdb.checksums import md5_file, sequence_length
+from leishref.checksums import md5_file, sequence_length
 
 
 class NCBIError(Exception):

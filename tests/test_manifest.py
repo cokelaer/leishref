@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from leishdb.manifest import Manifest, ManifestRow
+from leishref.manifest import Manifest, ManifestRow
 
 
 def test_manifest_create_and_append():

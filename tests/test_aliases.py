@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from leishdb.aliases import Aliases
+from leishref.aliases import Aliases
 
 
 def test_aliases_add_and_resolve():

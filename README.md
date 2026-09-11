@@ -1,4 +1,4 @@
-# Leishmania Genome Database (leishdb)
+# Leishmania Reference Genome Database (leishref)
 
 Manage Leishmania genomes from NCBI, TriTrypDB, and custom assemblies with full provenance tracking, user-friendly aliasing, and automated ragtag scaffolding.
 
@@ -30,7 +30,7 @@ cd /path/to/Leishmania
 poetry install
 
 # Verify CLI is available
-leish-backfill --help
+leishref backfill --help
 ```
 
 ---
@@ -55,7 +55,7 @@ Leishmania/
 │   ├── Species.Strain.on.RefAlias.agp
 │   ├── Species.Strain.on.RefAlias.cleaned.fa  # Pruned version (chrom-anchored only)
 │   └── ...
-├── leishdb/                  # Python package (git-tracked)
+├── leishref/                  # Python package (git-tracked)
 │   ├── __init__.py
 │   ├── manifest.py           # CSV I/O
 │   ├── aliases.py            # Alias resolution
@@ -129,13 +129,13 @@ Scan disk for existing NCBI, MyAssemblies, and Scaffold files; compute md5sums; 
 
 ```bash
 # Preview what will be added
-leishdb backfill --dry-run
+leishref backfill --dry-run
 
 # Actually add to manifest.csv
-leishdb backfill
+leishref backfill
 
 # Check manifest
-leishdb info
+leishref info
 ```
 
 Example output:
@@ -155,14 +155,14 @@ Downloads fasta + GFF from NCBI using `datasets` CLI; extracts metadata (sequenc
 
 ```bash
 # Fetch *L. tropica* L590 from NCBI
-leishdb fetch \
+leishref fetch \
   --accession GCA_000410715.1 \
   --species Leishmania_tropica \
   --strain L590 \
   --alias Ltropica.L590
 
 # Check result
-leishdb info --alias Ltropica.L590
+leishref info --alias Ltropica.L590
 ```
 
 Files created:
@@ -176,7 +176,7 @@ Run ragtag to scaffold query fasta against reference; optionally clean (prune un
 
 ```bash
 # Scaffold query onto Ld1S reference
-leishdb scaffold \
+leishref scaffold \
   --query MyAssemblies/LtropicaCDC/assembly.fasta \
   --reference Ld1S \
   --alias Ltropica.CDC.onLd1S \
@@ -200,11 +200,11 @@ Create a Zenodo deposition for a single scaffold (fasta + AGP), upload, publish,
 
 ```bash
 # Dry-run (preview)
-leishdb publish --scaffold Scaffold/Ltropica.CDC.onLd1S.fa
+leishref publish --scaffold Scaffold/Ltropica.CDC.onLd1S.fa
 
 # Actually publish (requires ZENODO_TOKEN env var)
 export ZENODO_TOKEN="your-zenodo-api-token"
-leishdb publish --scaffold Scaffold/Ltropica.CDC.onLd1S.fa --confirm
+leishref publish --scaffold Scaffold/Ltropica.CDC.onLd1S.fa --confirm
 ```
 
 Result:
@@ -217,10 +217,10 @@ Result:
 
 ```bash
 # All genomes
-leishdb info
+leishref info
 
 # Single alias
-leishdb info --alias Ld1S
+leishref info --alias Ld1S
 
 # Output:
 # filename: Ld1S.fa
@@ -250,10 +250,10 @@ leishdb info --alias Ld1S
 
 ```bash
 # 1. Fetch from NCBI
-leishdb fetch --accession GCA_000410715.1 --alias Ltropica.L590
+leishref fetch --accession GCA_000410715.1 --alias Ltropica.L590
 
 # 2. Scaffold onto Ld1S (assumes Ld1S alias exists and points to NCBI/Ld1S.fa)
-leishdb scaffold \
+leishref scaffold \
   --query NCBI/GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna \
   --reference Ld1S \
   --clean \
@@ -261,10 +261,10 @@ leishdb scaffold \
 
 # 3. Publish scaffold to Zenodo
 export ZENODO_TOKEN="..."
-leishdb publish --scaffold Scaffold/Ltropica.L590.onLd1S.fa --confirm
+leishref publish --scaffold Scaffold/Ltropica.L590.onLd1S.fa --confirm
 
 # 4. View manifest
-leishdb info
+leishref info
 ```
 
 ### Backfill existing custom assembly + check
@@ -275,13 +275,13 @@ mkdir -p MyAssemblies/MyStrain
 cp ~/my_assembly.fasta MyAssemblies/MyStrain/
 
 # 2. Backfill
-leishdb backfill
+leishref backfill
 
 # 3. Edit aliases.csv to add short name
 # Add: MyStrain,MyAssemblies/MyStrain/my_assembly.fasta
 
 # 4. Scaffold onto reference
-leishdb scaffold --query MyAssemblies/MyStrain/my_assembly.fasta --reference Ld1S --clean --alias MyStrain.onLd1S
+leishref scaffold --query MyAssemblies/MyStrain/my_assembly.fasta --reference Ld1S --clean --alias MyStrain.onLd1S
 ```
 
 ---
@@ -295,7 +295,7 @@ leishdb scaffold --query MyAssemblies/MyStrain/my_assembly.fasta --reference Ld1
 python3 -c "
 import tempfile
 from pathlib import Path
-from leishdb.manifest import Manifest, ManifestRow
+from leishref.manifest import Manifest, ManifestRow
 
 with tempfile.TemporaryDirectory() as tmpdir:
     m = Manifest(Path(tmpdir) / 'test.csv')
@@ -309,14 +309,14 @@ with tempfile.TemporaryDirectory() as tmpdir:
 
 ```bash
 # Per CLAUDE.md defaults
-black --line-length=120 leishdb/ tests/
-isort --profile=black leishdb/ tests/
-flake8 leishdb/ tests/
+black --line-length=120 leishref/ tests/
+isort --profile=black leishref/ tests/
+flake8 leishref/ tests/
 ```
 
 ### Add a new source
 
-Edit `leishdb/fetch.py` (orchestrator) to handle new source. Add new module (e.g., `leishdb/newsource.py`) with download function.
+Edit `leishref/fetch.py` (orchestrator) to handle new source. Add new module (e.g., `leishref/newsource.py`) with download function.
 
 ---
 
