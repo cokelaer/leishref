@@ -373,22 +373,24 @@ def publish(scaffold, manifest, version, confirm, sandbox):
         doi = published.get("doi") or published.get("conceptdoi")
         click.echo(f"Published! DOI: {doi}")
 
-        # Update manifest
-        if row:
-            row["zenodo_doi"] = doi
-            manifest_obj.replace_by_accession(row.get("accession"), row)
+        # Update manifest (production only, not sandbox)
+        if not sandbox:
+            if row:
+                row["zenodo_doi"] = doi
+                manifest_obj.replace_by_accession(row.get("accession"), row)
+            else:
+                new_row = ManifestRow(
+                    filename=scaffold.name,
+                    gff_filename=agp_file.name,
+                    source="Scaffold",
+                    zenodo_doi=doi,
+                    version=version,
+                    date_added=manifest_obj.today_iso(),
+                )
+                manifest_obj.append(new_row)
+            click.echo(f"Updated manifest.csv")
         else:
-            new_row = ManifestRow(
-                filename=scaffold.name,
-                gff_filename=agp_file.name,
-                source="Scaffold",
-                zenodo_doi=doi,
-                version=version,
-                date_added=manifest_obj.today_iso(),
-            )
-            manifest_obj.append(new_row)
-
-        click.echo(f"Updated manifest.csv")
+            click.echo("Sandbox publish (manifest not updated)")
 
     except ZenodoError as e:
         click.echo(f"Zenodo error: {e}", err=True)
