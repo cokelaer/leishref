@@ -21,16 +21,26 @@ def cli():
 
 
 @cli.command()
-@click.option("--accession", required=True, help="NCBI accession (e.g., GCA_000410715.1)")
+@click.argument("accession")
 @click.option("--species", help="Species name (inferred from NCBI if not given)")
 @click.option("--strain", help="Strain name (inferred from NCBI if not given)")
 @click.option("--alias", help="Short alias for this genome")
 @click.option("--outdir", type=click.Path(), default="NCBI", help="Output directory")
 @click.option("--manifest", type=click.Path(), default="manifest.csv", help="Manifest CSV")
 def fetch(accession, species, strain, alias, outdir, manifest):
-    """Fetch genome from NCBI, optionally check TriTrypDB."""
+    """Fetch genome from NCBI. Detects GCA_/GCF_ accessions automatically.
+
+    Usage:
+      leishref fetch GCA_000410715.1
+      leishref fetch GCA_000410715.1 --alias Ld1S
+    """
     outdir = Path(outdir)
     manifest_obj = Manifest(Path(manifest))
+
+    # Detect if it looks like an NCBI accession
+    is_accession = accession.upper().startswith(("GCA_", "GCF_"))
+    if is_accession:
+        click.echo(f"Detected NCBI accession: {accession}")
 
     click.echo(f"Fetching {accession} from NCBI...")
     fasta, gff = fetch_fasta_gff(accession, outdir)
