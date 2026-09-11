@@ -1,0 +1,6 @@
+filename,gff_filename,source,accession,assembly_name,release_version,species,strain,alias,md5sum_fasta,md5sum_gff,scaffold_reference_alias,scaffold_tool_version,cleaned,cleaned_from,zenodo_doi,sequencing_technology,bioproject,biosample,raw_reads_accession,date_added,notes
+Ld1S.fa,,NCBI,,,,,,,af62a7f33ced1d542f9c1f9b5ea8bc1b,,,,,,,,,,,2026-09-11,backfilled from disk
+Ltropica.Ld1S.scaffold.pecat.fasta,,MyAssembly,,,,LtropicaCDC,LtropicaCDC,,779a6fcf0ea8cbddbe6624630f0beb35,,,,,,,,,,,2026-09-11,backfilled from disk
+Ltropica.Ld1S.scaffold.flye.fasta,,MyAssembly,,,,LtropicaCDC,LtropicaCDC,,5618b9abcf657b1b9b85ab7fcb0daaf0,,,,,,,,,,,2026-09-11,backfilled from disk
+Ltropica.Ld1S.scaffold.flye.filtered.fasta,,MyAssembly,,,,LtropicaCDC,LtropicaCDC,,b387ce1f3ec3021e00fea777623789ff,,,,,,,,,,,2026-09-11,backfilled from disk
+Ltropica.Ld1S.scaffold.pecat.filtered.fasta,,MyAssembly,,,,LtropicaCDC,LtropicaCDC,,a9a3d9a674a2ebbccc93f95c3d6c6691,,,,,,,,,,,2026-09-11,backfilled from disk
