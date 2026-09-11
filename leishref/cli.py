@@ -27,12 +27,14 @@ def cli():
 @click.option("--alias", help="Short alias for this genome")
 @click.option("--outdir", type=click.Path(), default="NCBI", help="Output directory")
 @click.option("--manifest", type=click.Path(), default="manifest.csv", help="Manifest CSV")
-def fetch(accession, species, strain, alias, outdir, manifest):
+@click.option("--force", is_flag=True, help="Re-fetch even if already in manifest")
+def fetch(accession, species, strain, alias, outdir, manifest, force):
     """Fetch genome from NCBI. Detects GCA_/GCF_ accessions automatically.
 
     Usage:
       leishref fetch GCA_000410715.1
       leishref fetch GCA_000410715.1 --alias Ld1S
+      leishref fetch GCA_000410715.1 --force  # re-fetch if exists
     """
     outdir = Path(outdir)
     manifest_obj = Manifest(Path(manifest))
@@ -41,6 +43,16 @@ def fetch(accession, species, strain, alias, outdir, manifest):
     is_accession = accession.upper().startswith(("GCA_", "GCF_"))
     if is_accession:
         click.echo(f"Detected NCBI accession: {accession}")
+
+    # Check if already in manifest
+    existing = manifest_obj.find_by_accession(accession)
+    if existing and not force:
+        click.echo(f"Already in manifest: {existing.get('filename')}", err=True)
+        click.echo(f"Use --force to re-fetch", err=True)
+        return
+
+    if existing and force:
+        click.echo(f"Re-fetching (--force): {accession}")
 
     click.echo(f"Fetching {accession} from NCBI...")
     fasta, gff = fetch_fasta_gff(accession, outdir)
