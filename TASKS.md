@@ -20,6 +20,8 @@
 - [x] Sandbox/production separation (DOIs only saved to manifest for production)
 - [x] Genome statistics tracking (num_bases, num_contigs, gc_percent computed on fetch/add/scaffold)
 - [x] Manifest update by filename for scaffolds (no accession fallback)
+- [x] Rich-click CLI formatting (improved help text with better layout)
+- [x] TriTrypDB fetch command (leishref fetch-tritrypdb <species_strain>)
 
 ## In Progress / High Priority 🚧
 
@@ -36,11 +38,6 @@
   - [ ] Zenodo: use `--version` flag (v1.0, v2.0) → track in manifest
 
 ## Medium Priority 📋
-
-- [ ] **TriTrypDB proper support**:
-  - [ ] Implement actual download (currently stub URL pattern)
-  - [ ] Extract version/release from TriTrypDB metadata
-  - [ ] Length comparison vs NCBI (currently noted only)
 
 - [ ] **Test suite**:
   - [ ] Integration tests for fetch/add/scaffold workflows
