@@ -12,11 +12,16 @@ class ZenodoError(Exception):
     pass
 
 
-def get_zenodo_token() -> str:
-    """Get Zenodo API token from ZENODO_TOKEN env var."""
-    token = os.environ.get("ZENODO_TOKEN")
+def get_zenodo_token(sandbox: bool = False) -> str:
+    """Get Zenodo API token from env var.
+
+    Production: ZENODO_TOKEN
+    Sandbox: ZENODO_SANDBOX_TOKEN
+    """
+    var_name = "ZENODO_SANDBOX_TOKEN" if sandbox else "ZENODO_TOKEN"
+    token = os.environ.get(var_name)
     if not token:
-        raise ZenodoError("ZENODO_TOKEN env var not set")
+        raise ZenodoError(f"{var_name} env var not set")
     return token
 
 
@@ -27,7 +32,7 @@ def _headers(token: str) -> dict:
 
 def create_deposition(title: str, description: str, creators: list[str], sandbox: bool = False) -> dict:
     """Create new Zenodo deposition. Returns deposition dict."""
-    token = get_zenodo_token()
+    token = get_zenodo_token(sandbox=sandbox)
     base = "https://sandbox.zenodo.org" if sandbox else "https://zenodo.org"
     url = f"{base}/api/deposit/depositions"
 
@@ -49,7 +54,7 @@ def create_deposition(title: str, description: str, creators: list[str], sandbox
 
 def upload_file(deposition_id: int, fpath: Path, sandbox: bool = False) -> dict:
     """Upload file to deposition."""
-    token = get_zenodo_token()
+    token = get_zenodo_token(sandbox=sandbox)
     fpath = Path(fpath)
     base = "https://sandbox.zenodo.org" if sandbox else "https://zenodo.org"
 
@@ -73,7 +78,7 @@ def upload_file(deposition_id: int, fpath: Path, sandbox: bool = False) -> dict:
 
 def update_metadata(deposition_id: int, data: dict, sandbox: bool = False) -> dict:
     """Update deposition metadata."""
-    token = get_zenodo_token()
+    token = get_zenodo_token(sandbox=sandbox)
     base = "https://sandbox.zenodo.org" if sandbox else "https://zenodo.org"
     url = f"{base}/api/deposit/depositions/{deposition_id}"
 
@@ -86,7 +91,7 @@ def update_metadata(deposition_id: int, data: dict, sandbox: bool = False) -> di
 
 def publish_deposition(deposition_id: int, sandbox: bool = False) -> dict:
     """Publish deposition (makes it public)."""
-    token = get_zenodo_token()
+    token = get_zenodo_token(sandbox=sandbox)
     base = "https://sandbox.zenodo.org" if sandbox else "https://zenodo.org"
     url = f"{base}/api/deposit/depositions/{deposition_id}/actions/publish"
 
