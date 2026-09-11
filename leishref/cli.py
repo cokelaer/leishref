@@ -245,7 +245,7 @@ def publish(scaffold, manifest, confirm):
 @click.option("--manifest", type=click.Path(), default="manifest.csv")
 @click.option("--alias", help="Look up specific alias")
 def info(manifest, alias):
-    """Display manifest info."""
+    """Display manifest info with provenance."""
     manifest_obj = Manifest(Path(manifest))
     rows = manifest_obj.read()
 
@@ -257,9 +257,26 @@ def info(manifest, alias):
         else:
             click.echo(f"Alias not found: {alias}", err=True)
     else:
-        click.echo(f"Total genomes: {len(rows)}")
+        click.echo(f"Total genomes: {len(rows)}\n")
         for row in rows:
-            click.echo(f"  {row.get('filename', 'N/A')}: {row.get('alias', 'N/A')}")
+            filename = row.get("filename", "N/A")
+            alias_name = row.get("alias") or "(no alias)"
+            source = row.get("source", "?")
+            accession = row.get("accession") or ""
+            zenodo = row.get("zenodo_doi") or ""
+            release_ver = row.get("release_version") or ""
+
+            click.echo(f"{filename}")
+            click.echo(f"  alias: {alias_name}")
+            click.echo(f"  source: {source}", nl=False)
+            if accession:
+                click.echo(f" | accession: {accession}", nl=False)
+            if release_ver:
+                click.echo(f" | release: {release_ver}", nl=False)
+            click.echo("")
+            if zenodo:
+                click.echo(f"  zenodo_doi: {zenodo}")
+            click.echo()
 
 
 if __name__ == "__main__":
