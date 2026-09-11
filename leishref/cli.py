@@ -354,17 +354,18 @@ def publish(scaffold, manifest, version, confirm, sandbox):
         click.echo(f"Uploading {agp_file.name}...")
         upload_file(dep_id, agp_file, sandbox=sandbox)
 
-        # Update metadata with version if provided
-        if version:
-            meta = {
-                "metadata": {
-                    "version": version,
-                    "keywords": ["leishmania", "scaffold", "ragtag", "genome"],
-                    "upload_type": "dataset",
-                }
+        # Update metadata with version + keywords (preserve existing title/creators)
+        meta = {
+            "metadata": {
+                "title": dep["metadata"]["title"],
+                "creators": dep["metadata"]["creators"],
+                "version": version or "v1.0",
+                "keywords": ["leishmania", "scaffold", "ragtag", "genome"],
+                "upload_type": "dataset",
             }
-            update_metadata(dep_id, meta, sandbox=sandbox)
-            click.echo(f"Updated metadata with version {version}")
+        }
+        update_metadata(dep_id, meta, sandbox=sandbox)
+        click.echo(f"Updated metadata with version {version or 'v1.0'}")
 
         click.echo("Publishing...")
         published = publish_deposition(dep_id, sandbox=sandbox)
