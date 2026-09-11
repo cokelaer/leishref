@@ -62,7 +62,12 @@ def fetch_fasta_gff(accession: str, outdir: Path) -> tuple[Optional[Path], Optio
                 fasta_file = new_fasta
 
             if gff_file:
-                new_gff = outdir / gff_file.name
+                # Use same prefix as FASTA for GFF naming consistency
+                if fasta_file:
+                    fasta_stem = fasta_file.stem  # e.g., "GCF_000002875.2_ASM287v2_genomic"
+                    new_gff = outdir / f"{fasta_stem}.gff"
+                else:
+                    new_gff = outdir / gff_file.name
                 new_gff.write_bytes(gff_file.read_bytes())
                 gff_file = new_gff
 
