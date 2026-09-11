@@ -27,6 +27,9 @@ MANIFEST_COLUMNS = [
     "bioproject",
     "biosample",
     "raw_reads_accession",
+    "num_bases",
+    "num_contigs",
+    "gc_percent",
     "date_added",
     "notes",
 ]

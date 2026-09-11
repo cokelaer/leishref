@@ -39,3 +39,19 @@ def contig_count(fpath: Path) -> int:
             if line.startswith(">"):
                 count += 1
     return count
+
+
+def gc_percent(fpath: Path) -> float:
+    """Calculate GC content percentage."""
+    fpath = Path(fpath)
+    gc_count = 0
+    total_bases = 0
+    with open(fpath, "r") as f:
+        for line in f:
+            if not line.startswith(">"):
+                seq = line.strip().upper()
+                gc_count += seq.count("G") + seq.count("C")
+                total_bases += len(seq)
+    if total_bases == 0:
+        return 0.0
+    return round((gc_count / total_bases) * 100, 2)

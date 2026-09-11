@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 
 from leishref.aliases import Aliases
-from leishref.checksums import contig_count, md5_file, sequence_length
+from leishref.checksums import contig_count, gc_percent, md5_file, sequence_length
 from leishref.manifest import Manifest, ManifestRow
 from leishref.ncbi import fetch_fasta_gff, fetch_metadata
 from leishref.scaffold import clean_scaffolded_fasta, parse_agp, run_scaffold
@@ -82,6 +82,9 @@ def fetch(accession, species, strain, alias, outdir, manifest, force):
         alias=alias,
         md5sum_fasta=md5_fasta,
         md5sum_gff=md5_gff,
+        num_bases=sequence_length(fasta),
+        num_contigs=contig_count(fasta),
+        gc_percent=gc_percent(fasta),
         date_added=manifest_obj.today_iso(),
         sequencing_technology=seq_tech,
         bioproject=bioproject,
@@ -143,6 +146,9 @@ def add(fasta, gff, species, strain, alias, outdir, manifest):
         alias=alias,
         md5sum_fasta=md5_fa,
         md5sum_gff=md5_gf,
+        num_bases=sequence_length(new_fasta),
+        num_contigs=contig_count(new_fasta),
+        gc_percent=gc_percent(new_fasta),
         date_added=manifest_obj.today_iso(),
         notes="added locally",
     )
@@ -206,6 +212,9 @@ def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
                 cleaned=True,
                 cleaned_from=out_fasta.name,
                 md5sum_fasta=md5_cleaned,
+                num_bases=sequence_length(cleaned_fasta),
+                num_contigs=contig_count(cleaned_fasta),
+                gc_percent=gc_percent(cleaned_fasta),
                 date_added=manifest_obj.today_iso(),
                 alias=alias,
             )
@@ -220,6 +229,9 @@ def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
                 scaffold_tool_version="ragtag.py",
                 cleaned=False,
                 md5sum_fasta=md5_scaffold,
+                num_bases=sequence_length(out_fasta),
+                num_contigs=contig_count(out_fasta),
+                gc_percent=gc_percent(out_fasta),
                 date_added=manifest_obj.today_iso(),
                 alias=alias,
             )
