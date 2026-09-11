@@ -389,7 +389,16 @@ def publish(scaffold, manifest, version, confirm, sandbox):
         if not sandbox:
             if row:
                 row["zenodo_doi"] = doi
-                manifest_obj.replace_by_accession(row.get("accession"), row)
+                # For rows without accession (scaffolds), update by filename
+                if row.get("accession"):
+                    manifest_obj.replace_by_accession(row.get("accession"), row)
+                else:
+                    rows = manifest_obj.read()
+                    for i, r in enumerate(rows):
+                        if r.get("filename") == scaffold.name:
+                            rows[i] = row
+                            manifest_obj.write(rows)
+                            break
             else:
                 new_row = ManifestRow(
                     filename=scaffold.name,
