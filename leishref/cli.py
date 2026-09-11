@@ -4,7 +4,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
-import click
+import rich_click as click
 
 from leishref.aliases import Aliases
 from leishref.checksums import contig_count, gc_percent, md5_file, sequence_length
@@ -32,10 +32,10 @@ def cli():
 def fetch(accession, species, strain, alias, outdir, manifest, force):
     """Fetch genome from NCBI. Detects GCA_/GCF_ accessions automatically.
 
-    Usage:
+    Examples:
       leishref fetch GCA_000410715.1
       leishref fetch GCA_000410715.1 --alias Ld1S
-      leishref fetch GCA_000410715.1 --force  # re-fetch if exists
+      leishref fetch GCA_000410715.1 --force
     """
     outdir = Path(outdir)
     manifest_obj = Manifest(Path(manifest))
@@ -111,7 +111,7 @@ def fetch(accession, species, strain, alias, outdir, manifest, force):
 def add(fasta, gff, species, strain, alias, outdir, manifest):
     """Add local fasta/gff files to database and manifest.
 
-    Usage:
+    Examples:
       leishref add /path/to/assembly.fa --species Leishmania_major --strain myStrain
       leishref add assembly.fa assembly.gff --alias MyGenome
     """
@@ -166,7 +166,12 @@ def add(fasta, gff, species, strain, alias, outdir, manifest):
 @click.option("--manifest", type=click.Path(), default="manifest.csv", help="Manifest CSV")
 @click.option("--ragtag-bin", help="Path to ragtag.py (auto-detect if not given)")
 def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
-    """Run ragtag scaffold on query against reference."""
+    """Run ragtag scaffold on query against reference.
+
+    Examples:
+      leishref scaffold --query assembly.fa --reference Ld1S
+      leishref scaffold --query assembly.fa --reference Ld1S --alias MyScaffold --clean
+    """
     query = Path(query)
     outdir = Path(outdir)
     manifest_obj = Manifest(Path(manifest))
@@ -328,7 +333,13 @@ def backfill(manifest, outdir, dry_run):
 @click.option("--confirm", is_flag=True, help="Actually publish (else dry-run)")
 @click.option("--sandbox", is_flag=True, help="Publish to sandbox.zenodo.org (test)")
 def publish(scaffold, manifest, version, confirm, sandbox):
-    """Publish scaffold (fasta+agp) to Zenodo. Requires ZENODO_TOKEN env var."""
+    """Publish scaffold (fasta+agp) to Zenodo. Requires ZENODO_TOKEN env var.
+
+    Examples:
+      leishref publish scaffold.fa --confirm
+      leishref publish scaffold.fa --sandbox --confirm
+      leishref publish scaffold.fa --version v1.0 --confirm
+    """
     scaffold = Path(scaffold)
     manifest_obj = Manifest(Path(manifest))
 
