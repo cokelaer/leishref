@@ -88,8 +88,66 @@ def fetch(accession, species, strain, alias, outdir, manifest, force):
         notes=None,
     )
 
+    if force:
+        manifest_obj.replace_by_accession(accession, row)
+        click.echo(f"Updated {accession} in manifest")
+    else:
+        manifest_obj.append(row)
+        click.echo(f"Added {accession} to manifest")
+
+
+@cli.command()
+@click.argument("fasta", type=click.Path(exists=True))
+@click.argument("gff", type=click.Path(exists=True), required=False)
+@click.option("--species", help="Species name")
+@click.option("--strain", help="Strain name")
+@click.option("--alias", help="Short alias")
+@click.option("--outdir", type=click.Path(), default="MyAssemblies", help="Destination directory")
+@click.option("--manifest", type=click.Path(), default="manifest.csv", help="Manifest CSV")
+def add(fasta, gff, species, strain, alias, outdir, manifest):
+    """Add local fasta/gff files to database and manifest.
+
+    Usage:
+      leishref add /path/to/assembly.fa --species Leishmania_major --strain myStrain
+      leishref add assembly.fa assembly.gff --alias MyGenome
+    """
+    fasta = Path(fasta)
+    gff = Path(gff) if gff else None
+    outdir = Path(outdir)
+    manifest_obj = Manifest(Path(manifest))
+
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    # Copy files
+    new_fasta = outdir / fasta.name
+    new_fasta.write_bytes(fasta.read_bytes())
+    click.echo(f"Copied {fasta.name} → {new_fasta}")
+
+    new_gff = None
+    if gff:
+        new_gff = outdir / gff.name
+        new_gff.write_bytes(gff.read_bytes())
+        click.echo(f"Copied {gff.name} → {new_gff}")
+
+    # Add to manifest
+    md5_fa = md5_file(new_fasta)
+    md5_gf = md5_file(new_gff) if new_gff else None
+
+    row = ManifestRow(
+        filename=new_fasta.name,
+        gff_filename=new_gff.name if new_gff else None,
+        source="MyAssembly",
+        species=species,
+        strain=strain,
+        alias=alias,
+        md5sum_fasta=md5_fa,
+        md5sum_gff=md5_gf,
+        date_added=manifest_obj.today_iso(),
+        notes="added locally",
+    )
+
     manifest_obj.append(row)
-    click.echo(f"Added {accession} to manifest")
+    click.echo(f"Added to manifest: {new_fasta.name}")
 
 
 @cli.command()
@@ -267,7 +325,7 @@ def publish(scaffold, manifest, confirm):
 @click.option("--manifest", type=click.Path(), default="manifest.csv")
 @click.option("--alias", help="Look up specific alias")
 def info(manifest, alias):
-    """Display manifest info with provenance."""
+    """Display manifest info with provenance. Warn about untracked files."""
     manifest_obj = Manifest(Path(manifest))
     rows = manifest_obj.read()
 
@@ -298,6 +356,24 @@ def info(manifest, alias):
             click.echo("")
             if zenodo:
                 click.echo(f"  zenodo_doi: {zenodo}")
+            click.echo()
+
+        # Check for untracked files
+        tracked_files = {row.get("filename") for row in rows if row.get("filename")}
+        untracked = []
+        for datadir in ["NCBI", "MyAssemblies", "Scaffold", "TriTryDB68"]:
+            dirpath = Path(datadir)
+            if dirpath.exists():
+                for fpath in dirpath.rglob("*.fa*"):
+                    if fpath.suffix not in [".fai"]:
+                        if fpath.name not in tracked_files:
+                            untracked.append(fpath)
+
+        if untracked:
+            click.echo("⚠️  UNTRACKED FILES (not in manifest):")
+            for fpath in untracked:
+                click.echo(f"  {fpath}", err=True)
+            click.echo(f"Use 'leishref add <file>' to track them", err=True)
             click.echo()
 
 

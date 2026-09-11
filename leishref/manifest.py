@@ -81,6 +81,17 @@ class Manifest:
         existing.extend(rows)
         self.write(existing)
 
+    def replace_by_accession(self, accession: str, new_row: ManifestRow) -> None:
+        """Replace row with matching accession, or append if not found."""
+        rows = self.read()
+        for i, row in enumerate(rows):
+            if row.get("accession") == accession:
+                rows[i] = new_row
+                self.write(rows)
+                return
+        # Not found, append instead
+        self.append(new_row)
+
     def find_by_filename(self, filename: str) -> Optional[ManifestRow]:
         """Find row by fasta filename."""
         for row in self.read():
