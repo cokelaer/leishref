@@ -12,6 +12,7 @@ from leishref.manifest import Manifest, ManifestRow
 from leishref.ncbi import fetch_fasta_gff, fetch_metadata
 from leishref.scaffold import clean_scaffolded_fasta, parse_agp, run_scaffold
 from leishref.tritrypdb import download_fasta_gff as tritrypdb_download
+from leishref.zenodo import create_deposition, upload_file, update_metadata, publish_deposition, ZenodoError
 
 
 @click.group()
@@ -309,16 +310,88 @@ def backfill(manifest, outdir, dry_run):
 
 
 @cli.command()
-@click.option("--scaffold", type=click.Path(exists=True), required=True, help="Scaffold fasta file")
+@click.argument("scaffold", type=click.Path(exists=True))
 @click.option("--manifest", type=click.Path(), default="manifest.csv")
+@click.option("--version", help="Version tag (e.g., v1.0)")
 @click.option("--confirm", is_flag=True, help="Actually publish (else dry-run)")
-def publish(scaffold, manifest, confirm):
-    """Publish scaffold to Zenodo (requires ZENODO_TOKEN)."""
+@click.option("--sandbox", is_flag=True, help="Publish to sandbox.zenodo.org (test)")
+def publish(scaffold, manifest, version, confirm, sandbox):
+    """Publish scaffold (fasta+agp) to Zenodo. Requires ZENODO_TOKEN env var."""
     scaffold = Path(scaffold)
-    click.echo(f"Zenodo publishing: {scaffold.name} (dry-run, add --confirm to publish)")
-    click.echo("Requires ZENODO_TOKEN env var")
-    if confirm:
-        click.echo("Publishing... (not yet implemented)")
+    manifest_obj = Manifest(Path(manifest))
+
+    # Find corresponding AGP file
+    agp_file = scaffold.with_suffix(".agp")
+    if not agp_file.exists():
+        click.echo(f"AGP file not found: {agp_file}", err=True)
+        return
+
+    # Check if already published
+    row = manifest_obj.find_by_filename(scaffold.name)
+    if row and row.get("zenodo_doi"):
+        click.echo(f"Already published with DOI: {row.get('zenodo_doi')}", err=True)
+        click.echo("(To publish a new version, use a new filename)", err=True)
+        return
+
+    if not confirm:
+        click.echo(f"Dry-run: would publish {scaffold.name} + {agp_file.name} to Zenodo")
+        click.echo(f"Add --confirm to actually publish")
+        return
+
+    try:
+        click.echo("Creating Zenodo deposition...")
+        title = f"Leishmania scaffold: {scaffold.stem}"
+        description = f"Ragtag-scaffolded genome assembly for {scaffold.stem}"
+        creators = ["Leishmania Database"]
+
+        dep = create_deposition(title, description, creators, sandbox=sandbox)
+        dep_id = dep["id"]
+        click.echo(f"Created deposition {dep_id}")
+
+        click.echo(f"Uploading {scaffold.name}...")
+        upload_file(dep_id, scaffold, sandbox=sandbox)
+
+        click.echo(f"Uploading {agp_file.name}...")
+        upload_file(dep_id, agp_file, sandbox=sandbox)
+
+        # Update metadata with version if provided
+        if version:
+            meta = {
+                "metadata": {
+                    "version": version,
+                    "keywords": ["leishmania", "scaffold", "ragtag", "genome"],
+                    "upload_type": "dataset",
+                }
+            }
+            update_metadata(dep_id, meta, sandbox=sandbox)
+            click.echo(f"Updated metadata with version {version}")
+
+        click.echo("Publishing...")
+        published = publish_deposition(dep_id, sandbox=sandbox)
+
+        doi = published.get("doi") or published.get("conceptdoi")
+        click.echo(f"Published! DOI: {doi}")
+
+        # Update manifest
+        if row:
+            row["zenodo_doi"] = doi
+            manifest_obj.replace_by_accession(row.get("accession"), row)
+        else:
+            new_row = ManifestRow(
+                filename=scaffold.name,
+                gff_filename=agp_file.name,
+                source="Scaffold",
+                zenodo_doi=doi,
+                version=version,
+                date_added=manifest_obj.today_iso(),
+            )
+            manifest_obj.append(new_row)
+
+        click.echo(f"Updated manifest.csv")
+
+    except ZenodoError as e:
+        click.echo(f"Zenodo error: {e}", err=True)
+        return
 
 
 @cli.command()
