@@ -249,6 +249,54 @@ def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
         sh.rmtree(tmp_outdir, ignore_errors=True)
 
 
+@cli.command("fetch-tritrypdb")
+@click.argument("species_strain")
+@click.option("--outdir", type=click.Path(), default="TriTryDB68", help="Output directory")
+@click.option("--species", help="Species name (inferred if not given)")
+@click.option("--strain", help="Strain name (inferred if not given)")
+@click.option("--alias", help="Short alias for this genome")
+@click.option("--manifest", type=click.Path(), default="manifest.csv", help="Manifest CSV")
+def fetch_tritrypdb(species_strain, outdir, species, strain, alias, manifest):
+    """Fetch genome from TriTrypDB release 68.
+
+    Examples:
+      leishref fetch-tritrypdb Leishmania_major_Friedlin
+      leishref fetch-tritrypdb Leishmania_infantum_JPCM5 --alias Linf
+    """
+    outdir = Path(outdir)
+    manifest_obj = Manifest(Path(manifest))
+
+    click.echo(f"Fetching {species_strain} from TriTrypDB...")
+    fasta, gff = tritrypdb_download(species_strain, outdir)
+
+    if not fasta:
+        click.echo(f"Not found on TriTrypDB: {species_strain}", err=True)
+        return
+
+    md5_fasta = md5_file(fasta)
+    md5_gff = md5_file(gff) if gff else None
+
+    row = ManifestRow(
+        filename=fasta.name,
+        gff_filename=gff.name if gff else None,
+        source="TriTrypDB",
+        release_version="68",
+        species=species or species_strain.split("_")[0],
+        strain=strain or "_".join(species_strain.split("_")[1:]),
+        alias=alias,
+        md5sum_fasta=md5_fasta,
+        md5sum_gff=md5_gff,
+        num_bases=sequence_length(fasta),
+        num_contigs=contig_count(fasta),
+        gc_percent=gc_percent(fasta),
+        date_added=manifest_obj.today_iso(),
+        notes="fetched from TriTrypDB release 68",
+    )
+
+    manifest_obj.append(row)
+    click.echo(f"Added {species_strain} to manifest: {fasta.name}")
+
+
 @cli.command()
 @click.option("--manifest", type=click.Path(), default="manifest.csv")
 @click.option("--outdir", type=click.Path(), default=".", help="Base directory to scan")
