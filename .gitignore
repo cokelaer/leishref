@@ -29,10 +29,8 @@ MyAssemblies/
 Scaffold/
 TEST/
 
-# AGP files describe layout as coordinates, not sequence, so they stay tracked:
-# they are what makes a scaffolded assembly reproducible from its parent.
-!AGP/
-!AGP/*.agp
+# AGP files describe layout but shouldn't be shipped with the package.
+AGP/
 
 # Alias-named symlinks created by `leishref link`, anchored to the root so the
 # tracked AGP directory is unaffected.
