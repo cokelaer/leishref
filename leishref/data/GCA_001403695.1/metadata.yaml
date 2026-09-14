@@ -1,0 +1,25 @@
+identifier: GCA_001403695.1
+source: NCBI
+accession: GCA_001403695.1
+taxon_id: 5681
+species: Leishmania peruviana
+assembly_name: Leishmania peruviana LEM-1537_V1
+assembly_level: Chromosome
+release_date: '2015-09-17'
+stats:
+  num_bases: 33890200
+  num_ungapped: 24953264
+  num_scaffolds: 37
+  num_contigs: 27873
+  gc_percent: 55.87
+  scaffold_n50: 1047715
+  scaffold_l50: 11
+  contig_n50: 1362
+  contig_l50: 5220
+  num_ambiguous: 8944236
+provenance:
+  bioproject: PRJEB7263
+  biosample: SAMEA2767110
+  sequencing_technology: Illumina
+  assembler: Velvet
+date_added: '2026-09-14'

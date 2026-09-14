@@ -1,0 +1,26 @@
+identifier: GCA_000755165.2
+source: NCBI
+accession: GCA_000755165.2
+taxon_id: 5679
+species: Leishmania panamensis
+strain: MHOM/PA/94/PSC-1
+assembly_name: ASM75516v2
+assembly_level: Complete Genome
+release_date: '2025-06-09'
+stats:
+  num_bases: 33860094
+  num_ungapped: 33860094
+  num_scaffolds: 35
+  num_contigs: 35
+  gc_percent: 58.19
+  scaffold_n50: 1204961
+  scaffold_l50: 10
+  contig_n50: 1204961
+  contig_l50: 10
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJNA235344
+  biosample: SAMN02991529
+  sequencing_technology: Oxford Nanopore PromethION; Illumina HiSeq
+  assembler: Canu v. 2.2; Pilon v. 1.24
+date_added: '2026-09-14'

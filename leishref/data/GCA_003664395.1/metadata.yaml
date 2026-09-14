@@ -1,0 +1,26 @@
+identifier: GCA_003664395.1
+source: NCBI
+accession: GCA_003664395.1
+taxon_id: 5677
+species: Leishmania lainsoni
+strain: 216-34
+assembly_name: CDC_Llain_216-34_v1
+assembly_level: Contig
+release_date: '2018-10-16'
+stats:
+  num_bases: 34152029
+  num_ungapped: 34152029
+  num_scaffolds: 137
+  num_contigs: 137
+  gc_percent: 57.84
+  scaffold_n50: 638860
+  scaffold_l50: 17
+  contig_n50: 638860
+  contig_l50: 17
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJNA484340
+  biosample: SAMN10094664
+  sequencing_technology: PacBio RSII
+  assembler: CANU v. 1.6
+date_added: '2026-09-14'

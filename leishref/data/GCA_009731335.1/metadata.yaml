@@ -1,0 +1,26 @@
+identifier: GCA_009731335.1
+source: NCBI
+accession: GCA_009731335.1
+taxon_id: 5689
+species: Leishmania tarentolae
+strain: Parrot Tar II
+assembly_name: Lta_assembly01
+assembly_level: Contig
+release_date: '2019-11-27'
+stats:
+  num_bases: 35416496
+  num_ungapped: 35416496
+  num_scaffolds: 179
+  num_contigs: 179
+  gc_percent: 57.41
+  scaffold_n50: 663019
+  scaffold_l50: 17
+  contig_n50: 663019
+  contig_l50: 17
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJDB8419
+  biosample: SAMD00191432
+  sequencing_technology: PacBio RS II
+  assembler: HGAP v. 3
+date_added: '2026-09-14'

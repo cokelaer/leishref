@@ -1,0 +1,26 @@
+identifier: GCA_902498725.1
+source: NCBI
+accession: GCA_902498725.1
+taxon_id: 347515
+species: Leishmania major
+strain: Friedlin
+assembly_name: Lma_mini
+assembly_level: Contig
+release_date: '2019-10-13'
+stats:
+  num_bases: 2736
+  num_ungapped: 2736
+  num_scaffolds: 4
+  num_contigs: 4
+  gc_percent: 43.02
+  scaffold_n50: 689
+  scaffold_l50: 2
+  contig_n50: 689
+  contig_l50: 2
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJEB33887
+  biosample: SAMEA5948836
+  sequencing_technology: ILLUMINA
+  assembler: PIPELINE_PAPER
+date_added: '2026-09-14'

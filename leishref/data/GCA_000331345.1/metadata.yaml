@@ -1,0 +1,26 @@
+identifier: GCA_000331345.1
+source: NCBI
+accession: GCA_000331345.1
+taxon_id: 860569
+species: Leishmania major
+strain: LV39c5
+assembly_name: Leishmania_major_LV39c5-1.0.1
+assembly_level: Scaffold
+release_date: '2013-01-11'
+stats:
+  num_bases: 32327517
+  num_ungapped: 31923375
+  num_scaffolds: 849
+  num_contigs: 1667
+  gc_percent: 59.47
+  scaffold_n50: 978401
+  scaffold_l50: 12
+  contig_n50: 71814
+  contig_l50: 127
+  num_ambiguous: 404142
+provenance:
+  bioproject: PRJNA50301
+  biosample: SAMN01129976
+  sequencing_technology: Roche 454
+  assembler: Newbler v. March 2012
+date_added: '2026-09-14'

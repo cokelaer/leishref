@@ -1,0 +1,26 @@
+identifier: GCA_041682205.1
+source: NCBI
+accession: GCA_041682205.1
+taxon_id: 3137466
+species: Leishmania cf.
+strain: MHOM/CO/2013/UN0043
+assembly_name: ASM4168220v1
+assembly_level: Chromosome
+release_date: '2024-09-19'
+stats:
+  num_bases: 33085037
+  num_ungapped: 33085037
+  num_scaffolds: 42
+  num_contigs: 42
+  gc_percent: 57.69
+  scaffold_n50: 1161120
+  scaffold_l50: 10
+  contig_n50: 1161120
+  contig_l50: 10
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJNA1095027
+  biosample: SAMN40711922
+  sequencing_technology: Oxford Nanopore GridION
+  assembler: NGSEP v. 4.3.2
+date_added: '2026-09-14'

@@ -1,0 +1,26 @@
+identifier: GCA_003992445.1
+source: NCBI
+accession: GCA_003992445.1
+taxon_id: 5667
+species: Leishmania aethiopica
+strain: 209-622
+assembly_name: ASM399244v1
+assembly_level: Contig
+release_date: '2019-01-04'
+stats:
+  num_bases: 33648436
+  num_ungapped: 33648436
+  num_scaffolds: 118
+  num_contigs: 118
+  gc_percent: 60.38
+  scaffold_n50: 763733
+  scaffold_l50: 15
+  contig_n50: 763733
+  contig_l50: 15
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJNA484340
+  biosample: SAMN09984807
+  sequencing_technology: PacBio RSII
+  assembler: CANU v. 1.6
+date_added: '2026-09-14'

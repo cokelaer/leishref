@@ -1,0 +1,24 @@
+identifier: GCF_000234665.1
+source: NCBI
+accession: GCF_000234665.1
+taxon_id: 929439
+species: Leishmania mexicana
+strain: MHOM/GT/2001/U1103
+assembly_name: ASM23466v4
+assembly_level: Chromosome
+release_date: '2011-11-08'
+stats:
+  num_bases: 32108741
+  num_ungapped: 32074854
+  num_scaffolds: 588
+  num_contigs: 937
+  gc_percent: 59.81
+  scaffold_n50: 1044075
+  scaffold_l50: 10
+  contig_n50: 164930
+  contig_l50: 56
+  num_ambiguous: 34238
+provenance:
+  bioproject: PRJEA60403
+  biosample: SAMEA2272796
+date_added: '2026-09-14'

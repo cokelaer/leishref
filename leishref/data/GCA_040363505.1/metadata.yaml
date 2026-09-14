@@ -1,0 +1,26 @@
+identifier: GCA_040363505.1
+source: NCBI
+accession: GCA_040363505.1
+taxon_id: 653362
+species: Leishmania utingensis
+strain: ITUB/BR/1977/M4964
+assembly_name: ASM4036350v1
+assembly_level: Chromosome
+release_date: '2024-06-28'
+stats:
+  num_bases: 31161156
+  num_ungapped: 31018790
+  num_scaffolds: 37
+  num_contigs: 1473
+  gc_percent: 57.67
+  scaffold_n50: 1010064
+  scaffold_l50: 10
+  contig_n50: 48106
+  contig_l50: 186
+  num_ambiguous: 159613
+provenance:
+  bioproject: PRJNA995499
+  biosample: SAMN36470829
+  sequencing_technology: Illumina HiSeq
+  assembler: a5-miseq v. 20160825
+date_added: '2026-09-14'

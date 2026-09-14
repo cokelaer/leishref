@@ -1,0 +1,26 @@
+identifier: GCA_024505685.1
+source: NCBI
+accession: GCA_024505685.1
+taxon_id: 5660
+species: Leishmania braziliensis
+strain: BA788
+assembly_name: BA788
+assembly_level: Chromosome
+release_date: '2022-08-02'
+stats:
+  num_bases: 33476229
+  num_ungapped: 33475229
+  num_scaffolds: 50
+  num_contigs: 51
+  gc_percent: 58.08
+  scaffold_n50: 1142394
+  scaffold_l50: 10
+  contig_n50: 1142394
+  contig_l50: 10
+  num_ambiguous: 1000
+provenance:
+  bioproject: PRJNA814324
+  biosample: SAMN26547435
+  sequencing_technology: HiSeq
+  assembler: RGAAT v. 1.0
+date_added: '2026-09-14'

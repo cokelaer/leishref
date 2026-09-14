@@ -1,0 +1,26 @@
+identifier: GCA_000410755.2
+source: NCBI
+accession: GCA_000410755.2
+taxon_id: 5663
+species: Leishmania enriettii
+strain: LEM3045
+assembly_name: Leishmania_enrietti_LEM3045-1.0.2
+assembly_level: Chromosome
+release_date: '2016-09-30'
+stats:
+  num_bases: 30761861
+  num_ungapped: 30427026
+  num_scaffolds: 495
+  num_contigs: 1171
+  gc_percent: 59.24
+  scaffold_n50: 868233
+  scaffold_l50: 11
+  contig_n50: 101873
+  contig_l50: 93
+  num_ambiguous: 334898
+provenance:
+  bioproject: PRJNA192711
+  biosample: SAMN02214422
+  sequencing_technology: Illumina
+  assembler: AllPaths-LG v. October 2015
+date_added: '2026-09-14'

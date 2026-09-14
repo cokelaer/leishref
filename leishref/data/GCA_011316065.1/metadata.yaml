@@ -1,0 +1,26 @@
+identifier: GCA_011316065.1
+source: NCBI
+accession: GCA_011316065.1
+taxon_id: 5666
+species: Leishmania tropica
+strain: ATCC 50129
+assembly_name: ASM1131606v1
+assembly_level: Contig
+release_date: '2020-03-16'
+stats:
+  num_bases: 30870161
+  num_ungapped: 30870161
+  num_scaffolds: 1928
+  num_contigs: 1928
+  gc_percent: 59.88
+  scaffold_n50: 32161
+  scaffold_l50: 274
+  contig_n50: 32161
+  contig_l50: 274
+  num_ambiguous: 346
+provenance:
+  bioproject: PRJNA589179
+  biosample: SAMN13269096
+  sequencing_technology: Illumina HiSeq
+  assembler: CLC Genomics Workbench v. 8.5
+date_added: '2026-09-14'

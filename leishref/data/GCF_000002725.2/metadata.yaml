@@ -1,0 +1,24 @@
+identifier: GCF_000002725.2
+source: NCBI
+accession: GCF_000002725.2
+taxon_id: 347515
+species: Leishmania major
+strain: Friedlin
+assembly_name: ASM272v2
+assembly_level: Complete Genome
+release_date: '2011-02-14'
+stats:
+  num_bases: 32855089
+  num_ungapped: 32855089
+  num_scaffolds: 36
+  num_contigs: 36
+  gc_percent: 59.72
+  scaffold_n50: 1091540
+  scaffold_l50: 11
+  contig_n50: 1091540
+  contig_l50: 11
+  num_ambiguous: 7
+provenance:
+  bioproject: PRJNA10724
+  biosample: SAMEA3138173
+date_added: '2026-09-14'

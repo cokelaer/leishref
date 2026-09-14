@@ -1,0 +1,26 @@
+identifier: GCA_051989855.1
+source: NCBI
+accession: GCA_051989855.1
+taxon_id: 5680
+species: Leishmania shawi
+strain: MCEB/BR/84/M8408
+assembly_name: USP_Lsha_8408_v1.0
+assembly_level: Chromosome
+release_date: '2025-08-13'
+stats:
+  num_bases: 32549649
+  num_ungapped: 32538578
+  num_scaffolds: 63
+  num_contigs: 292
+  gc_percent: 57.76
+  scaffold_n50: 937220
+  scaffold_l50: 10
+  contig_n50: 211710
+  contig_l50: 46
+  num_ambiguous: 11071
+provenance:
+  bioproject: PRJNA1167797
+  biosample: SAMN44063805
+  sequencing_technology: PacBio Sequel; Illumina NextSeq
+  assembler: Flye2 v. 2.9
+date_added: '2026-09-14'

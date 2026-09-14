@@ -1,0 +1,25 @@
+identifier: GCA_900537975.2
+source: NCBI
+accession: GCA_900537975.2
+taxon_id: 420245
+species: Leishmania braziliensis
+assembly_name: LBRM_annotationDEFINITIVO
+assembly_level: Chromosome
+release_date: '2023-01-04'
+stats:
+  num_bases: 32380552
+  num_ungapped: 32380552
+  num_scaffolds: 35
+  num_contigs: 35
+  gc_percent: 58.03
+  scaffold_n50: 1142551
+  scaffold_l50: 10
+  contig_n50: 1142551
+  contig_l50: 10
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJEB25922
+  biosample: SAMEA3469605
+  sequencing_technology: PacBio RSII
+  assembler: HGAP
+date_added: '2026-09-14'

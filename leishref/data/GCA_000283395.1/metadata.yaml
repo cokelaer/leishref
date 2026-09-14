@@ -1,0 +1,26 @@
+identifier: GCA_000283395.1
+source: NCBI
+accession: GCA_000283395.1
+taxon_id: 1215323
+species: Leishmania donovani
+strain: Ld 2001
+assembly_name: ASM28339v1
+assembly_level: Contig
+release_date: '2012-08-06'
+stats:
+  num_bases: 27466456
+  num_ungapped: 27466456
+  num_scaffolds: 14518
+  num_contigs: 14518
+  gc_percent: 55.72
+  scaffold_n50: 3370
+  scaffold_l50: 2409
+  contig_n50: 3370
+  contig_l50: 2409
+  num_ambiguous: 443
+provenance:
+  bioproject: PRJNA171297
+  biosample: SAMN02953820
+  sequencing_technology: SOLiD
+  assembler: Velvet v. 2.0
+date_added: '2026-09-14'

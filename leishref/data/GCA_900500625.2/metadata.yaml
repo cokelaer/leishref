@@ -1,0 +1,25 @@
+identifier: GCA_900500625.2
+source: NCBI
+accession: GCA_900500625.2
+taxon_id: 435258
+species: Leishmania infantum
+assembly_name: LINF
+assembly_level: Complete Genome
+release_date: '2020-06-28'
+stats:
+  num_bases: 32803248
+  num_ungapped: 32803248
+  num_scaffolds: 36
+  num_contigs: 36
+  gc_percent: 59.74
+  scaffold_n50: 1055293
+  scaffold_l50: 11
+  contig_n50: 1055293
+  contig_l50: 11
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJEB20254
+  biosample: SAMEA103972945
+  sequencing_technology: PACBIO
+  assembler: HGAP
+date_added: '2026-09-14'

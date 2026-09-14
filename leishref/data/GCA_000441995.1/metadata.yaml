@@ -1,0 +1,26 @@
+identifier: GCA_000441995.1
+source: NCBI
+accession: GCA_000441995.1
+taxon_id: 62297
+species: Leishmania turanica
+strain: LEM423
+assembly_name: Leishmania_turanica_LEM423-1.0.2
+assembly_level: Scaffold
+release_date: '2013-07-29'
+stats:
+  num_bases: 32320007
+  num_ungapped: 30872140
+  num_scaffolds: 336
+  num_contigs: 1669
+  gc_percent: 60.01
+  scaffold_n50: 397299
+  scaffold_l50: 25
+  contig_n50: 39203
+  contig_l50: 220
+  num_ambiguous: 1448203
+provenance:
+  bioproject: PRJNA192712
+  biosample: SAMN02212518
+  sequencing_technology: Illumina
+  assembler: AllPaths-LG v. Oct-2012
+date_added: '2026-09-14'

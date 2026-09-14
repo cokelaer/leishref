@@ -1,0 +1,26 @@
+identifier: GCF_017916325.1
+source: NCBI
+accession: GCF_017916325.1
+taxon_id: 1580590
+species: Leishmania martiniquensis
+strain: LSCM1
+assembly_name: LU_Lmar_1.0
+assembly_level: Chromosome
+release_date: '2021-04-15'
+stats:
+  num_bases: 32413670
+  num_ungapped: 32413620
+  num_scaffolds: 42
+  num_contigs: 47
+  gc_percent: 59.85
+  scaffold_n50: 1046741
+  scaffold_l50: 11
+  contig_n50: 841843
+  contig_l50: 12
+  num_ambiguous: 50
+provenance:
+  bioproject: PRJNA691531
+  biosample: SAMN17294109
+  sequencing_technology: Oxford Nanopore MinION; Illumina HiSeq; Illumina MiSeq
+  assembler: Flye assembler v. 2.6; Samtools v. 1.9
+date_added: '2026-09-14'

@@ -1,0 +1,26 @@
+identifier: GCA_017916335.1
+source: NCBI
+accession: GCA_017916335.1
+taxon_id: 2249476
+species: Leishmania orientalis
+strain: LSCM4
+assembly_name: LU_Lori_1.0
+assembly_level: Chromosome
+release_date: '2021-04-15'
+stats:
+  num_bases: 34194276
+  num_ungapped: 34192569
+  num_scaffolds: 98
+  num_contigs: 109
+  gc_percent: 59.72
+  scaffold_n50: 1120138
+  scaffold_l50: 11
+  contig_n50: 871047
+  contig_l50: 13
+  num_ambiguous: 1707
+provenance:
+  bioproject: PRJNA691532
+  biosample: SAMN17294111
+  sequencing_technology: Oxford Nanopore MinION; Illumina HiSeq; Illumina MiSeq
+  assembler: Flye assembler v. 2.6; Samtools v. 1.9
+date_added: '2026-09-14'

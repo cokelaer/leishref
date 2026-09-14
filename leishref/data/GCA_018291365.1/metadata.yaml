@@ -1,0 +1,26 @@
+identifier: GCA_018291365.1
+source: NCBI
+accession: GCA_018291365.1
+taxon_id: 44271
+species: Leishmania chagasi
+strain: MCER/BR/1981/M6445/Salvaterra
+assembly_name: IEC_LinfBR_2
+assembly_level: Contig
+release_date: '2021-05-06'
+stats:
+  num_bases: 35326942
+  num_ungapped: 35326942
+  num_scaffolds: 15315
+  num_contigs: 15315
+  gc_percent: 56.92
+  scaffold_n50: 8377
+  scaffold_l50: 1165
+  contig_n50: 8377
+  contig_l50: 1165
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJNA722301
+  biosample: SAMN10964360
+  sequencing_technology: Illumina MiSeq
+  assembler: SPAdes v. 3.12
+date_added: '2026-09-14'

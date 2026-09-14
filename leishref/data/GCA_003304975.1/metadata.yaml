@@ -1,0 +1,26 @@
+identifier: GCA_003304975.1
+source: NCBI
+accession: GCA_003304975.1
+taxon_id: 5660
+species: Leishmania braziliensis
+strain: IOC-L 3564
+assembly_name: IOC-L_3564
+assembly_level: Chromosome
+release_date: '2018-07-11'
+stats:
+  num_bases: 38003648
+  num_ungapped: 35156055
+  num_scaffolds: 1029
+  num_contigs: 8090
+  gc_percent: 57.39
+  scaffold_n50: 758103
+  scaffold_l50: 14
+  contig_n50: 7920
+  contig_l50: 1293
+  num_ambiguous: 2849305
+provenance:
+  bioproject: PRJNA454506
+  biosample: SAMN09009547
+  sequencing_technology: IonTorrent
+  assembler: SPAdes v. 3.1.10
+date_added: '2026-09-14'

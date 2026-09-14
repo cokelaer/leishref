@@ -1,0 +1,26 @@
+identifier: GCA_000409445.2
+source: NCBI
+accession: GCA_000409445.2
+taxon_id: 1303197
+species: Leishmania sp.
+strain: LEM2494
+assembly_name: Leishmania_MAR_LEM2494-1.0.3
+assembly_level: Chromosome
+release_date: '2016-05-17'
+stats:
+  num_bases: 30813970
+  num_ungapped: 30528164
+  num_scaffolds: 251
+  num_contigs: 628
+  gc_percent: 59.7
+  scaffold_n50: 873628
+  scaffold_l50: 11
+  contig_n50: 145034
+  contig_l50: 66
+  num_ambiguous: 285831
+provenance:
+  bioproject: PRJNA192703
+  biosample: SAMN04576851
+  sequencing_technology: Illumina
+  assembler: AllPaths-LG v. October 2015
+date_added: '2026-09-14'

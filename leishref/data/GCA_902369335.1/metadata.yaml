@@ -1,0 +1,25 @@
+identifier: GCA_902369335.1
+source: NCBI
+accession: GCA_902369335.1
+taxon_id: 5671
+species: Leishmania infantum
+assembly_name: Linf
+assembly_level: Chromosome
+release_date: '2019-10-04'
+stats:
+  num_bases: 17897
+  num_ungapped: 17897
+  num_scaffolds: 1
+  num_contigs: 1
+  gc_percent: 22.33
+  scaffold_n50: 17897
+  scaffold_l50: 1
+  contig_n50: 17897
+  contig_l50: 1
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJEB33887
+  biosample: SAMEA5854545
+  sequencing_technology: ILLUMINA
+  assembler: new_system
+date_added: '2026-09-14'

@@ -1,0 +1,26 @@
+identifier: GCF_017918215.1
+source: NCBI
+accession: GCF_017918215.1
+taxon_id: 2803181
+species: Leishmania sp.
+strain: GH5
+assembly_name: LU_Lgha_1.0
+assembly_level: Chromosome
+release_date: '2021-04-15'
+stats:
+  num_bases: 35953538
+  num_ungapped: 35953057
+  num_scaffolds: 116
+  num_contigs: 125
+  gc_percent: 59.67
+  scaffold_n50: 1100365
+  scaffold_l50: 11
+  contig_n50: 961565
+  contig_l50: 13
+  num_ambiguous: 481
+provenance:
+  bioproject: PRJNA691536
+  biosample: SAMN17294115
+  sequencing_technology: Oxford Nanopore MinION; Illumina HiSeq; Illumina MiSeq
+  assembler: Flye assembler v. 2.6; Samtools v. 1.9
+date_added: '2026-09-14'

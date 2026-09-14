@@ -1,0 +1,26 @@
+identifier: GCA_020783415.1
+source: NCBI
+accession: GCA_020783415.1
+taxon_id: 5664
+species: Leishmania major
+strain: JRCGR_LM-01
+assembly_name: ASM2078341v1
+assembly_level: Chromosome
+release_date: '2021-11-07'
+stats:
+  num_bases: 32854833
+  num_ungapped: 32733245
+  num_scaffolds: 36
+  num_contigs: 2543
+  gc_percent: 59.73
+  scaffold_n50: 1091532
+  scaffold_l50: 11
+  contig_n50: 43774
+  contig_l50: 227
+  num_ambiguous: 135713
+provenance:
+  bioproject: PRJNA763067
+  biosample: SAMN21422215
+  sequencing_technology: Illumina MiSeq
+  assembler: SPAdes v. 3.13.0
+date_added: '2026-09-14'

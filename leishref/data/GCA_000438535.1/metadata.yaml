@@ -1,0 +1,25 @@
+identifier: GCA_000438535.1
+source: NCBI
+accession: GCA_000438535.1
+taxon_id: 5659
+species: Leishmania amazonensis
+assembly_name: LeiAma1.0
+assembly_level: Scaffold
+release_date: '2013-07-18'
+stats:
+  num_bases: 29029348
+  num_ungapped: 29004374
+  num_scaffolds: 2627
+  num_contigs: 3199
+  gc_percent: 59.27
+  scaffold_n50: 22901
+  scaffold_l50: 368
+  contig_n50: 17272
+  contig_l50: 479
+  num_ambiguous: 25494
+provenance:
+  bioproject: PRJNA173202
+  biosample: SAMN02953847
+  sequencing_technology: 454; Illumina GAII
+  assembler: Newbler v. 2.3; Velvet v. 0.7.56; Zorro assembly v. 2.1
+date_added: '2026-09-14'

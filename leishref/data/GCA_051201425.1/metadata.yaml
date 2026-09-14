@@ -1,0 +1,26 @@
+identifier: GCA_051201425.1
+source: NCBI
+accession: GCA_051201425.1
+taxon_id: 5678
+species: Leishmania naiffi
+strain: MDAS/BR/1979/M5533
+assembly_name: ASM5120142v1
+assembly_level: Contig
+release_date: '2025-07-03'
+stats:
+  num_bases: 29394937
+  num_ungapped: 29394937
+  num_scaffolds: 19530
+  num_contigs: 19530
+  gc_percent: 57.39
+  scaffold_n50: 2464
+  scaffold_l50: 3552
+  contig_n50: 2464
+  contig_l50: 3552
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJNA1217433
+  biosample: SAMN46487453
+  sequencing_technology: Illumina NextSeq
+  assembler: Megahit v. 1.2.9
+date_added: '2026-09-14'

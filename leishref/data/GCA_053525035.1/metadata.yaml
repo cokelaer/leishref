@@ -1,0 +1,26 @@
+identifier: GCA_053525035.1
+source: NCBI
+accession: GCA_053525035.1
+taxon_id: 5689
+species: Leishmania tarentolae
+strain: T33
+assembly_name: ASM5352503v1
+assembly_level: Contig
+release_date: '2025-11-18'
+stats:
+  num_bases: 35411438
+  num_ungapped: 35411438
+  num_scaffolds: 178
+  num_contigs: 178
+  gc_percent: 57.42
+  scaffold_n50: 663171
+  scaffold_l50: 17
+  contig_n50: 663171
+  contig_l50: 17
+  num_ambiguous: 50584
+provenance:
+  bioproject: PRJNA1279432
+  biosample: SAMN49482003
+  sequencing_technology: Illumina NovaSeq
+  assembler: Reference-guided assembly with Burrow-Wheeler Aligner v. 0.7.17
+date_added: '2026-09-14'

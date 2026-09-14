@@ -1,0 +1,26 @@
+identifier: GCA_051201275.1
+source: NCBI
+accession: GCA_051201275.1
+taxon_id: 5670
+species: Leishmania guyanensis
+strain: MHOM/BR/75/M4147
+assembly_name: ASM5120127v1
+assembly_level: Contig
+release_date: '2025-07-03'
+stats:
+  num_bases: 31560808
+  num_ungapped: 31560808
+  num_scaffolds: 14089
+  num_contigs: 14089
+  gc_percent: 57.44
+  scaffold_n50: 4743
+  scaffold_l50: 1914
+  contig_n50: 4743
+  contig_l50: 1914
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJNA1217433
+  biosample: SAMN46487452
+  sequencing_technology: Illumina NextSeq
+  assembler: Megahit v. 1.2.9
+date_added: '2026-09-14'

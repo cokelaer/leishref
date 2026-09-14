@@ -1,0 +1,26 @@
+identifier: GCA_041682195.1
+source: NCBI
+accession: GCA_041682195.1
+taxon_id: 5679
+species: Leishmania panamensis
+strain: MHOM/CO/12/LL0536
+assembly_name: ASM4168219v1
+assembly_level: Chromosome
+release_date: '2024-09-19'
+stats:
+  num_bases: 34770956
+  num_ungapped: 34770956
+  num_scaffolds: 50
+  num_contigs: 50
+  gc_percent: 57.82
+  scaffold_n50: 1052144
+  scaffold_l50: 12
+  contig_n50: 1052144
+  contig_l50: 12
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJNA1095027
+  biosample: SAMN40711934
+  sequencing_technology: Oxford Nanopore GridION
+  assembler: NGSEP v. 4.3.2
+date_added: '2026-09-14'

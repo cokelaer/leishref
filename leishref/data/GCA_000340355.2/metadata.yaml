@@ -1,0 +1,26 @@
+identifier: GCA_000340355.2
+source: NCBI
+accession: GCA_000340355.2
+taxon_id: 1295825
+species: Leishmania braziliensis
+strain: MHOM/BR/75/M2903
+assembly_name: Leishmania_braziliensis_M2903-1.0.6
+assembly_level: Chromosome
+release_date: '2016-09-30'
+stats:
+  num_bases: 35210150
+  num_ungapped: 32474153
+  num_scaffolds: 744
+  num_contigs: 3934
+  gc_percent: 57.78
+  scaffold_n50: 1030512
+  scaffold_l50: 11
+  contig_n50: 62201
+  contig_l50: 160
+  num_ambiguous: 2735996
+provenance:
+  bioproject: PRJNA165955
+  biosample: SAMN04576869
+  sequencing_technology: Roche 454
+  assembler: Newbler v. October 2015
+date_added: '2026-09-14'

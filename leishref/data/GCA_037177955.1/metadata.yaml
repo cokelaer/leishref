@@ -1,0 +1,26 @@
+identifier: GCA_037177955.1
+source: NCBI
+accession: GCA_037177955.1
+taxon_id: 5671
+species: Leishmania infantum
+strain: N1HROMA6
+assembly_name: ASM3717795v1
+assembly_level: Contig
+release_date: '2024-03-15'
+stats:
+  num_bases: 27120055
+  num_ungapped: 27120055
+  num_scaffolds: 2976
+  num_contigs: 2976
+  gc_percent: 59.33
+  scaffold_n50: 13423
+  scaffold_l50: 604
+  contig_n50: 13423
+  contig_l50: 604
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJNA881045
+  biosample: SAMN38142612
+  sequencing_technology: Oxford Nanopore GridION
+  assembler: GS De Novo Assembler v. 2023
+date_added: '2026-09-14'

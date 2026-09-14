@@ -1,0 +1,25 @@
+identifier: GCA_902369275.1
+source: NCBI
+accession: GCA_902369275.1
+taxon_id: 5660
+species: Leishmania braziliensis
+assembly_name: Lbraz
+assembly_level: Chromosome
+release_date: '2019-10-04'
+stats:
+  num_bases: 17771
+  num_ungapped: 17771
+  num_scaffolds: 1
+  num_contigs: 1
+  gc_percent: 20.08
+  scaffold_n50: 17771
+  scaffold_l50: 1
+  contig_n50: 17771
+  contig_l50: 1
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJEB33887
+  biosample: SAMEA5854543
+  sequencing_technology: ILLUMINA
+  assembler: new_system
+date_added: '2026-09-14'

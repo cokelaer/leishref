@@ -1,0 +1,26 @@
+identifier: GCA_040363675.1
+source: NCBI
+accession: GCA_040363675.1
+taxon_id: 651832
+species: Leishmania lindenbergi
+strain: MHOM/BR/1966/M15733
+assembly_name: ASM4036367v1
+assembly_level: Chromosome
+release_date: '2024-07-01'
+stats:
+  num_bases: 31126262
+  num_ungapped: 30976280
+  num_scaffolds: 37
+  num_contigs: 1545
+  gc_percent: 57.65
+  scaffold_n50: 1095450
+  scaffold_l50: 10
+  contig_n50: 44361
+  contig_l50: 198
+  num_ambiguous: 153902
+provenance:
+  bioproject: PRJNA995499
+  biosample: SAMN36470830
+  sequencing_technology: Illumina HiSeq
+  assembler: a5-miseq v. 20160825
+date_added: '2026-09-14'

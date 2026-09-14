@@ -1,0 +1,26 @@
+identifier: GCA_022701395.1
+source: NCBI
+accession: GCA_022701395.1
+taxon_id: 5670
+species: Leishmania guyanensis
+strain: MHOM/BR/75/M4147
+assembly_name: ASM2270139v1
+assembly_level: Chromosome
+release_date: '2022-03-28'
+stats:
+  num_bases: 30373395
+  num_ungapped: 30370622
+  num_scaffolds: 41
+  num_contigs: 80
+  gc_percent: 57.57
+  scaffold_n50: 1014903
+  scaffold_l50: 10
+  contig_n50: 818718
+  contig_l50: 13
+  num_ambiguous: 3066
+provenance:
+  bioproject: PRJNA808737
+  biosample: SAMN26114871
+  sequencing_technology: Illumina NovaSeq
+  assembler: SPAdes v. 3.13.0
+date_added: '2026-09-14'

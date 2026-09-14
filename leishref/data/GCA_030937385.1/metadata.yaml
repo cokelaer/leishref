@@ -1,0 +1,26 @@
+identifier: GCA_030937385.1
+source: NCBI
+accession: GCA_030937385.1
+taxon_id: 5659
+species: Leishmania amazonensis
+strain: LV79
+assembly_name: OSU_LamaLV79
+assembly_level: Chromosome
+release_date: '2023-08-29'
+stats:
+  num_bases: 32238651
+  num_ungapped: 32238651
+  num_scaffolds: 36
+  num_contigs: 36
+  gc_percent: 59.54
+  scaffold_n50: 1092207
+  scaffold_l50: 10
+  contig_n50: 1092207
+  contig_l50: 10
+  num_ambiguous: 9
+provenance:
+  bioproject: PRJNA949447
+  biosample: SAMN34089951
+  sequencing_technology: Illumina NovaSeq; PacBio Sequel
+  assembler: Flye v. 2.9-b1768
+date_added: '2026-09-14'

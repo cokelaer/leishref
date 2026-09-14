@@ -1,0 +1,26 @@
+identifier: GCA_000410695.2
+source: NCBI
+accession: GCA_000410695.2
+taxon_id: 40284
+species: Leishmania arabica
+strain: LEM1108
+assembly_name: Leishmania_arabica_LEM1108-1.0.3
+assembly_level: Chromosome
+release_date: '2016-09-16'
+stats:
+  num_bases: 31269090
+  num_ungapped: 30769586
+  num_scaffolds: 168
+  num_contigs: 1530
+  gc_percent: 59.42
+  scaffold_n50: 1057807
+  scaffold_l50: 11
+  contig_n50: 51432
+  contig_l50: 172
+  num_ambiguous: 499639
+provenance:
+  bioproject: PRJNA192710
+  biosample: SAMN02214421
+  sequencing_technology: Illumina
+  assembler: AllPaths-LG v. October 2015
+date_added: '2026-09-14'

@@ -1,0 +1,25 @@
+identifier: GCA_902369305.1
+source: NCBI
+accession: GCA_902369305.1
+taxon_id: 5674
+species: Leishmania adleri
+assembly_name: Lad
+assembly_level: Chromosome
+release_date: '2019-10-04'
+stats:
+  num_bases: 19219
+  num_ungapped: 19219
+  num_scaffolds: 1
+  num_contigs: 1
+  gc_percent: 21.76
+  scaffold_n50: 19219
+  scaffold_l50: 1
+  contig_n50: 19219
+  contig_l50: 1
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJEB33887
+  biosample: SAMEA5854542
+  sequencing_technology: ILLUMINA
+  assembler: new_system
+date_added: '2026-09-14'

@@ -180,5 +180,7 @@ def test_assembly_levels_come_from_a_known_vocabulary():
 
 
 def test_most_genomes_name_their_strain():
-    named = [g for g in catalog() if g.strain]
-    assert len(named) >= len(catalog()) - 1, "only one entry should lack a strain"
+    """Not every submitter registers one, so this is a proportion rather than a count."""
+    entries = catalog()
+    named = [g for g in entries if g.strain]
+    assert len(named) >= 0.7 * len(entries)

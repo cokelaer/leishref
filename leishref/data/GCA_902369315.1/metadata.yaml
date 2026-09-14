@@ -1,0 +1,25 @@
+identifier: GCA_902369315.1
+source: NCBI
+accession: GCA_902369315.1
+taxon_id: 5670
+species: Leishmania guyanensis
+assembly_name: Lgu
+assembly_level: Chromosome
+release_date: '2019-10-04'
+stats:
+  num_bases: 19624
+  num_ungapped: 19624
+  num_scaffolds: 1
+  num_contigs: 1
+  gc_percent: 20.46
+  scaffold_n50: 19624
+  scaffold_l50: 1
+  contig_n50: 19624
+  contig_l50: 1
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJEB33887
+  biosample: SAMEA5854544
+  sequencing_technology: ILLUMINA
+  assembler: new_system
+date_added: '2026-09-14'

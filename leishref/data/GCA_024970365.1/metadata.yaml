@@ -1,0 +1,26 @@
+identifier: GCA_024970365.1
+source: NCBI
+accession: GCA_024970365.1
+taxon_id: 5670
+species: Leishmania guyanensis
+strain: M4147
+assembly_name: ASM2497036v1
+assembly_level: Complete Genome
+release_date: '2022-09-06'
+stats:
+  num_bases: 32515841
+  num_ungapped: 32515841
+  num_scaffolds: 35
+  num_contigs: 35
+  gc_percent: 57.91
+  scaffold_n50: 1133580
+  scaffold_l50: 10
+  contig_n50: 1133580
+  contig_l50: 10
+  num_ambiguous: 94
+provenance:
+  bioproject: PRJNA872130
+  biosample: SAMN30439819
+  sequencing_technology: PacBio RSII; Illumina HiSeq
+  assembler: HGAP v. 3
+date_added: '2026-09-14'

@@ -1,0 +1,26 @@
+identifier: GCA_037177915.1
+source: NCBI
+accession: GCA_037177915.1
+taxon_id: 5671
+species: Leishmania infantum
+strain: LCAN/ES/2023/CATB107
+assembly_name: ASM3717791v1
+assembly_level: Contig
+release_date: '2024-03-15'
+stats:
+  num_bases: 32100678
+  num_ungapped: 32100678
+  num_scaffolds: 164
+  num_contigs: 164
+  gc_percent: 56.95
+  scaffold_n50: 531231
+  scaffold_l50: 21
+  contig_n50: 531231
+  contig_l50: 21
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJNA881045
+  biosample: SAMN38142615
+  sequencing_technology: Oxford Nanopore GridION
+  assembler: GS De Novo Assembler v. 2023
+date_added: '2026-09-14'

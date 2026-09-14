@@ -1,0 +1,26 @@
+identifier: GCA_000444285.2
+source: NCBI
+accession: GCA_000444285.2
+taxon_id: 1206056
+species: Leishmania aethiopica
+strain: L147
+assembly_name: Leishmania_aethiopica-L147-2.0.3
+assembly_level: Chromosome
+release_date: '2016-09-30'
+stats:
+  num_bases: 31630816
+  num_ungapped: 30987240
+  num_scaffolds: 160
+  num_contigs: 1758
+  gc_percent: 60.07
+  scaffold_n50: 1001864
+  scaffold_l50: 11
+  contig_n50: 37668
+  contig_l50: 254
+  num_ambiguous: 643815
+provenance:
+  bioproject: PRJNA169673
+  biosample: SAMN02214601
+  sequencing_technology: Illumina
+  assembler: Allpaths-LG v. October 2015
+date_added: '2026-09-14'

@@ -1,0 +1,26 @@
+identifier: GCA_058218795.1
+source: NCBI
+accession: GCA_058218795.1
+taxon_id: 5677
+species: Leishmania lainsoni
+strain: MHOM/BR/2002/NMT-RBO 027P
+assembly_name: ASM5821879v1
+assembly_level: Contig
+release_date: '2026-06-16'
+stats:
+  num_bases: 33995374
+  num_ungapped: 33995374
+  num_scaffolds: 53
+  num_contigs: 53
+  gc_percent: 59.61
+  scaffold_n50: 920068
+  scaffold_l50: 11
+  contig_n50: 920068
+  contig_l50: 11
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJNA1175610
+  biosample: SAMN44366953
+  sequencing_technology: Oxford Nanopore MinION; Illumina HiSeq
+  assembler: Necat v. v0.0.1_update20200803
+date_added: '2026-09-14'

@@ -1,0 +1,26 @@
+identifier: GCA_025688915.1
+source: NCBI
+accession: GCA_025688915.1
+taxon_id: 5659
+species: Leishmania amazonensis
+strain: PH8
+assembly_name: ASM2568891v1
+assembly_level: Chromosome
+release_date: '2022-10-18'
+stats:
+  num_bases: 31912247
+  num_ungapped: 31277866
+  num_scaffolds: 76
+  num_contigs: 323
+  gc_percent: 59.68
+  scaffold_n50: 1069554
+  scaffold_l50: 10
+  contig_n50: 188212
+  contig_l50: 51
+  num_ambiguous: 634386
+provenance:
+  bioproject: PRJNA824309
+  biosample: SAMN27400998
+  sequencing_technology: PacBio RSII; Illumina HiSeq
+  assembler: Canu v. 1.7; SPAdes v. 3.15
+date_added: '2026-09-14'

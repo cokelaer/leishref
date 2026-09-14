@@ -1,0 +1,26 @@
+identifier: GCA_005317125.1
+source: NCBI
+accession: GCA_005317125.1
+taxon_id: 5659
+species: Leishmania amazonensis
+strain: UA301
+assembly_name: ASM531712v1
+assembly_level: Complete Genome
+release_date: '2019-05-14'
+stats:
+  num_bases: 32156470
+  num_ungapped: 32156470
+  num_scaffolds: 34
+  num_contigs: 34
+  gc_percent: 59.5
+  scaffold_n50: 1135553
+  scaffold_l50: 9
+  contig_n50: 1135553
+  contig_l50: 9
+  num_ambiguous: 88
+provenance:
+  bioproject: PRJNA522806
+  biosample: SAMN10955936
+  sequencing_technology: Illumina HiSeq
+  assembler: SMALT v. 0.7.4
+date_added: '2026-09-14'

@@ -1,0 +1,26 @@
+identifier: GCA_003671315.1
+source: NCBI
+accession: GCA_003671315.1
+taxon_id: 5671
+species: Leishmania infantum
+strain: HUUFS14
+assembly_name: HUUFS14
+assembly_level: Scaffold
+release_date: '2018-10-22'
+stats:
+  num_bases: 32578914
+  num_ungapped: 32536451
+  num_scaffolds: 2507
+  num_contigs: 2969
+  gc_percent: 59.55
+  scaffold_n50: 29848
+  scaffold_l50: 311
+  contig_n50: 25367
+  contig_l50: 372
+  num_ambiguous: 42601
+provenance:
+  bioproject: PRJNA398352
+  biosample: SAMN07508840
+  sequencing_technology: Illumina HiSeq
+  assembler: ABySS v. 1.56
+date_added: '2026-09-14'

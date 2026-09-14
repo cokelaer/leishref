@@ -1,0 +1,26 @@
+identifier: GCA_964014055.1
+source: NCBI
+accession: GCA_964014055.1
+taxon_id: 1295825
+species: Leishmania braziliensis
+strain: M2903
+assembly_name: Leishmania_braziliensis_M2903-Dec2022
+assembly_level: Scaffold
+release_date: '2024-03-20'
+stats:
+  num_bases: 33495285
+  num_ungapped: 33492157
+  num_scaffolds: 91
+  num_contigs: 94
+  gc_percent: 58.01
+  scaffold_n50: 1050665
+  scaffold_l50: 11
+  contig_n50: 868186
+  contig_l50: 12
+  num_ambiguous: 3128
+provenance:
+  bioproject: PRJEB2115
+  biosample: SAMEA2700045
+  sequencing_technology: Illumina,PacBio
+  assembler: various
+date_added: '2026-09-14'

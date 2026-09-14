@@ -1,0 +1,26 @@
+identifier: GCF_000755165.1
+source: NCBI
+accession: GCF_000755165.1
+taxon_id: 5679
+species: Leishmania panamensis
+strain: MHOM/PA/94/PSC-1
+assembly_name: ASM75516v1
+assembly_level: Chromosome
+release_date: '2014-09-16'
+stats:
+  num_bases: 30688794
+  num_ungapped: 29989080
+  num_scaffolds: 35
+  num_contigs: 588
+  gc_percent: 57.56
+  scaffold_n50: 1043456
+  scaffold_l50: 10
+  contig_n50: 97606
+  contig_l50: 87
+  num_ambiguous: 699714
+provenance:
+  bioproject: PRJNA235344
+  biosample: SAMN02991529
+  sequencing_technology: 454 GS FLX Titanium; Illumina HiSeq 2000
+  assembler: Newbler v. 2.6; PAGIT package
+date_added: '2026-09-14'

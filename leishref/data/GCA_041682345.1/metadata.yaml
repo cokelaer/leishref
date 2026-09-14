@@ -1,0 +1,26 @@
+identifier: GCA_041682345.1
+source: NCBI
+accession: GCA_041682345.1
+taxon_id: 5660
+species: Leishmania braziliensis
+strain: MHOM/CO/2019/UN0028
+assembly_name: ASM4168234v1
+assembly_level: Chromosome
+release_date: '2024-09-19'
+stats:
+  num_bases: 35939307
+  num_ungapped: 35939307
+  num_scaffolds: 71
+  num_contigs: 71
+  gc_percent: 58.02
+  scaffold_n50: 872671
+  scaffold_l50: 13
+  contig_n50: 872671
+  contig_l50: 13
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJNA1095027
+  biosample: SAMN40711904
+  sequencing_technology: Oxford Nanopore GridION
+  assembler: NGSEP v. 4.3.2
+date_added: '2026-09-14'

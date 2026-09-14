@@ -1,0 +1,33 @@
+identifier: GCA_003730175.1
+source: NCBI
+accession: GCA_003730175.1
+taxon_id: 5661
+species: Leishmania donovani
+strain: FDAARGOS_360
+assembly_name: ASM373017v1
+assembly_level: Contig
+release_date: '2018-11-15'
+files:
+  fasta: GCA_003730175.1_ASM373017v1_genomic.fna
+  gff: GCA_003730175.1_ASM373017v1_genomic.gff
+checksums:
+  fasta: 02823d1515f4b77b43b92030915b8a67
+  gff: c024b31e8c2e3b30a240a59155d58047
+stats:
+  num_bases: 34011430
+  num_ungapped: 34011430
+  num_scaffolds: 71
+  num_contigs: 71
+  gc_percent: 59.76
+  scaffold_n50: 828097
+  scaffold_l50: 14
+  contig_n50: 828097
+  contig_l50: 14
+  num_ambiguous: 0
+  num_gaps: 0
+provenance:
+  bioproject: PRJNA231221
+  biosample: SAMN07312504
+  sequencing_technology: PacBio; Illumina
+  assembler: canu v. 1.2
+date_added: '2026-09-14'

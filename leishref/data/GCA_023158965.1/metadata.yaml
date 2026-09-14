@@ -1,0 +1,26 @@
+identifier: GCA_023158965.1
+source: NCBI
+accession: GCA_023158965.1
+taxon_id: 1580590
+species: Leishmania martiniquensis
+strain: PCM3.1
+assembly_name: ASM2315896v1
+assembly_level: Scaffold
+release_date: '2022-04-27'
+stats:
+  num_bases: 32368282
+  num_ungapped: 32339921
+  num_scaffolds: 42
+  num_contigs: 462
+  gc_percent: 59.92
+  scaffold_n50: 1046182
+  scaffold_l50: 11
+  contig_n50: 584254
+  contig_l50: 18
+  num_ambiguous: 32097
+provenance:
+  bioproject: PRJNA741905
+  biosample: SAMN19915282
+  sequencing_technology: Illumina GAIIx
+  assembler: BWA v. 0.7.17
+date_added: '2026-09-14'

@@ -1,0 +1,26 @@
+identifier: GCA_055690235.1
+source: NCBI
+accession: GCA_055690235.1
+taxon_id: 5681
+species: Leishmania peruviana
+strain: Lsh3394
+assembly_name: ASM5569023v1
+assembly_level: Scaffold
+release_date: '2026-03-05'
+stats:
+  num_bases: 32777053
+  num_ungapped: 32708754
+  num_scaffolds: 340
+  num_contigs: 1017
+  gc_percent: 57.61
+  scaffold_n50: 800850
+  scaffold_l50: 12
+  contig_n50: 68630
+  contig_l50: 162
+  num_ambiguous: 68299
+provenance:
+  bioproject: PRJNA1335188
+  biosample: SAMN51959455
+  sequencing_technology: Illumina MiSeq; Oxford Nanopore MinION
+  assembler: Hybrid pipeline v. 1.0
+date_added: '2026-09-14'

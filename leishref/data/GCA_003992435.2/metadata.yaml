@@ -1,0 +1,26 @@
+identifier: GCA_003992435.2
+source: NCBI
+accession: GCA_003992435.2
+taxon_id: 5665
+species: Leishmania mexicana
+strain: 215-49
+assembly_name: ASM399243v2
+assembly_level: Chromosome
+release_date: '2025-08-12'
+stats:
+  num_bases: 31690181
+  num_ungapped: 31686881
+  num_scaffolds: 34
+  num_contigs: 67
+  gc_percent: 59.72
+  scaffold_n50: 1086485
+  scaffold_l50: 10
+  contig_n50: 698355
+  contig_l50: 15
+  num_ambiguous: 3300
+provenance:
+  bioproject: PRJNA484340
+  biosample: SAMN09984810
+  sequencing_technology: PacBio RSII
+  assembler: Flye v. 2.6
+date_added: '2026-09-14'

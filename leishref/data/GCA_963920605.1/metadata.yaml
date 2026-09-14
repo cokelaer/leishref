@@ -1,0 +1,30 @@
+identifier: GCA_963920605.1
+source: NCBI
+accession: GCA_963920605.1
+taxon_id: 5661
+species: Leishmania donovani
+assembly_name: Parent1
+assembly_level: Scaffold
+release_date: '2023-12-23'
+files:
+  fasta: GCA_963920605.1_Parent1_genomic.fna
+checksums:
+  fasta: 1d1f6449d04574b37bfcdfa69269059a
+stats:
+  num_bases: 31196456
+  num_ungapped: 31100348
+  num_scaffolds: 36
+  num_contigs: 1048
+  gc_percent: 59.59
+  scaffold_n50: 1049799
+  scaffold_l50: 11
+  contig_n50: 51807
+  contig_l50: 184
+  num_ambiguous: 96108
+  num_gaps: 1012
+provenance:
+  bioproject: PRJEB67989
+  biosample: SAMEA115057454
+  sequencing_technology: PacBio RS II
+  assembler: CANU
+date_added: '2026-09-14'

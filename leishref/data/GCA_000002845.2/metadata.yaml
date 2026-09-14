@@ -1,0 +1,24 @@
+identifier: GCA_000002845.2
+source: NCBI
+accession: GCA_000002845.2
+taxon_id: 420245
+species: Leishmania braziliensis
+strain: MHOM/BR/75/M2904
+assembly_name: ASM284v2
+assembly_level: Chromosome
+release_date: '2011-11-07'
+stats:
+  num_bases: 32068771
+  num_ungapped: 31987066
+  num_scaffolds: 138
+  num_contigs: 955
+  gc_percent: 57.77
+  scaffold_n50: 992961
+  scaffold_l50: 11
+  contig_n50: 63680
+  contig_l50: 136
+  num_ambiguous: 81879
+provenance:
+  bioproject: PRJEA18663
+  biosample: SAMEA2272271
+date_added: '2026-09-14'

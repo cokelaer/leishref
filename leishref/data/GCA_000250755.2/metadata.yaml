@@ -1,0 +1,26 @@
+identifier: GCA_000250755.2
+source: NCBI
+accession: GCA_000250755.2
+taxon_id: 860570
+species: Leishmania major
+strain: SD 75.1
+assembly_name: Leishmania_major_SD_75.1-1.1.1
+assembly_level: Scaffold
+release_date: '2012-03-07'
+stats:
+  num_bases: 31242750
+  num_ungapped: 31157250
+  num_scaffolds: 36
+  num_contigs: 891
+  gc_percent: 59.52
+  scaffold_n50: 1022795
+  scaffold_l50: 11
+  contig_n50: 89399
+  contig_l50: 111
+  num_ambiguous: 85599
+provenance:
+  bioproject: PRJNA50303
+  biosample: SAMN02953800
+  sequencing_technology: '454'
+  assembler: Newbler v. MapAsmResearch-04/19/2010-patch-08/17/20106.0
+date_added: '2026-09-14'

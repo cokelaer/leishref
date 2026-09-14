@@ -1,0 +1,26 @@
+identifier: GCA_902369385.1
+source: NCBI
+accession: GCA_902369385.1
+taxon_id: 347515
+species: Leishmania major
+strain: Friedlin
+assembly_name: LmjF
+assembly_level: Chromosome
+release_date: '2019-10-04'
+stats:
+  num_bases: 18998
+  num_ungapped: 18998
+  num_scaffolds: 1
+  num_contigs: 1
+  gc_percent: 23.56
+  scaffold_n50: 18998
+  scaffold_l50: 1
+  contig_n50: 18998
+  contig_l50: 1
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJEB33887
+  biosample: SAMEA5854546
+  sequencing_technology: ILLUMINA
+  assembler: new_system
+date_added: '2026-09-14'

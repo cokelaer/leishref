@@ -1,0 +1,26 @@
+identifier: GCA_018290745.1
+source: NCBI
+accession: GCA_018290745.1
+taxon_id: 44271
+species: Leishmania chagasi
+strain: MHOM/HD/2017/M32502/Amapala
+assembly_name: IEC_LinfHon_2
+assembly_level: Contig
+release_date: '2021-05-06'
+stats:
+  num_bases: 30617757
+  num_ungapped: 30617757
+  num_scaffolds: 7193
+  num_contigs: 7193
+  gc_percent: 59.33
+  scaffold_n50: 8707
+  scaffold_l50: 1038
+  contig_n50: 8707
+  contig_l50: 1038
+  num_ambiguous: 0
+provenance:
+  bioproject: PRJNA722301
+  biosample: SAMN10964361
+  sequencing_technology: Illumina MiSeq
+  assembler: SPAdes v. 3.12
+date_added: '2026-09-14'

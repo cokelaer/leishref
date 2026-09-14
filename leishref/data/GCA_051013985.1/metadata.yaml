@@ -1,0 +1,26 @@
+identifier: GCA_051013985.1
+source: NCBI
+accession: GCA_051013985.1
+taxon_id: 5664
+species: Leishmania major
+strain: RS-01
+assembly_name: ASM5101398v1
+assembly_level: Chromosome
+release_date: '2025-06-20'
+stats:
+  num_bases: 32853494
+  num_ungapped: 32849428
+  num_scaffolds: 36
+  num_contigs: 38
+  gc_percent: 59.7
+  scaffold_n50: 1091245
+  scaffold_l50: 11
+  contig_n50: 1091245
+  contig_l50: 11
+  num_ambiguous: 4073
+provenance:
+  bioproject: PRJNA1215564
+  biosample: SAMN46412637
+  sequencing_technology: Illumina NovaSeq
+  assembler: SPAdes v. 4.0.0
+date_added: '2026-09-14'

@@ -1,0 +1,26 @@
+identifier: GCA_000981925.2
+source: NCBI
+accession: GCA_000981925.2
+taxon_id: 1638716
+species: Leishmania sp.
+strain: AIIMS/LM/SS/PKDL/LD-974
+assembly_name: Ld_v2
+assembly_level: Contig
+release_date: '2015-06-10'
+stats:
+  num_bases: 27848322
+  num_ungapped: 27848322
+  num_scaffolds: 1100
+  num_contigs: 1100
+  gc_percent: 55.8
+  scaffold_n50: 61709
+  scaffold_l50: 135
+  contig_n50: 61709
+  contig_l50: 135
+  num_ambiguous: 5703
+provenance:
+  bioproject: PRJNA280137
+  biosample: SAMN03457191
+  sequencing_technology: Illumina HiSeq
+  assembler: A5 assembly pipeline v. 20150522
+date_added: '2026-09-14'

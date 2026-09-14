@@ -1,0 +1,26 @@
+identifier: GCA_000470725.1
+source: NCBI
+accession: GCA_000470725.1
+taxon_id: 5661
+species: Leishmania donovani
+strain: BHU 1220
+assembly_name: BHU1220
+assembly_level: Chromosome
+release_date: '2013-09-30'
+stats:
+  num_bases: 32414853
+  num_ungapped: 31204622
+  num_scaffolds: 36
+  num_contigs: 2266
+  gc_percent: 59.49
+  scaffold_n50: 1024085
+  scaffold_l50: 11
+  contig_n50: 41904
+  contig_l50: 207
+  num_ambiguous: 1212985
+provenance:
+  bioproject: PRJNA192928
+  biosample: SAMN01974509
+  sequencing_technology: Illumina HiSeq
+  assembler: Bowtie v. 0.12.9
+date_added: '2026-09-14'
