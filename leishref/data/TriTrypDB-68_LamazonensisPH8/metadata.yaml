@@ -1,0 +1,41 @@
+identifier: TriTrypDB-68_LamazonensisPH8
+source: TriTrypDB
+species: Leishmania amazonensis
+strain: PH8
+assembly_level: chromosome
+release_date: '2023-07-01'
+
+files:
+  fasta: TriTrypDB-68_LamazonensisPH8_Genome.fasta
+
+checksums:
+  fasta: null
+
+stats:
+  gc_percent: 59.2
+
+tritrypdb:
+  release: 68
+  source_url: "https://tritrypdb.org/tritrypdb/app"
+  downloaded: '2026-09-14'
+
+provenance:
+  original_assembly: null
+  original_source: TriTrypDB
+  bioproject: null
+  sequencing_paper: "Goes et al. 2023"
+  sequencing_pmid: "37263313"
+  tritrypdb_pmid: "36656904"
+  zenodo_deposition: "https://zenodo.org/records/18755023"
+
+license:
+  name: Public Domain
+  source: VEuPathDB
+  note: "TriTrypDB data are provided freely for public use per VEuPathDB policy"
+
+date_added: '2026-09-14'
+notes: |
+  Genome sequence obtained from TriTrypDB release 68.
+  TriTrypDB is part of the VEuPathDB resource.
+  This is a redistribution of the publicly released TriTrypDB reference sequence.
+  For CDSs and protein annotations, see Zenodo record 18755023.
