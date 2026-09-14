@@ -5,8 +5,6 @@ import tempfile
 from pathlib import Path
 from typing import Optional, Set
 
-from leishref.checksums import contig_count, md5_file
-
 
 class RagtagError(Exception):
     pass

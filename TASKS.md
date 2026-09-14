@@ -17,7 +17,10 @@
 - [x] Ragtag scaffolding with AGP-based cleaning (chrom-anchored plus kinetoplast)
 - [x] Zenodo publishing, sandbox kept separate from production
 - [x] AGP derivation and `apply_agp` reconstruction
-- [x] Genome statistics (num_bases, num_contigs, gc_percent), complete for all 17 entries
+- [x] Genome statistics in one pass: num_bases, num_contigs, gc_percent, contig_n50,
+      num_ambiguous, num_gaps -- complete for all 17 entries
+- [x] Suggested aliases on `download` and `info`
+- [x] `dev add --technology/--assembler`; sequencing technology recorded for 15 of 17
 
 ## In Progress / High Priority 🚧
 

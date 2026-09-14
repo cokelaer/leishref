@@ -14,6 +14,9 @@ stats:
   num_bases: 32959864
   num_contigs: 36
   gc_percent: 59.75
+  contig_n50: 1067468
+  num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA450813
   biosample: SAMN08948132

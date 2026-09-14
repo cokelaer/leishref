@@ -84,6 +84,9 @@ stats:
   num_bases: 32959864
   num_contigs: 36
   gc_percent: 59.75
+  contig_n50: 1067468
+  num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA450813
   biosample: SAMN08948132
@@ -93,6 +96,15 @@ date_added: '2026-09-11'
 
 The directory is named by accession where there is one. There is no separate index to
 keep in sync: the directory tree *is* the catalog.
+
+`gc_percent` excludes ambiguous bases, so it reports the composition of sequence that was
+actually resolved rather than being diluted by gaps. `num_gaps` counts runs of N rather
+than N bases, so it says how many joins or unknown stretches a sequence contains, and
+`contig_n50` is what separates a chromosome-level assembly from a heap of contigs.
+
+`provenance` is free-form. NCBI supplies bioproject, biosample and sequencing technology
+where it has them; `dev add` takes `--technology` and `--assembler`, and anything else
+useful can simply be added to the file.
 
 `source` says where `download` fetches a genome from, not who assembled it:
 
@@ -115,6 +127,21 @@ which it becomes retrievable by anyone else.
 
 `--alias` is required. It is the name the genome takes on your machine: the directory
 under `data/`, and the symlink you will actually type.
+
+`--alias` is required, but leishref proposes one rather than leaving you to invent it:
+
+```console
+$ leishref download GCA_000410715.1
+--alias is required: it names this genome in your local database,
+becoming the directory under data/ and the symlink you will type.
+
+  leishref download GCA_000410715.1 --alias Ltrop.ncbi.L590
+```
+
+The suggestion is `<Lspec>.<source>.<discriminator>`, where the discriminator is the
+strain when one is known -- including strains NCBI hides in `assembly_name` because it
+left the strain field empty -- and the accession otherwise. `leishref info <name>` shows
+it too. Take it or pick your own.
 
 ```console
 $ leishref download GCA_000410715.1 --alias Ltrop.L590
@@ -167,10 +194,12 @@ $ leishref search donovani
   GCA_001989975.1      Leishmania donovani       NCBI    32.2 Mb   36 seqs
   ...
 
-$ leishref search tropica zenodo
-4 matches for 'tropica zenodo'
+$ leishref search tropica
+8 matches for 'tropica'
 
-  Ltropica.Ld1S.scaffold.flye    Leishmania tropica CDC  Zenodo      33.6 Mb  76 seqs  [zenodo]
+  GCA_000410715.1              Leishmania tropica L590  NCBI    33.0 Mb    448 seqs  N50 303 kb
+  GCA_048773145.2              Leishmania tropica       NCBI    35.8 Mb  26199 seqs   N50 4 kb
+  Ltropica.Ld1S.scaffold.flye  Leishmania tropica CDC   Zenodo  33.6 Mb     76 seqs  N50 1.2 Mb
   ...
 ```
 
@@ -201,7 +230,8 @@ Exits non-zero on a missing file or a checksum mismatch, so it can gate CI or ru
 leishref dev fetch GCA_000410715.1 --alias Ltrop.L590
 
 # Register your own assembly
-leishref dev add assembly.fa --alias Ltrop.flye --species "Leishmania tropica"
+leishref dev add assembly.fa --alias Ltrop.flye --species "Leishmania tropica" \
+  --technology "PacBio RS II" --assembler Flye
 
 # Scaffold against an installed reference
 leishref dev scaffold --query flye.fa --reference Ltrop.L590 --alias Ltrop.flye --clean

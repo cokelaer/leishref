@@ -165,3 +165,35 @@ def test_search_flags_installed_genomes(tmp_path):
 
     result = run(["search", origin.identifier], tmp_path)
     assert "installed as mine" in result.output
+
+
+def test_download_without_an_alias_suggests_one(tmp_path):
+    result = run(["download", "GCA_000410715.1"], tmp_path)
+
+    assert result.exit_code == 2
+    assert "--alias is required" in result.output
+    assert "--alias Ltrop.ncbi.L590" in result.output
+
+
+def test_download_rejects_an_unknown_name_before_asking_for_an_alias(tmp_path):
+    result = run(["download", "nonexistent"], tmp_path)
+    assert result.exit_code == 1
+    assert "Not in catalog" in result.output
+
+
+def test_info_suggests_an_alias_for_a_genome_not_installed(installed):
+    base, _ = installed
+    result = run(["info", "GCA_000410715.1"], base)
+    assert "suggested alias: Ltrop.ncbi.L590" in result.output
+
+
+def test_info_does_not_suggest_an_alias_for_something_installed(installed):
+    base, _ = installed
+    result = run(["info", "Ltrop.flye"], base)
+    assert "suggested alias" not in result.output
+
+
+def test_search_reports_contiguity(installed):
+    base, _ = installed
+    result = run(["search", "GCA_000410715.1"], base)
+    assert "N50" in result.output

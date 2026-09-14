@@ -14,7 +14,10 @@ checksums:
 stats:
   num_bases: 32122061
   num_contigs: 76
-  gc_percent: 59.54
+  gc_percent: 59.58
+  contig_n50: 1043848
+  num_ambiguous: 20333
+  num_gaps: 454
 provenance:
   bioproject: PRJNA12658
   biosample: SAMEA3138175

@@ -15,43 +15,65 @@ def md5_file(fpath: Path) -> str:
     return hash_md5.hexdigest()
 
 
-def sequence_length(fpath: Path) -> int:
-    """Total length of all sequences in fasta file (excluding headers, newlines)."""
-    fpath = Path(fpath)
-    length = 0
-    with open(fpath, "r") as f:
-        in_seq = False
-        for line in f:
-            line = line.strip()
+def genome_stats(fpath: Path) -> dict:
+    """Size, contig count, GC, contig N50, ambiguous bases and gap count, in one pass.
+
+    A gap is a run of N of any length, so the count reflects how many joins or unknown
+    stretches a sequence contains rather than how many bases they span.
+    """
+    lengths = []
+    current = 0
+    gc = 0
+    acgt = 0
+    n_bases = 0
+    gaps = 0
+    in_gap = False
+
+    with open(fpath, "r") as handle:
+        for line in handle:
             if line.startswith(">"):
-                in_seq = True
-            elif in_seq and line:
-                length += len(line)
-    return length
+                if current:
+                    lengths.append(current)
+                current = 0
+                in_gap = False
+                continue
+            seq = line.strip().upper()
+            if not seq:
+                continue
+            current += len(seq)
+            gc += seq.count("G") + seq.count("C")
+            n_here = seq.count("N")
+            n_bases += n_here
+            acgt += len(seq) - n_here
+            if n_here:
+                for char in seq:
+                    if char == "N":
+                        if not in_gap:
+                            gaps += 1
+                            in_gap = True
+                    else:
+                        in_gap = False
+            else:
+                in_gap = False
 
+    if current:
+        lengths.append(current)
 
-def contig_count(fpath: Path) -> int:
-    """Count contigs (headers) in fasta."""
-    fpath = Path(fpath)
-    count = 0
-    with open(fpath, "r") as f:
-        for line in f:
-            if line.startswith(">"):
-                count += 1
-    return count
+    total = sum(lengths)
+    n50 = 0
+    if total:
+        running = 0
+        for length in sorted(lengths, reverse=True):
+            running += length
+            if running >= total / 2:
+                n50 = length
+                break
 
-
-def gc_percent(fpath: Path) -> float:
-    """Calculate GC content percentage."""
-    fpath = Path(fpath)
-    gc_count = 0
-    total_bases = 0
-    with open(fpath, "r") as f:
-        for line in f:
-            if not line.startswith(">"):
-                seq = line.strip().upper()
-                gc_count += seq.count("G") + seq.count("C")
-                total_bases += len(seq)
-    if total_bases == 0:
-        return 0.0
-    return round((gc_count / total_bases) * 100, 2)
+    return {
+        "num_bases": total,
+        "num_contigs": len(lengths),
+        "gc_percent": round(gc / acgt * 100, 2) if acgt else 0.0,
+        "contig_n50": n50,
+        "num_ambiguous": n_bases,
+        "num_gaps": gaps,
+    }

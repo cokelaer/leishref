@@ -5,8 +5,6 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from leishref.checksums import md5_file, sequence_length
-
 TRITRYPDB_BASE = "https://tritrypdb.org/common/downloads/release-68"
 
 

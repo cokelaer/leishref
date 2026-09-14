@@ -10,7 +10,19 @@ stats:
   num_bases: 34460333
   num_contigs: 42
   gc_percent: 59.67
+  contig_n50: 1097036
+  num_ambiguous: 600
+  num_gaps: 6
 provenance:
   zenodo_doi: 10.5281/zenodo.22710153
+  sequencing_technology: PacBio RS II
+  bioproject: PRJNA484340
+  raw_reads_accession: PRJNA484340
+  assembler: PECAT
+  pipeline: LORA 1.0.0
+  reads: filtered
+scaffold:
+  reference_alias: Ld1S
+  tool_version: ragtag.py
 date_added: '2026-09-11'
-notes: backfilled from disk
+notes: 48 contigs before scaffolding; maxicircle 29591 bp

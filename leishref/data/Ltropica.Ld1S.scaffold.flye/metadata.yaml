@@ -9,8 +9,20 @@ checksums:
 stats:
   num_bases: 33637730
   num_contigs: 76
-  gc_percent: 60.01
+  gc_percent: 60.02
+  contig_n50: 1169298
+  num_ambiguous: 6500
+  num_gaps: 65
 provenance:
   zenodo_doi: 10.5281/zenodo.22710142
+  sequencing_technology: PacBio RS II
+  bioproject: PRJNA484340
+  raw_reads_accession: PRJNA484340
+  assembler: Flye
+  pipeline: LORA 1.0.0
+  reads: raw
+scaffold:
+  reference_alias: Ld1S
+  tool_version: ragtag.py
 date_added: '2026-09-11'
-notes: backfilled from disk
+notes: 141 contigs before scaffolding; 36 chromosomes + maxicircle (18975 bp) + 39

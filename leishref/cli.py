@@ -13,9 +13,10 @@ from typing import Optional
 import rich_click as click
 
 from leishref.agp import derive_agp, write_agp
-from leishref.checksums import contig_count, gc_percent, md5_file, sequence_length
+from leishref.checksums import genome_stats, md5_file
 from leishref.links import LinkConflict, link_paths
 from leishref.metadata import CATALOG_DIR, LOCAL_DIR, Genome, catalog, find, local, read_genome, today_iso, write_genome
+from leishref.naming import suggest_alias
 from leishref.ncbi import fetch_fasta_gff, fetch_metadata
 from leishref.scaffold import clean_scaffolded_fasta, run_scaffold
 from leishref.zenodo import (
@@ -45,14 +46,6 @@ def dev():
 
 
 # --------------------------------------------------------------------------- helpers
-
-
-def _stats(fasta: Path) -> dict:
-    return {
-        "num_bases": sequence_length(fasta),
-        "num_contigs": contig_count(fasta),
-        "gc_percent": gc_percent(fasta),
-    }
 
 
 def _link(alias: str, paths, no_link: bool) -> None:
@@ -111,7 +104,7 @@ def _require(genomes, key, what):
 
 @cli.command()
 @click.argument("name")
-@click.option("--alias", required=True, help="Name for this genome in your local database")
+@click.option("--alias", help="Name for this genome in your local database (required)")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
 @click.option("--force", is_flag=True, help="Download again even if already installed")
@@ -129,6 +122,12 @@ def download(name, alias, local_dir, catalog_dir, force, no_link):
     """
     entries = catalog(Path(catalog_dir) if catalog_dir else None)
     genome = _require(entries, name, "catalog")
+
+    if not alias:
+        click.echo("--alias is required: it names this genome in your local database,", err=True)
+        click.echo("becoming the directory under data/ and the symlink you will type.\n", err=True)
+        click.echo(f"  leishref download {name} --alias {suggest_alias(genome)}", err=True)
+        raise SystemExit(2)
 
     target = Path(local_dir) / alias
     if (target / "metadata.yaml").exists() and not force:
@@ -198,6 +197,8 @@ def info(name, local_dir, catalog_dir):
         click.echo(yaml.safe_dump(genome.to_dict(), sort_keys=False, default_flow_style=False).rstrip())
         if genome.path:
             click.echo(f"\npath: {genome.path}")
+        if find(installed, name) is None:
+            click.echo(f"suggested alias: {suggest_alias(genome)}")
         return
 
     click.echo(f"Catalog: {len(entries)} genomes  ({CATALOG_DIR})")
@@ -268,10 +269,16 @@ def search(terms, local_dir, catalog_dir, installed, long_form):
         size = f"{bases / 1e6:.1f} Mb" if bases else ""
         contigs = genome.stats.get("num_contigs")
         seqs = f"{contigs} seqs" if contigs else ""
+        n50 = genome.stats.get("contig_n50")
+        # N50 is the one number that separates a chromosome-level assembly from a heap of contigs.
+        contiguity = f"N50 {n50 / 1e6:.1f} Mb" if n50 and n50 >= 1e6 else (f"N50 {n50 / 1e3:.0f} kb" if n50 else "")
         # The source column already says Zenodo, so only installation is worth flagging.
         suffix = f"  [installed as {by_origin[genome.identifier]}]" if genome.identifier in by_origin else ""
 
-        click.echo(f"  {genome.identifier:<38} {organism:<28} {genome.source or '?':<11} {size:>8} {seqs:>10}{suffix}")
+        click.echo(
+            f"  {genome.identifier:<38} {organism:<28} {genome.source or '?':<8}"
+            f" {size:>8} {seqs:>10} {contiguity:>11}{suffix}"
+        )
 
 
 @cli.command()
@@ -389,7 +396,7 @@ def fetch(accession, alias, species, strain, catalog_dir, local_dir, force, no_l
             assembly_name=meta.get("assembly_name"),
             files={k: v.name for k, v in (("fasta", fasta), ("gff", gff)) if v},
             checksums={k: md5_file(v) for k, v in (("fasta", fasta), ("gff", gff)) if v},
-            stats=_stats(fasta),
+            stats=genome_stats(fasta),
             provenance={
                 k: v
                 for k, v in (
@@ -417,10 +424,12 @@ def fetch(accession, alias, species, strain, catalog_dir, local_dir, force, no_l
 @click.option("--alias", required=True, help="Name for this genome, in the catalog and locally")
 @click.option("--species", help="Species name")
 @click.option("--strain", help="Strain name")
+@click.option("--technology", help="Sequencing technology, e.g. 'PacBio RS II'")
+@click.option("--assembler", help="Assembler used, e.g. Flye")
 @click.option("--catalog-dir", type=click.Path(), help="Write the entry here instead")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
-def add(fasta, gff, alias, species, strain, catalog_dir, local_dir, no_link):
+def add(fasta, gff, alias, species, strain, technology, assembler, catalog_dir, local_dir, no_link):
     """Add a local assembly to the catalog and install it locally.
 
     Examples:
@@ -437,7 +446,8 @@ def add(fasta, gff, alias, species, strain, catalog_dir, local_dir, no_link):
         strain=strain,
         files={k: v.name for k, v in (("fasta", fasta), ("gff", gff)) if v},
         checksums={k: md5_file(v) for k, v in (("fasta", fasta), ("gff", gff)) if v},
-        stats=_stats(fasta),
+        stats=genome_stats(fasta),
+        provenance={k: v for k, v in (("sequencing_technology", technology), ("assembler", assembler)) if v},
         date_added=today_iso(),
     )
 
@@ -499,7 +509,7 @@ def scaffold(query, reference, alias, clean, catalog_dir, local_dir, no_link):
             strain=ref.strain,
             files={"fasta": result.name},
             checksums={"fasta": md5_file(result)},
-            stats=_stats(result),
+            stats=genome_stats(result),
             provenance={"agp_filename": agp.name},
             scaffold={
                 "reference_alias": reference,
