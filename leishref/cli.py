@@ -48,6 +48,34 @@ def dev():
 # --------------------------------------------------------------------------- helpers
 
 
+FASTA_SUFFIXES = (".fna", ".fa", ".fasta")
+
+
+def _classify(paths) -> dict:
+    """Sort written files into the roles metadata.yaml records."""
+    roles = {}
+    for path in paths:
+        if path is None:
+            continue
+        suffix = Path(path).suffix.lower()
+        if suffix in FASTA_SUFFIXES and "fasta" not in roles:
+            roles["fasta"] = Path(path)
+        elif suffix == ".gff" and "gff" not in roles:
+            roles["gff"] = Path(path)
+    return roles
+
+
+def _organism(genome) -> str:
+    """'Leishmania donovani - BPK282A1', or just the species when no strain is known."""
+    species = genome.species or "?"
+    return f"{species} - {genome.strain}" if genome.strain else species
+
+
+def _by_organism(genomes: list) -> list:
+    """Group a listing by organism rather than by accession, which sorts arbitrarily."""
+    return sorted(genomes, key=lambda g: ((g.species or "~").lower(), (g.strain or "").lower(), g.identifier))
+
+
 def _link(alias: str, paths, no_link: bool) -> None:
     if no_link:
         return
@@ -73,6 +101,12 @@ def _install(genome: Genome, alias: str, sources, local_root: Path, move: bool =
         genome.provenance = dict(genome.provenance)
         genome.provenance["catalog_id"] = genome.identifier
     genome.identifier = alias
+
+    # Entries imported from NCBI's summary carry no filenames, because nothing was
+    # downloaded to name. Record what actually arrived so verify and link can see it.
+    roles = _classify(sources)
+    if roles:
+        genome.files = {kind: path.name for kind, path in roles.items()}
 
     for path in sources:
         if path is None:
@@ -161,17 +195,29 @@ def download(name, alias, local_dir, catalog_dir, force, no_link):
 
     click.echo(f"Installed into {installed}")
 
+    local_genome = read_genome(installed)
     bad = False
-    for kind, path, recorded in read_genome(installed).file_paths():
+    computed = {}
+    for kind, path, recorded in local_genome.file_paths():
         if not path.exists():
             continue
-        if recorded and md5_file(path) != recorded:
+        digest = md5_file(path)
+        computed[kind] = digest
+        if not recorded:
+            click.echo(f"  md5 recorded: {path.name}")
+        elif digest == recorded:
+            click.echo(f"  md5 OK: {path.name}")
+        else:
             click.echo(f"  md5 MISMATCH: {path.name}", err=True)
             bad = True
-        elif recorded:
-            click.echo(f"  md5 OK: {path.name}")
 
-    _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
+    # A catalog entry built from NCBI's summary has no checksum until something has
+    # actually fetched the files; keep what we just computed so verify has a baseline.
+    if computed and not local_genome.checksums:
+        local_genome.checksums = computed
+        write_genome(installed, local_genome)
+
+    _link(alias, [p for _, p, _ in local_genome.file_paths() if p.exists()], no_link)
     if bad:
         raise SystemExit(1)
 
@@ -202,15 +248,13 @@ def info(name, local_dir, catalog_dir):
         return
 
     click.echo(f"Catalog: {len(entries)} genomes  ({CATALOG_DIR})")
-    for genome in entries:
-        species = genome.species or "?"
-        strain = f" {genome.strain}" if genome.strain else ""
+    for genome in _by_organism(entries):
         doi = "  zenodo" if genome.zenodo_doi else ""
-        click.echo(f"  {genome.identifier:<38} {species}{strain}{doi}")
+        click.echo(f"  {genome.identifier:<38} {_organism(genome)}{doi}")
 
     click.echo(f"\nLocal: {len(installed)} installed  ({Path(local_dir)})")
-    for genome in installed:
-        click.echo(f"  {genome.identifier:<38} {genome.species or '?'}")
+    for genome in _by_organism(installed):
+        click.echo(f"  {genome.identifier:<38} {_organism(genome)}")
     if not installed:
         click.echo("  (nothing yet -- 'leishref download <name> --alias <alias>')")
 
@@ -263,8 +307,14 @@ def search(terms, local_dir, catalog_dir, installed, long_form):
             click.echo("")
         return
 
-    for genome in matches:
-        organism = " ".join(filter(None, (genome.species, genome.strain))) or "?"
+    ordered = _by_organism(matches)
+    # Size the two variable columns to what is actually being shown: a search for one
+    # species should not be padded out to the width of the longest name in the catalog.
+    id_width = min(max(len(g.identifier) for g in ordered), 38)
+    organism_width = min(max(len(_organism(g)) for g in ordered), 44)
+
+    for genome in ordered:
+        organism = _organism(genome)
         year = (genome.release_date or "")[:4]
         level = (genome.assembly_level or "").replace("Complete Genome", "Complete")
 
@@ -280,8 +330,8 @@ def search(terms, local_dir, catalog_dir, installed, long_form):
         suffix = f"  [installed as {by_origin[genome.identifier]}]" if genome.identifier in by_origin else ""
 
         click.echo(
-            f"  {genome.identifier:<38} {organism[:30]:<31} {genome.source or '?':<7} {year:<5}"
-            f" {level:<11} {size:>8} {count:>10} {contiguity:>9}{suffix}"
+            f"  {genome.identifier:<{id_width}}  {organism[:organism_width]:<{organism_width}}"
+            f" {genome.source or '?':<7} {year:<5} {level:<11} {size:>8} {count:>10} {contiguity:>9}{suffix}"
         )
 
 

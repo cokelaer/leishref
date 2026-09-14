@@ -102,10 +102,19 @@ def test_shipped_catalog_identifiers_are_unique():
     assert len(set(identifiers)) == len(identifiers)
 
 
-def test_shipped_catalog_records_files_and_checksums():
+def test_a_checksum_is_never_recorded_without_the_file_it_belongs_to():
+    """Entries imported from NCBI's summary have neither yet; having one without the
+    other would mean verify could not tell what it was checking."""
     for genome in catalog():
-        assert genome.fasta, f"{genome.identifier} has no fasta recorded"
-        assert genome.checksums.get("fasta"), f"{genome.identifier} has no fasta checksum"
+        for kind in ("fasta", "gff"):
+            if genome.checksums.get(kind):
+                assert genome.files.get(kind), f"{genome.identifier}: {kind} checksum but no filename"
+
+
+def test_entries_that_name_files_are_downloadable():
+    for genome in catalog():
+        if genome.fasta:
+            assert genome.accession or genome.zenodo_doi, f"{genome.identifier} names a file but has no source"
 
 
 def test_haystack_covers_identity_and_provenance(genome):

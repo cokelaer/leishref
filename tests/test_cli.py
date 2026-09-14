@@ -197,3 +197,70 @@ def test_search_reports_contiguity(installed):
     base, _ = installed
     result = run(["search", "GCA_000410715.1"], base)
     assert "N50" in result.output
+
+
+def test_organism_joins_species_and_strain_with_a_dash():
+    from leishref.cli import _organism
+
+    assert _organism(Genome(species="Leishmania donovani", strain="BPK282A1")) == "Leishmania donovani - BPK282A1"
+
+
+def test_organism_omits_the_dash_when_no_strain_is_known():
+    from leishref.cli import _organism
+
+    assert _organism(Genome(species="Leishmania donovani")) == "Leishmania donovani"
+    assert _organism(Genome()) == "?"
+
+
+def test_listings_sort_by_species_then_strain():
+    from leishref.cli import _by_organism
+
+    entries = [
+        Genome(identifier="c", species="Leishmania tropica", strain="B"),
+        Genome(identifier="a", species="Leishmania donovani", strain="Z"),
+        Genome(identifier="b", species="Leishmania donovani", strain="A"),
+    ]
+    assert [g.identifier for g in _by_organism(entries)] == ["b", "a", "c"]
+
+
+def test_entries_without_a_species_sort_last():
+    from leishref.cli import _by_organism
+
+    entries = [Genome(identifier="unknown"), Genome(identifier="named", species="Leishmania donovani")]
+    assert [g.identifier for g in _by_organism(entries)] == ["named", "unknown"]
+
+
+def test_info_lists_the_catalog_in_organism_order(installed):
+    base, _ = installed
+    result = run(["info"], base)
+
+    listed = [line for line in result.output.splitlines() if line.startswith("  GC")]
+    organisms = [line.split(None, 1)[1] for line in listed]
+    assert organisms == sorted(organisms, key=str.lower)
+
+
+def test_search_output_shows_the_dash(installed):
+    base, _ = installed
+    result = run(["search", "BPK282A1"], base)
+    assert "Leishmania donovani - BPK282A1" in result.output
+
+
+def test_install_records_the_files_it_wrote(tmp_path):
+    """A catalog entry imported from NCBI's summary names no files; installing one has
+    to record what actually arrived, or verify and link cannot see it."""
+    from leishref.cli import _install
+
+    source = tmp_path / "GCA_9_genomic.fna"
+    source.write_text(">c1\nACGT\n")
+    gff = tmp_path / "GCA_9_genomic.gff"
+    gff.write_text("##gff-version 3\n")
+
+    catalog_entry = Genome(identifier="GCA_9.1", source="NCBI", accession="GCA_9.1")
+    assert catalog_entry.files == {}
+
+    target = _install(catalog_entry, "mine", [source, gff], tmp_path / "data")
+    written = read_genome(target)
+
+    assert written.files == {"fasta": "GCA_9_genomic.fna", "gff": "GCA_9_genomic.gff"}
+    assert written.identifier == "mine"
+    assert written.provenance["catalog_id"] == "GCA_9.1"
