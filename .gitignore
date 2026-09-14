@@ -47,3 +47,4 @@ AGP/
 # Claude Code settings and project-specific task tracking
 .claude/
 TASKS.md
+docs/_build/
