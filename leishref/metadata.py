@@ -169,9 +169,50 @@ def local(root: Optional[Path] = None) -> list[Genome]:
     return list(iter_genomes(root or LOCAL_DIR))
 
 
-def find(genomes: list[Genome], key: str) -> Optional[Genome]:
-    """Match on directory name, accession, or fasta filename."""
+_ALIASES_CACHE = None
+
+
+def load_aliases(root: Optional[Path] = None) -> dict[str, str]:
+    """Load common aliases from aliases.txt (alias -> accession mapping)."""
+    global _ALIASES_CACHE
+    if _ALIASES_CACHE is not None:
+        return _ALIASES_CACHE
+
+    aliases = {}
+    aliases_file = (root or CATALOG_DIR) / "aliases.txt"
+    if aliases_file.exists():
+        with open(aliases_file) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split("\t")
+                if len(parts) == 2:
+                    alias, accession = parts
+                    aliases[alias.strip()] = accession.strip()
+    _ALIASES_CACHE = aliases
+    return aliases
+
+
+def find(genomes: list[Genome], key: str, catalog_root: Optional[Path] = None) -> Optional[Genome]:
+    """Match on directory name, accession, alias, or fasta filename."""
     for genome in genomes:
         if key in (genome.identifier, genome.accession, genome.fasta):
             return genome
+    # Check aliases
+    aliases = load_aliases(catalog_root)
+    if key in aliases:
+        accession = aliases[key]
+        for genome in genomes:
+            if accession == genome.accession:
+                return genome
+    return None
+
+
+def get_catalog_alias(accession: str, catalog_root: Optional[Path] = None) -> Optional[str]:
+    """Get the catalog alias for an accession, if one exists."""
+    aliases = load_aliases(catalog_root)
+    for alias, acc in aliases.items():
+        if acc == accession:
+            return alias
     return None

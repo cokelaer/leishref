@@ -1,0 +1,32 @@
+identifier: Ltrop.ncbi.CDC
+source: NCBI
+accession: GCA_014139745.1
+taxon_id: 5666
+species: Leishmania tropica
+strain: CDC216-162
+assembly_name: CDC_Ltropica216-162_v1
+assembly_level: Chromosome
+release_date: '2020-08-14'
+files:
+  fasta: GCA_014139745.1_CDC_Ltropica216-162_v1_genomic.fna
+checksums:
+  fasta: 383d5fce29b2bc8c9e6451c0a7df20e0
+stats:
+  num_bases: 32700668
+  num_ungapped: 32700668
+  num_scaffolds: 43
+  num_contigs: 43
+  gc_percent: 59.67
+  scaffold_n50: 1070514
+  scaffold_l50: 11
+  contig_n50: 1070514
+  contig_l50: 11
+  num_ambiguous: 0
+  num_gaps: 0
+provenance:
+  bioproject: PRJNA484340
+  biosample: SAMN09984808
+  sequencing_technology: PacBio RSII; Illumina MiSeq
+  assembler: Flye v. 2.4
+  catalog_id: GCA_014139745.1
+date_added: '2026-09-14'

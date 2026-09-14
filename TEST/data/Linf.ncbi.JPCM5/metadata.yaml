@@ -1,0 +1,32 @@
+identifier: Linf.ncbi.JPCM5
+source: NCBI
+accession: GCF_000002875.2
+taxon_id: 435258
+species: Leishmania infantum
+strain: JPCM5
+assembly_name: ASM287v2
+assembly_level: Chromosome
+release_date: '2011-11-08'
+files:
+  fasta: GCF_000002875.2_ASM287v2_genomic.fna
+  gff: GCF_000002875.2_ASM287v2_genomic.gff
+checksums:
+  fasta: 562545239846303869ab080646cd632d
+  gff: 7f9fffc4473e4ebeff1f90939c9c4828
+stats:
+  num_bases: 32122061
+  num_ungapped: 32102100
+  num_scaffolds: 76
+  num_contigs: 278
+  gc_percent: 59.58
+  scaffold_n50: 1043848
+  scaffold_l50: 11
+  contig_n50: 302093
+  contig_l50: 30
+  num_ambiguous: 20333
+  num_gaps: 202
+provenance:
+  bioproject: PRJNA12658
+  biosample: SAMEA3138175
+  catalog_id: GCF_000002875.2
+date_added: '2026-09-11'
