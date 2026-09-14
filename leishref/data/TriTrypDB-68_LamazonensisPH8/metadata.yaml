@@ -6,10 +6,10 @@ assembly_level: chromosome
 release_date: '2023-07-01'
 
 files:
-  fasta: TriTrypDB-68_LamazonensisPH8_Genome.fasta
+  fasta: TriTrypDB-68_LamazonensisPH8_AnnotatedCDSs.fasta
 
 checksums:
-  fasta: null
+  fasta: "227eef98088369aaeb5b482b8ce62433"
 
 stats:
   gc_percent: 59.2
@@ -26,6 +26,7 @@ provenance:
   sequencing_paper: "Goes et al. 2023"
   sequencing_pmid: "37263313"
   tritrypdb_pmid: "36656904"
+  zenodo_doi: "10.5281/zenodo.18755023"
   zenodo_deposition: "https://zenodo.org/records/18755023"
 
 license:
