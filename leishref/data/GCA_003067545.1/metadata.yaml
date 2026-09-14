@@ -3,20 +3,29 @@ source: NCBI
 accession: GCA_003067545.1
 taxon_id: 5666
 species: Leishmania tropica
+strain: MHOM/LB /2017/IK
 assembly_name: MHOM_LB _2017_IK
+assembly_level: Scaffold
+release_date: '2018-04-23'
 files:
   fasta: GCA_003067545.1_MHOM_LB_2017_IK_genomic.fna
 checksums:
   fasta: 22e0d2f3ed135640d94588257be4f378
 stats:
   num_bases: 32139927
-  num_contigs: 9499
+  num_ungapped: 30800879
+  num_scaffolds: 9499
+  num_contigs: 20898
   gc_percent: 59.74
-  contig_n50: 13854
+  scaffold_n50: 13854
+  scaffold_l50: 647
+  contig_n50: 3299
+  contig_l50: 2626
   num_ambiguous: 1339785
-  num_gaps: 11623
+  num_gaps: 11399
 provenance:
   bioproject: PRJNA438080
   biosample: SAMN08693283
   sequencing_technology: Illumina
+  assembler: CLC NGS Cell v. 8.5
 date_added: '2026-09-11'

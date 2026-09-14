@@ -68,12 +68,15 @@ leishref/data/
 ```
 
 ```yaml
-identifier: GCA_003719575.1
+identifier: GCA_000227135.2
 source: NCBI
-accession: GCA_003719575.1
+accession: GCA_000227135.2
 taxon_id: 5661
 species: Leishmania donovani
-assembly_name: ASM371957v1
+strain: BPK282A1
+assembly_name: ASM22713v2
+assembly_level: Chromosome
+release_date: '2011-12-13'
 files:
   fasta: GCA_003719575.1_ASM371957v1_genomic.fna
   gff: GCA_003719575.1_ASM371957v1_genomic.gff
@@ -81,16 +84,20 @@ checksums:
   fasta: 89dbdf0dd945c963164f92fcfbe16ac7
   gff: ec6b6d0505165183095938e031ca28b8
 stats:
-  num_bases: 32959864
-  num_contigs: 36
-  gc_percent: 59.75
-  contig_n50: 1067468
-  num_ambiguous: 0
-  num_gaps: 0
+  num_bases: 32444968
+  num_ungapped: 31252241
+  num_scaffolds: 36
+  num_contigs: 2152
+  gc_percent: 59.5
+  scaffold_n50: 1024085
+  scaffold_l50: 11
+  contig_n50: 45436
+  contig_l50: 197
+  num_ambiguous: 1192833
+  num_gaps: 2116
 provenance:
-  bioproject: PRJNA450813
-  biosample: SAMN08948132
-  sequencing_technology: PacBio; Illumina MiSeq
+  bioproject: PRJEA61817
+  biosample: SAMEA2271930
 date_added: '2026-09-11'
 ```
 
@@ -106,11 +113,30 @@ useful can simply be added to the file.
 | field | definition |
 |---|---|
 | `num_bases` | total length of all sequences, ambiguous bases included |
-| `num_contigs` | number of records in the FASTA |
+| `num_ungapped` | `num_bases` less the bases inside gaps |
+| `num_scaffolds` | number of records in the FASTA |
+| `num_contigs` | number of gapless blocks, counted across all scaffolds |
 | `gc_percent` | `(G + C) / (A + C + G + T)` — **N excluded from the denominator** |
-| `contig_n50` | length of the contig at which the cumulative sorted length passes half the assembly |
+| `scaffold_n50` / `contig_n50` | length at which the cumulative sorted length passes half the assembly |
+| `scaffold_l50` / `contig_l50` | how many sequences that took |
 | `num_ambiguous` | total count of N bases |
-| `num_gaps` | number of *runs* of N, not the number of N bases |
+| `num_gaps` | number of *runs* of N at least 10 long |
+
+These reproduce NCBI's own `assembly_stats` exactly, field for field, which is how the
+gap rule below was settled.
+
+**Scaffolds are not contigs.** A FASTA record is a scaffold; the gapless blocks inside it
+are contigs. Counting records and calling the result contigs understates a gapped
+assembly badly — `GCA_000227135.2` has 36 records but 2152 contigs, and its scaffold N50
+of 1.02 Mb drops to 45 kb at contig level. Both numbers are true; they answer different
+questions.
+
+**A gap is a run of at least 10 N.** Shorter runs are ambiguous bases inside a contig:
+they count towards `num_ambiguous` but do not split a contig or reduce `num_ungapped`.
+This is NCBI's rule. In `GCA_000227135.2` there are 25 runs shorter than 10, totalling
+106 bases, and that 106 is exactly the difference between NCBI's `total_ungapped_length`
+and the plain non-N base count. `min_gap` is adjustable if you need a different
+convention.
 
 **`gc_percent` excludes ambiguous bases.** This is the usual definition, but it is worth
 stating because the alternative — dividing by every base, N included — is easy to
@@ -128,6 +154,10 @@ genus sits near 59–60% GC. Counting N in the denominator gave:
 | `GCA_000410715.1` | 1840 | 56.88% | 59.90% |
 | `GCA_001989975.1` | 2346 | 52.68% | 59.44% |
 
+NCBI's published `gc_percent` is rounded to the nearest 0.5, so it will not match to two
+decimals; computing from its own `gc_count` and `atgc_count` gives the same figures
+leishref reports.
+
 Gap-free assemblies are unaffected, so the error hides until you compare across
 assemblies of differing quality — at which point it looks like a biological difference
 between strains. It is not: it is a 2346-gap assembly. Excluding N puts the whole catalog
@@ -142,9 +172,8 @@ regions are in here" rather than "how much is missing" — that is `num_ambiguou
 spanning several wrapped lines still counts once, and a run at the end of one contig is
 not merged with one at the start of the next.
 
-**`contig_n50`** is what separates a chromosome-level assembly from a heap of contigs,
-and is more informative than `num_contigs` alone: `GCA_000410715.1` has 448 sequences at
-N50 303 kb, while the scaffolds here have 76 at N50 1.2 Mb.
+**N50 and L50** separate a chromosome-level assembly from a heap of contigs better than a
+record count does. `search` shows the scaffold figures; both levels are in the record.
 
 `source` says where `download` fetches a genome from, not who assembled it:
 

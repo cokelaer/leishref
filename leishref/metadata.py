@@ -37,6 +37,8 @@ class Genome:
     species: Optional[str] = None
     strain: Optional[str] = None
     assembly_name: Optional[str] = None
+    assembly_level: Optional[str] = None
+    release_date: Optional[str] = None
     release_version: Optional[str] = None
     files: dict = field(default_factory=dict)
     checksums: dict = field(default_factory=dict)
@@ -109,6 +111,8 @@ class Genome:
             "species": self.species,
             "strain": self.strain,
             "assembly_name": self.assembly_name,
+            "assembly_level": self.assembly_level,
+            "release_date": self.release_date,
             "release_version": self.release_version,
             "files": self.files,
             "checksums": self.checksums,

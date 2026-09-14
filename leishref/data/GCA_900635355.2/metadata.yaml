@@ -4,6 +4,8 @@ accession: GCA_900635355.2
 taxon_id: 5661
 species: Leishmania donovani
 assembly_name: LDHU3_new
+assembly_level: Complete Genome
+release_date: '2020-06-28'
 files:
   fasta: GCA_900635355.2_LDHU3_new_genomic.fna
   gff: GCA_900635355.2_LDHU3_new_genomic.gff
@@ -12,13 +14,19 @@ checksums:
   gff: f745df42cd16d7f2cf0a0ccf1ec9158d
 stats:
   num_bases: 33035865
+  num_ungapped: 33035865
+  num_scaffolds: 36
   num_contigs: 36
   gc_percent: 59.77
+  scaffold_n50: 1062302
+  scaffold_l50: 11
   contig_n50: 1062302
+  contig_l50: 11
   num_ambiguous: 0
   num_gaps: 0
 provenance:
   bioproject: PRJEB23341
   biosample: SAMEA104389403
   sequencing_technology: PACBIO
+  assembler: HGAP
 date_added: '2026-09-11'

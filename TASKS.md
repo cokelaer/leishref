@@ -17,8 +17,11 @@
 - [x] Ragtag scaffolding with AGP-based cleaning (chrom-anchored plus kinetoplast)
 - [x] Zenodo publishing, sandbox kept separate from production
 - [x] AGP derivation and `apply_agp` reconstruction
-- [x] Genome statistics in one pass: num_bases, num_contigs, gc_percent, contig_n50,
-      num_ambiguous, num_gaps -- complete for all 17 entries
+- [x] Genome statistics at scaffold and contig level: num_scaffolds vs num_contigs,
+      scaffold/contig N50 and L50, num_ungapped, num_ambiguous, num_gaps.
+      Reproduces NCBI's assembly_stats exactly on all 13 NCBI entries
+- [x] strain, assembly_level and release_date pulled from NCBI (strain lives in
+      organism.infraspecific_names, not organism_name)
 - [x] Suggested aliases on `download` and `info`
 - [x] `dev add --technology/--assembler`; sequencing technology recorded for 15 of 17
 

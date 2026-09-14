@@ -265,19 +265,23 @@ def search(terms, local_dir, catalog_dir, installed, long_form):
 
     for genome in matches:
         organism = " ".join(filter(None, (genome.species, genome.strain))) or "?"
+        year = (genome.release_date or "")[:4]
+        level = (genome.assembly_level or "").replace("Complete Genome", "Complete")
+
         bases = genome.stats.get("num_bases")
         size = f"{bases / 1e6:.1f} Mb" if bases else ""
-        contigs = genome.stats.get("num_contigs")
-        seqs = f"{contigs} seqs" if contigs else ""
-        n50 = genome.stats.get("contig_n50")
-        # N50 is the one number that separates a chromosome-level assembly from a heap of contigs.
-        contiguity = f"N50 {n50 / 1e6:.1f} Mb" if n50 and n50 >= 1e6 else (f"N50 {n50 / 1e3:.0f} kb" if n50 else "")
-        # The source column already says Zenodo, so only installation is worth flagging.
+        scaffolds = genome.stats.get("num_scaffolds")
+        count = f"{scaffolds} scaf" if scaffolds else ""
+
+        # Scaffold N50 is the headline contiguity figure; contig N50 is in the record.
+        n50 = genome.stats.get("scaffold_n50")
+        contiguity = f"N50 {n50 / 1e6:.1f}M" if n50 and n50 >= 1e6 else (f"N50 {n50 / 1e3:.0f}k" if n50 else "")
+
         suffix = f"  [installed as {by_origin[genome.identifier]}]" if genome.identifier in by_origin else ""
 
         click.echo(
-            f"  {genome.identifier:<38} {organism:<28} {genome.source or '?':<8}"
-            f" {size:>8} {seqs:>10} {contiguity:>11}{suffix}"
+            f"  {genome.identifier:<38} {organism[:30]:<31} {genome.source or '?':<7} {year:<5}"
+            f" {level:<11} {size:>8} {count:>10} {contiguity:>9}{suffix}"
         )
 
 
@@ -392,8 +396,10 @@ def fetch(accession, alias, species, strain, catalog_dir, local_dir, force, no_l
             accession=accession,
             taxon_id=meta.get("taxon_id"),
             species=species or (" ".join(organism[:2]) if len(organism) >= 2 else None),
-            strain=strain or (" ".join(organism[2:]) or None),
+            strain=strain or meta.get("strain") or (" ".join(organism[2:]) or None),
             assembly_name=meta.get("assembly_name"),
+            assembly_level=meta.get("assembly_level"),
+            release_date=meta.get("release_date"),
             files={k: v.name for k, v in (("fasta", fasta), ("gff", gff)) if v},
             checksums={k: md5_file(v) for k, v in (("fasta", fasta), ("gff", gff)) if v},
             stats=genome_stats(fasta),
@@ -403,6 +409,7 @@ def fetch(accession, alias, species, strain, catalog_dir, local_dir, force, no_l
                     ("bioproject", meta.get("bioproject")),
                     ("biosample", meta.get("biosample")),
                     ("sequencing_technology", meta.get("sequencing_technology")),
+                    ("assembler", meta.get("assembler")),
                 )
                 if v
             },

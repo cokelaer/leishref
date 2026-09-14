@@ -147,3 +147,38 @@ def test_zenodo_sourced_genomes_carry_a_doi():
     for entry in catalog():
         if entry.source == "Zenodo":
             assert entry.zenodo_doi, f"{entry.identifier} is sourced from Zenodo but has no DOI"
+
+
+def test_contigs_are_never_fewer_than_scaffolds():
+    """A scaffold holds at least one contig, so the counts can only go one way."""
+    for entry in catalog():
+        assert entry.stats["num_contigs"] >= entry.stats["num_scaffolds"], entry.identifier
+
+
+def test_ungapped_length_never_exceeds_total():
+    for entry in catalog():
+        assert entry.stats["num_ungapped"] <= entry.stats["num_bases"], entry.identifier
+
+
+def test_contig_n50_never_exceeds_scaffold_n50():
+    for entry in catalog():
+        assert entry.stats["contig_n50"] <= entry.stats["scaffold_n50"], entry.identifier
+
+
+def test_ncbi_entries_record_assembly_level_and_release_date():
+    for entry in catalog():
+        if entry.source == "NCBI":
+            assert entry.assembly_level, f"{entry.identifier} has no assembly_level"
+            assert entry.release_date, f"{entry.identifier} has no release_date"
+
+
+def test_assembly_levels_come_from_a_known_vocabulary():
+    allowed = {"Complete Genome", "Chromosome", "Scaffold", "Contig"}
+    for entry in catalog():
+        if entry.assembly_level:
+            assert entry.assembly_level in allowed, f"{entry.identifier}: {entry.assembly_level!r}"
+
+
+def test_most_genomes_name_their_strain():
+    named = [g for g in catalog() if g.strain]
+    assert len(named) >= len(catalog()) - 1, "only one entry should lack a strain"

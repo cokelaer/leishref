@@ -3,20 +3,29 @@ source: NCBI
 accession: GCA_001989975.1
 taxon_id: 5661
 species: Leishmania donovani
+strain: MHOM/IN/1983/AG83
 assembly_name: ASM198997v1
+assembly_level: Chromosome
+release_date: '2017-02-07'
 files:
   fasta: GCA_001989975.1_ASM198997v1_genomic.fna
 checksums:
   fasta: 1976333f81ec00f84a4e888e6a24dc98
 stats:
   num_bases: 32196393
-  num_contigs: 36
+  num_ungapped: 28533355
+  num_scaffolds: 36
+  num_contigs: 2172
   gc_percent: 59.44
-  contig_n50: 1029368
+  scaffold_n50: 1029368
+  scaffold_l50: 11
+  contig_n50: 20549
+  contig_l50: 426
   num_ambiguous: 3663498
-  num_gaps: 2346
+  num_gaps: 2136
 provenance:
   bioproject: PRJNA297706
   biosample: SAMN04145217
   sequencing_technology: Illumina HiSeq
+  assembler: AllPaths v. Sep-2015
 date_added: '2026-09-11'

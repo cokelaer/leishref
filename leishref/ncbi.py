@@ -88,12 +88,16 @@ def fetch_metadata(accession: str) -> dict:
         data = json.loads(line)
         info = data.get("assembly_info", {})
         organism = data.get("organism", {})
+        # NCBI records the strain under infraspecific_names, not in organism_name.
+        infraspecific = organism.get("infraspecific_names") or {}
         return {
             "taxon_id": organism.get("tax_id"),
             "organism_name": organism.get("organism_name"),
+            "strain": infraspecific.get("strain") or infraspecific.get("isolate"),
             "assembly_name": info.get("assembly_name"),
             "assembly_level": info.get("assembly_level"),
             "release_date": info.get("release_date"),
+            "assembler": info.get("assembly_method"),
             "sequencing_technology": info.get("sequencing_tech"),
             "bioproject": info.get("bioproject_accession"),
             "biosample": (info.get("biosample") or {}).get("accession"),

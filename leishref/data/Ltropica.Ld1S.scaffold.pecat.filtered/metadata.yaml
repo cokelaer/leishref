@@ -2,15 +2,21 @@ identifier: Ltropica.Ld1S.scaffold.pecat.filtered
 source: Zenodo
 species: Leishmania tropica
 strain: CDC
+assembly_level: Scaffold
 files:
   fasta: Ltropica.Ld1S.scaffold.pecat.filtered.fasta
 checksums:
   fasta: a9a3d9a674a2ebbccc93f95c3d6c6691
 stats:
   num_bases: 34460333
-  num_contigs: 42
+  num_ungapped: 34459733
+  num_scaffolds: 42
+  num_contigs: 48
   gc_percent: 59.67
-  contig_n50: 1097036
+  scaffold_n50: 1097036
+  scaffold_l50: 11
+  contig_n50: 940227
+  contig_l50: 11
   num_ambiguous: 600
   num_gaps: 6
 provenance:

@@ -3,20 +3,29 @@ source: NCBI
 accession: GCA_048773145.2
 taxon_id: 5666
 species: Leishmania tropica
+strain: NUMS 24
 assembly_name: ASM4877314v2
+assembly_level: Contig
+release_date: '2025-09-22'
 files:
   fasta: GCA_048773145.2_ASM4877314v2_genomic.fna
 checksums:
   fasta: a4fb7592f8d61c6105cca9c0e268c064
 stats:
   num_bases: 35795895
+  num_ungapped: 35795895
+  num_scaffolds: 26199
   num_contigs: 26199
   gc_percent: 59.66
+  scaffold_n50: 3568
+  scaffold_l50: 2634
   contig_n50: 3568
+  contig_l50: 2634
   num_ambiguous: 0
   num_gaps: 0
 provenance:
   bioproject: PRJNA1314960
   biosample: SAMN46286801
   sequencing_technology: Illumina HiSeq
+  assembler: SPAdes v. 3.15.5
 date_added: '2026-09-11'
