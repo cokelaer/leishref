@@ -1,0 +1,17 @@
+identifier: GCF_000002875.2
+source: NCBI
+accession: GCF_000002875.2
+taxon_id: 435258
+species: Leishmania infantum
+strain: JPCM5
+assembly_name: ASM287v2
+files:
+  fasta: GCF_000002875.2_ASM287v2_genomic.fna
+  gff: GCF_000002875.2_ASM287v2_genomic.gff
+checksums:
+  fasta: 562545239846303869ab080646cd632d
+  gff: 7f9fffc4473e4ebeff1f90939c9c4828
+provenance:
+  bioproject: PRJNA12658
+  biosample: SAMEA3138175
+date_added: '2026-09-11'

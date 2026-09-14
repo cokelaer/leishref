@@ -1,0 +1,19 @@
+identifier: GCA_048773145.2
+source: NCBI
+accession: GCA_048773145.2
+taxon_id: 5666
+species: Leishmania tropica
+assembly_name: ASM4877314v2
+files:
+  fasta: GCA_048773145.2_ASM4877314v2_genomic.fna
+checksums:
+  fasta: a4fb7592f8d61c6105cca9c0e268c064
+stats:
+  num_bases: 35795895
+  num_contigs: 26199
+  gc_percent: 59.66
+provenance:
+  bioproject: PRJNA1314960
+  biosample: SAMN46286801
+  sequencing_technology: Illumina HiSeq
+date_added: '2026-09-11'

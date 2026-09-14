@@ -1,334 +1,178 @@
 # Leishmania Reference Genome Database (leishref)
 
-Manage Leishmania genomes from NCBI, TriTrypDB, and custom assemblies with full provenance tracking, user-friendly aliasing, and automated ragtag scaffolding.
+A curated catalog of Leishmania genomes that ships inside the package, so
+`pip install leishref` is the only entry point you need: no hunting across NCBI,
+TriTrypDB and Zenodo to find out what exists or where it lives.
 
 **Key features:**
-- A curated catalog ships inside the package, so `pip install leishref` is the only
-  entry point you need — no hunting across NCBI, TriTrypDB and Zenodo
-- `leishref download <alias>` resolves whichever source a genome lives in and checks its md5
-- Generated aliases (`Ltrop.ncbi.MHOM_LB_2017_IK`) instead of full filenames
-- Layouts recorded as derivations (parent assembly + AGP) rather than as separate genomes
-- `verify` re-hashes everything on disk against the manifest
-- Ragtag scaffolding with AGP-based cleaning to remove unplaced contigs while preserving chromosome-anchored sequences and kinetoplast (maxicircle/kDNA)
-- Per-scaffold Zenodo publishing for reproducible DOI provenance
-- Git-tracked code + manifest; sequence data on disk (ignored by git)
+- One directory per genome, each with a `metadata.yaml` carrying source, accession,
+  checksums, statistics and provenance
+- `leishref download <name> --alias <alias>` installs a genome locally and checks its md5
+- Alias-named symlinks so you can type `Ltrop.L590.fna` instead of
+  `GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna`
+- Layouts recorded as derivations (parent assembly plus an AGP) rather than as separate genomes
+- Ragtag scaffolding with AGP-based cleaning that preserves chromosome-anchored
+  sequence and the kinetoplast
+- Per-genome Zenodo publishing for citable DOIs
 
 ---
 
-## Installation & Setup
-
-### Prerequisites
-- Python 3.9+
-- Poetry (for dependency management)
-- `datasets` CLI from NCBI (via damona `sequana_tools` env, or standalone)
-- `ragtag.py` (currently in py311 conda env; will auto-locate or specify with `--ragtag-bin`)
-
-### Install
+## Installation
 
 ```bash
-# Clone/navigate to repo
-cd /path/to/Leishmania
-
-# Install dependencies
-poetry install
-
-# Verify CLI is available
-leishref --help
+pip install leishref        # or: poetry install, for development
+leishref info               # the catalog is already there
 ```
+
+Optional, for the maintainer commands: the NCBI `datasets` CLI (`damona activate
+sequana_tools`) and `ragtag.py`.
 
 ---
 
-## Database Structure
+## Two halves
 
+Using the database and maintaining it are different jobs, so the commands are split:
+
+```console
+$ leishref --help
+  download   Install a catalog genome into the local database under ALIAS
+  info       List the catalog and the local database
+  verify     Check the local database against recorded checksums
+  link       Refresh the alias-named symlinks
+  dev        Commands for maintaining the shipped catalog
+
+$ leishref dev --help
+  fetch        Add an NCBI genome to the catalog
+  add          Add a local assembly to the catalog
+  scaffold     Scaffold an assembly against a reference with ragtag
+  publish      Deposit an installed genome on Zenodo
+  derive-agp   Derive an AGP showing how one assembly was laid out from another
 ```
-Leishmania/
-├── manifest.csv              # YOUR genomes (created on demand, overlays the catalog)
-├── NCBI/                     # Raw NCBI downloads (fasta + gff, prefix-matched pairs)
-│   ├── Ld1S.fa
-│   └── Ld1S.gff
-├── TriTryDB68/               # TriTrypDB release-68 downloads (fallback source)
-├── MyAssemblies/             # Custom/own assemblies (pre-scaffold, not git-tracked)
-│   └── LtropicaCDC/
-│       ├── Ltropica.Ld1S.scaffold.flye.fasta
-│       ├── Ltropica.Ld1S.scaffold.pecat.fasta
-│       └── README.rst
-├── AGP/                      # Derived layouts (git-TRACKED — coordinates, not sequence)
-│   └── TriTrypDB-68_LtropicaL590_Genome.agp
-├── Scaffold/                 # Ragtag outputs (not git-tracked)
-│   ├── Species.Strain.on.RefAlias.fa
-│   ├── Species.Strain.on.RefAlias.agp
-│   ├── Species.Strain.on.RefAlias.cleaned.fa  # Pruned version (chrom-anchored only)
-│   └── ...
-├── leishref/                  # Python package (git-tracked)
-│   ├── __init__.py
-│   ├── manifest.py           # CSV I/O
-│   ├── alias.py              # Alias generation
-│   ├── checksums.py          # md5/sequence_length/contig_count
-│   ├── ncbi.py               # datasets CLI wrapper
-│   ├── tritrypdb.py          # TriTrypDB release-68 download
-│   ├── agp.py                # AGP derivation, reconstruction
-│   └── data/
-│       └── manifest.csv      # THE CATALOG — ships with the package, PR-updated
-│   ├── scaffold.py           # ragtag wrapper + AGP cleaning
-│   ├── zenodo.py             # Zenodo deposition management
-│   └── cli.py                # CLI entry points
-├── tests/                    # Test suite (git-tracked)
-│   ├── test_manifest.py
-│   ├── test_aliases.py
-│   └── test_scaffold_clean.py
-├── pyproject.toml            # Poetry config (git-tracked)
-└── .gitignore                # Ignore sequence data, pycache, etc.
-```
+
+Everything under `dev` writes to `leishref/data/`, the catalog that ships with the
+package. Those changes are meant to travel as a pull request.
 
 ---
 
 ## The catalog
 
-`leishref/data/manifest.csv` ships inside the package. It is the curated index of every
-genome leishref knows about: accession, checksums, statistics, Zenodo DOI, provenance.
-It is updated by hand or by pull request, never written to at runtime.
+Each genome is a directory holding a single `metadata.yaml`:
 
-Your own genomes go in a `manifest.csv` in the working directory, created the first time
-you run `add`, `fetch` or `scaffold`. It overlays the catalog: a local row replaces the
-catalog row with the same filename, so you can correct or extend the shipped index
-without editing it.
-
-```console
-$ leishref info
-18 genomes: 17 from catalog, 1 local
-  catalog: .../leishref/data/manifest.csv
-  local:   manifest.csv
-
-my_assembly.fa  [local]
-  alias: MyStrain
-  ...
+```
+leishref/data/
+  GCA_000410715.1/metadata.yaml
+  GCA_003719575.1/metadata.yaml
+  GCF_000002875.2/metadata.yaml
+  Ltropica.Ld1S.scaffold.flye/metadata.yaml    # no accession: named by the maintainer
 ```
 
-`--manifest <path>` bypasses both and uses that one file.
-
-### Getting the sequence
-
-The catalog records where each genome actually lives, so one command fetches it:
-
-```bash
-leishref download Ld1S                 # by alias
-leishref download GCA_000410715.1      # by accession
-leishref download Ltropica.Ld1S.scaffold.flye.fasta   # by filename
+```yaml
+identifier: GCA_003719575.1
+source: NCBI
+accession: GCA_003719575.1
+taxon_id: 5661
+species: Leishmania donovani
+assembly_name: ASM371957v1
+files:
+  fasta: GCA_003719575.1_ASM371957v1_genomic.fna
+  gff: GCA_003719575.1_ASM371957v1_genomic.gff
+checksums:
+  fasta: 89dbdf0dd945c963164f92fcfbe16ac7
+  gff: ec6b6d0505165183095938e031ca28b8
+stats:
+  num_bases: 32959864
+  num_contigs: 36
+  gc_percent: 59.75
+provenance:
+  bioproject: PRJNA450813
+  biosample: SAMN08948132
+  sequencing_technology: PacBio; Illumina MiSeq
+date_added: '2026-09-11'
 ```
 
-It prefers a Zenodo DOI when the catalog has one and falls back to the NCBI accession,
-then checks the downloaded file against the recorded md5:
-
-```console
-$ leishref download Ltropica.Ld1S.scaffold.pecat.fasta
-Ltropica.Ld1S.scaffold.pecat.fasta -> 10.5281/zenodo.22710148 (Zenodo)
-  MyAssemblies/Ltropica.Ld1S.scaffold.pecat.fasta
-  MyAssemblies/Ltropica.Ld1S.scaffold.pecat.agp
-  md5 OK: Ltropica.Ld1S.scaffold.pecat.fasta
-```
-
-Zenodo downloads need no token. TriTrypDB genomes have neither a DOI nor an accession,
-so `download` points you at `add` instead.
-
-### Contributing a genome
-
-1. `leishref fetch <accession>` (or `add`) — lands in your local `manifest.csv`
-2. Move the row into `leishref/data/manifest.csv`
-3. Open a PR
+The directory is named by accession where there is one. There is no separate index to
+keep in sync: the directory tree *is* the catalog.
 
 ---
 
-## Manifest Schema
+## Using the database
 
-Single CSV with 28 columns, one row per genome/scaffold:
+### Install a genome
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `filename` | str | Fasta filename (relative path) |
-| `gff_filename` | str | GFF filename (relative path, may be empty) |
-| `source` | str | NCBI, TriTrypDB, MyAssembly, Scaffold |
-| `accession` | str | NCBI/TriTrypDB accession (e.g., GCA_000410715.1) |
-| `assembly_name` | str | Full assembly name from NCBI |
-| `release_version` | str | Release/version tag |
-| `taxon_id` | int | NCBI taxonomy id (5661 = *L. donovani*, 5666 = *L. tropica*, ...) |
-| `species` | str | Genus species (e.g., Leishmania_major) |
-| `strain` | str | Strain name (e.g., Friedlin) |
-| `alias` | str | User alias for easy lookup |
-| `md5sum_fasta` | str | Checksum of fasta file |
-| `md5sum_gff` | str | Checksum of GFF file |
-| `scaffold_reference_alias` | str | Alias of reference used for scaffolding |
-| `scaffold_tool_version` | str | ragtag.py version |
-| `cleaned` | bool | True if pruned to chr-anchored + kinetoplast |
-| `cleaned_from` | str | Filename of original (unclean) scaffold |
-| `derived_from` | str | Parent assembly this is a re-layout of (see Derivation model) |
-| `agp_filename` | str | AGP describing the layout relative to `derived_from` |
-| `zenodo_doi` | str | Zenodo deposition DOI (if published) |
-| `sequencing_technology` | str | Sequencing method from NCBI metadata |
-| `bioproject` | str | NCBI BioProject accession |
-| `biosample` | str | NCBI BioSample accession |
-| `raw_reads_accession` | str | SRA accession for raw reads |
-| `date_added` | str | ISO date added to DB |
-| `notes` | str | Free-text notes (e.g., "added locally", "length differs from <other>") |
-
----
-
-## Aliases
-
-Every genome carries an alias of the form `<Lspec>.<source>.<discriminator>`:
-
-```
-Ltrop.ncbi.MHOM_LB_2017_IK     GCA_003067545.1
-Ltrop.ncbi.L590                GCA_000410715.1
-Ltrop.ncbi.GCA_048773145.2     GCA_048773145.2
-Linfa.ncbi.JPCM5               GCF_000002875.2
-Ltrop.mine.flye                flye scaffold
-Ltrop.mine.pecat_filtered      filtered pecat scaffold
-```
-
-**Species** is the genus initial plus four letters of the epithet, which keeps close
-neighbours apart (`Ltrop` vs `Ltura`, `Lmajo` vs `Lmart`).
-
-**Source** is where the sequence came from. A TriTrypDB release changes the annotation,
-so it is folded in: `Ltrop.tritryp68.L590` and `Ltrop.tritryp69.L590` sit side by side.
-NCBI accessions already carry their own `.1`/`.2` version, so `ncbi` stays bare. A Zenodo
-DOI is *not* a source -- it records where an assembly was published, not where it came
-from -- so `Ltrop.mine.flye` keeps its origin and the DOI is simply how `download`
-retrieves it.
-
-**Discriminator** is the strain where one is known. NCBI often leaves the strain field
-empty and puts the designation in `assembly_name` instead, so that is mined too:
-`MHOM_LB _2017_IK`, stray space and all, becomes `MHOM_LB_2017_IK`. When the assembly
-name is an auto-generated `ASM<digits>v<n>` the accession is used instead, since an
-opaque submitter id says less than the accession does. For local assemblies nothing in
-the metadata distinguishes one from another, so the filename supplies it: the tokens
-after `scaffold` are what actually differ.
-
-Aliases are lookup keys, not parsed structure, so a discriminator containing dots (an
-accession) is fine. Collisions fall back to the accession, then to a counter.
-
-```bash
-leishref alias --dry-run    # preview
-leishref alias              # fill in anything missing
-leishref alias --overwrite  # recompute all
-```
-
-`fetch`, `add` and `scaffold` assign one automatically unless you pass `--alias`.
-
-### Alias-named symlinks
-
-Data files keep the name their source gave them, which is rarely what you want to type.
-`fetch`, `add`, `scaffold` and `download` drop a symlink named after the alias into the
-directory you ran them from:
+`--alias` is required. It is the name the genome takes on your machine: the directory
+under `data/`, and the symlink you will actually type.
 
 ```console
-$ leishref download Ltrop.ncbi.L590
-Ltrop.ncbi.L590 -> GCA_000410715.1 (NCBI)
-  Ltrop.ncbi.L590.fna -> NCBI/GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna
-  Ltrop.ncbi.L590.gff -> NCBI/GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.gff
+$ leishref download GCA_000410715.1 --alias Ltrop.L590
+GCA_000410715.1 -> GCA_000410715.1 (NCBI)
+Installed into data/Ltrop.L590
+  md5 OK: GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna
+  Ltrop.L590.fna -> data/Ltrop.L590/GCA_000410715.1_..._genomic.fna
+  Ltrop.L590.gff -> data/Ltrop.L590/GCA_000410715.1_..._genomic.gff
 ```
 
-The extension is preserved so file-type sniffing still works, and the link is relative,
-so the tree can be moved or shared without breaking. `leishref link` creates them for
-everything already on disk; `--no-link` opts out per command.
+leishref prefers a Zenodo DOI where the catalog records one and falls back to the NCBI
+accession, then checks what arrived against the recorded checksum. Zenodo downloads need
+no token. TriTrypDB genomes have neither identifier, because their downloads now require
+a login; fetch those by hand and register them with `leishref dev add`.
 
-An existing symlink is repointed. A regular file of the same name is never overwritten —
-leishref reports the conflict and moves on.
+The result:
+
+```
+data/Ltrop.L590/
+  metadata.yaml         # copied from the catalog, identifier rewritten to your alias
+  GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna
+  GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.gff
+Ltrop.L590.fna -> data/Ltrop.L590/...     # relative symlink
+Ltrop.L590.gff -> data/Ltrop.L590/...
+```
+
+The extension is preserved so file-type sniffing works, and links are relative so the
+tree can be moved or shared. `leishref link` refreshes them; `--no-link` opts out. An
+existing symlink is repointed, but a regular file of the same name is never overwritten.
+
+### Look around
+
+```bash
+leishref info                    # catalog and local database
+leishref info GCA_000410715.1    # one genome, in full
+leishref info Ltrop.L590         # local genomes resolve by alias
+```
+
+### Check integrity
+
+```bash
+leishref verify           # re-hash every installed file
+leishref verify --quick   # presence only
+```
+
+Exits non-zero on a missing file or a checksum mismatch, so it can gate CI or run from cron.
 
 ---
 
-## Quick Start
-
-### 1. Fetch a genome from NCBI
-
-Downloads fasta + GFF from NCBI using `datasets` CLI; extracts metadata (sequencing tech, BioProject, BioSample); appends manifest row.
+## Maintaining the catalog
 
 ```bash
-# Fetch *L. tropica* L590 from NCBI (accession is positional)
-leishref fetch GCA_000410715.1 \
-  --species Leishmania_tropica \
-  --strain L590 \
-  --alias Ltropica.L590
+# Add an NCBI genome. --alias also keeps the files locally rather than discarding them.
+leishref dev fetch GCA_000410715.1 --alias Ltrop.L590
 
-# Check result
-leishref info --alias Ltropica.L590
+# Register your own assembly
+leishref dev add assembly.fa --alias Ltrop.flye --species "Leishmania tropica"
+
+# Scaffold against an installed reference
+leishref dev scaffold --query flye.fa --reference Ltrop.L590 --alias Ltrop.flye --clean
+
+# Publish and record the DOI
+export ZENODO_TOKEN=...            # fish: set -x ZENODO_TOKEN ...
+leishref dev publish Ltrop.flye --confirm --version v1.0
 ```
 
-Files created:
-- `NCBI/GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna` (fasta)
-- `NCBI/GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.gff` (GFF)
-- Manifest row added with source=NCBI, md5sums, metadata
+Use `ZENODO_SANDBOX_TOKEN` with `--sandbox` to rehearse. A sandbox DOI is deliberately
+not recorded, since it would block the real publish later.
 
-### 2. Scaffold a query against a reference
-
-Run ragtag to scaffold query fasta against reference; optionally clean (prune unplaced contigs).
-
-```bash
-# Scaffold query onto Ld1S reference
-leishref scaffold \
-  --query MyAssemblies/LtropicaCDC/assembly.fasta \
-  --reference Ld1S \
-  --alias Ltropica.CDC.onLd1S \
-  --clean
-
-# Files created
-# Scaffold/Ltropica.CDC.onLd1S.fa       (original ragtag output)
-# Scaffold/Ltropica.CDC.onLd1S.agp      (AGP file from ragtag)
-# Scaffold/Ltropica.CDC.onLd1S.cleaned.fa  (chr-anchored + maxicircle only)
-```
-
-**Cleaning details:**
-- Parses `ragtag.scaffold.agp` to identify which contigs were placed on reference chromosomes
-- Removes unplaced contigs (gaps, orphans)
-- **Preserves** maxicircle/kinetoplast (matched by name pattern) — important for Leishmania!
-- Original `.fa` and `.cleaned.fa` both tracked in manifest
-
-### 3. Publish a scaffold to Zenodo
-
-Create a Zenodo deposition for a single scaffold (fasta + AGP), upload, publish, and get DOI.
-
-**Setup (one-time):**
-1. Get API token from https://zenodo.org/account/settings/applications/tokens/new (or sandbox.zenodo.org for testing)
-2. Set environment variable:
-   - **Bash/Zsh:** `export ZENODO_TOKEN="your-token"`
-   - **Fish:** `set -x ZENODO_TOKEN your-token` (note: `-x` to export)
-3. For sandbox testing: `ZENODO_SANDBOX_TOKEN` (separate token from sandbox.zenodo.org)
-
-**Usage:**
-```bash
-# Dry-run (preview, no token needed)
-leishref publish Scaffold/Ltropica.CDC.onLd1S.fa
-
-# Publish to sandbox for testing
-leishref publish Scaffold/Ltropica.CDC.onLd1S.fa --sandbox --confirm
-
-# Publish to production
-leishref publish Scaffold/Ltropica.CDC.onLd1S.fa --version v1.0 --confirm
-```
-
-Result:
-- Deposition created on Zenodo with title + metadata
-- Files uploaded (`.fa` + `.agp`)
-- Published (made public) with DOI
-- DOI written to manifest.csv `zenodo_doi` column
-- Version tracked if `--version` provided
-
-### 4. Look up in manifest
-
-```bash
-# All genomes
-leishref info
-
-# Single alias
-leishref info --alias Ld1S
-
-# Output:
-# filename: Ld1S.fa
-# source: NCBI
-# accession: GCA_000410715.1
-# species: Leishmania_donovani
-# alias: Ld1S
-# ...
-```
+**Contributing a genome:** run `leishref dev fetch` or `dev add`, check the new
+`leishref/data/<id>/metadata.yaml`, and open a pull request. Only metadata is committed;
+sequence data never enters the repository.
 
 ---
 
@@ -390,106 +234,56 @@ coordinates and NCBI's is in scaffold coordinates; the same AGP is what relates 
 
 ---
 
-## Integrity checking
-
-```bash
-leishref verify           # re-hash every file, compare against the manifest
-leishref verify --quick   # presence only, skip checksums
-```
-
-Reports missing files and checksum mismatches, and exits non-zero if either is
-found, so it can gate CI or run from cron.
-
----
-
-## Workflow Examples
-
-### Add a known NCBI genome + scaffold onto Ld1S reference
-
-```bash
-# 1. Fetch from NCBI
-leishref fetch GCA_000410715.1 --alias Ltropica.L590
-
-# 2. Scaffold onto Ld1S (assumes Ld1S alias exists and points to NCBI/Ld1S.fa)
-leishref scaffold \
-  --query NCBI/GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna \
-  --reference Ld1S \
-  --clean \
-  --alias Ltropica.L590.onLd1S
-
-# 3. Publish scaffold to Zenodo
-export ZENODO_TOKEN="..."
-leishref publish Scaffold/Ltropica.L590.onLd1S.fa --confirm
-
-# 4. View manifest
-leishref info
-```
-
-### Register a custom assembly + scaffold it
-
-```bash
-# 1. Add it (copies into MyAssemblies/, computes md5 and stats)
-leishref add ~/my_assembly.fasta --species Leishmania_major --strain MyStrain --alias MyStrain
-
-# 2. Scaffold onto reference
-leishref scaffold --query MyAssemblies/my_assembly.fasta --reference Ld1S --clean --alias MyStrain.onLd1S
-
-# 3. Confirm nothing drifted
-leishref verify
-```
-
----
-
 ## Development
 
-### Run tests
-
 ```bash
+poetry install
 poetry run pytest
 poetry run pytest --cov=leishref --cov-report=term-missing
-poetry run pytest tests/test_agp.py::test_agp_roundtrip_reconstructs_child -xvs
 ```
 
 `pytest-asyncio` in the ambient conda env is incompatible with this pytest and breaks
-collection; `addopts = "-p no:asyncio"` in `pyproject.toml` disables it.
-
-### Lint & format
+collection, so `addopts = "-p no:asyncio"` in `pyproject.toml` disables it.
 
 ```bash
-# Per CLAUDE.md defaults
 black --line-length=120 leishref/ tests/
 isort --profile=black leishref/ tests/
 flake8 leishref/ tests/
 ```
 
-### Add a new source
+**Layout**
 
-Add a module (e.g. `leishref/newsource.py`) exposing a download function, then wire a subcommand in `leishref/cli.py`.
+```
+leishref/
+  cli.py        user commands, plus the dev group
+  metadata.py   Genome records, catalog and local database
+  links.py      alias-named symlinks
+  checksums.py  md5, length, contig count, GC
+  ncbi.py       datasets CLI wrapper
+  tritrypdb.py  TriTrypDB download (needs a login; see above)
+  scaffold.py   ragtag wrapper and AGP-based cleaning
+  agp.py        AGP derivation and reconstruction
+  zenodo.py     deposition and record download
+  data/         THE CATALOG, one directory per genome
+```
 
 ---
 
 ## Troubleshooting
 
-**ragtag.py not found:**
-- Set `--ragtag-bin /path/to/ragtag.py` in scaffold command
-- Or install into active conda env: `conda install ragtag`
+**ragtag.py not found** — install it into the active environment, or keep it on `PATH`.
 
-**datasets CLI not available:**
-- `damona activate sequana_tools` before running `leish-fetch`
+**datasets CLI not available** — `damona activate sequana_tools`.
 
-**NCBI accession not found:**
-- Verify accession format (e.g., GCA_000410715.1)
-- Check NCBI GenBank directly
-- Falls back to TriTrypDB if available
+**Zenodo auth fails** — check `ZENODO_TOKEN` (or `ZENODO_SANDBOX_TOKEN` for `--sandbox`).
+In fish, `set -x` is needed to export.
 
-**Zenodo auth fails:**
-- Verify `ZENODO_TOKEN` is set and valid
-- Get token from https://zenodo.org/account/settings/applications/tokens/new
+**A genome will not download** — TriTrypDB entries have no DOI or accession by design.
+Download by hand and use `leishref dev add`.
 
 ---
 
-## Citation & Attribution
+## Citation
 
-Generated with [Claude Code](https://claude.com/claude-code). See git log for commit history and rationale.
-
-If publishing data from this DB, cite original NCBI/TriTrypDB sources and Zenodo DOIs from manifest.
+Cite the original NCBI or TriTrypDB source, and the Zenodo DOI recorded in the genome's
+`metadata.yaml` where there is one.

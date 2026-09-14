@@ -1,0 +1,19 @@
+identifier: GCA_037178165.1
+source: NCBI
+accession: GCA_037178165.1
+taxon_id: 5671
+species: Leishmania infantum
+assembly_name: ASM3717816v1
+files:
+  fasta: GCA_037178165.1_ASM3717816v1_genomic.fna
+checksums:
+  fasta: 94e147937aea15c0f7dc410220cbd2a7
+stats:
+  num_bases: 33353360
+  num_contigs: 107
+  gc_percent: 59.55
+provenance:
+  bioproject: PRJNA881045
+  biosample: SAMN38142599
+  sequencing_technology: Oxford Nanopore GridION
+date_added: '2026-09-11'

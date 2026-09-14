@@ -1,0 +1,21 @@
+identifier: GCA_900635355.2
+source: NCBI
+accession: GCA_900635355.2
+taxon_id: 5661
+species: Leishmania donovani
+assembly_name: LDHU3_new
+files:
+  fasta: GCA_900635355.2_LDHU3_new_genomic.fna
+  gff: GCA_900635355.2_LDHU3_new_genomic.gff
+checksums:
+  fasta: 22caed47485ddb1b1c60d30fe1d5be4e
+  gff: f745df42cd16d7f2cf0a0ccf1ec9158d
+stats:
+  num_bases: 33035865
+  num_contigs: 36
+  gc_percent: 59.77
+provenance:
+  bioproject: PRJEB23341
+  biosample: SAMEA104389403
+  sequencing_technology: PACBIO
+date_added: '2026-09-11'

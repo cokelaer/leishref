@@ -1,0 +1,20 @@
+identifier: GCA_000410715.1
+source: NCBI
+accession: GCA_000410715.1
+taxon_id: 1206058
+species: Leishmania tropica
+strain: L590
+assembly_name: Leishmania_tropica_L590-2.0.2
+files:
+  fasta: GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna
+checksums:
+  fasta: e9dd43a43334a002bc957a786ec902a5
+stats:
+  num_bases: 32989014
+  num_contigs: 448
+  gc_percent: 56.88
+provenance:
+  bioproject: PRJNA169676
+  biosample: SAMN02953854
+  sequencing_technology: Illumina
+date_added: '2026-09-11'

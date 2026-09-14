@@ -1,0 +1,19 @@
+identifier: GCA_003067545.1
+source: NCBI
+accession: GCA_003067545.1
+taxon_id: 5666
+species: Leishmania tropica
+assembly_name: MHOM_LB _2017_IK
+files:
+  fasta: GCA_003067545.1_MHOM_LB_2017_IK_genomic.fna
+checksums:
+  fasta: 22e0d2f3ed135640d94588257be4f378
+stats:
+  num_bases: 32139927
+  num_contigs: 9499
+  gc_percent: 57.25
+provenance:
+  bioproject: PRJNA438080
+  biosample: SAMN08693283
+  sequencing_technology: Illumina
+date_added: '2026-09-11'

@@ -1,43 +1,27 @@
 # leishref Tasks & Roadmap
 
-## Completed ✅
+## Completed
 
-- [x] Init poetry package structure
-- [x] Manifest CSV with 25-column schema (added num_bases, num_contigs, gc_percent)
-- [x] NCBI fetch via datasets CLI (fasta+gff) with GFF naming fix
-- [x] TriTrypDB fallback download (stub, URLs prepared)
-- [x] Ragtag scaffolding wrapper + AGP-based cleaning (chrom-anchored + kinetoplast whitelist)
-- [x] Info command with provenance display (source, accession, release, DOI)
-- [x] Add local files via `add` command (copies to MyAssemblies/, computes stats)
-- [x] Untracked file warnings in `info`
-- [x] Smart accession detection (GCA_/GCF_ prefixes)
-- [x] Fetch confirmation (block duplicates, --force override, replace instead of append)
-- [x] CLI refactored to single `leishref` group command
-- [x] Project renamed: leishdb → leishref
-- [x] **Zenodo publishing** (requests library, metadata update, sandbox vs production tokens)
-- [x] Sandbox/production separation (DOIs only saved to manifest for production)
-- [x] Genome statistics tracking (num_bases, num_contigs, gc_percent computed on fetch/add/scaffold)
-- [x] Manifest update by filename for scaffolds (no accession fallback)
-- [x] Rich-click CLI formatting (improved help text with better layout)
-- [x] TriTrypDB fetch command (leishref fetch-tritrypdb <species_strain>)
-- [x] **`verify` command** — re-hash files against manifest, non-zero exit on drift
-- [x] **AGP derivation model** — `derived_from` + `agp_filename` columns, `leishref derive-agp`
-- [x] `apply_agp()` reconstruction: child FASTA regenerable from parent + AGP
-- [x] Path resolution for bare manifest filenames (`resolve_path`)
-- [x] pytest runnable again (`-p no:asyncio`); AGP test suite added
-- [x] **Catalog ships with the package** (`leishref/data/manifest.csv`), local manifest overlays it
-- [x] **`download` command** — resolves Zenodo DOI or NCBI accession from the catalog, checks md5
-- [x] `taxon_id` column, populated for all NCBI rows
-- [x] **Alias scheme** `<Lspec>.<source>.<discriminator>`, auto-assigned on fetch/add/scaffold
-- [x] Removed the unused `aliases.py` / `aliases.csv` (superseded by the manifest alias column)
-- [x] **Alias-named symlinks** in the calling directory (`leishref link`, `--no-link` to opt out)
-- [x] Fixed `fetch_metadata`: parsed an obsolete datasets JSON shape, so assembly_name /
-      bioproject / biosample / sequencing_technology were silently empty on every row
+- [x] Poetry package, rich-click CLI
+- [x] **One directory per genome** under `leishref/data/<id>/metadata.yaml`; the CSV
+      manifest is gone, and with it the index-vs-truth sync problem
+- [x] **User / developer split**: `leishref <cmd>` for using the database,
+      `leishref dev <cmd>` for maintaining the catalog
+- [x] Catalog ships with the package; local database at `data/<alias>/`
+- [x] `download` resolves a Zenodo DOI or NCBI accession and verifies the md5
+- [x] `--alias` compulsory on install; the directory name is the alias
+- [x] `verify`, non-zero exit on missing files or checksum drift
+- [x] Alias-named relative symlinks (`link`, `--no-link`)
+- [x] NCBI fetch via datasets CLI, with taxonomy and project metadata
+- [x] Ragtag scaffolding with AGP-based cleaning (chrom-anchored plus kinetoplast)
+- [x] Zenodo publishing, sandbox kept separate from production
+- [x] AGP derivation and `apply_agp` reconstruction
+- [x] Genome statistics (num_bases, num_contigs, gc_percent)
 
 ## In Progress / High Priority 🚧
 
 - [ ] **Register TriTrypDB-68 as derivations** (login now required, so no auto-fetch):
-  - [ ] `derive-agp --record` each local TriTrypDB genome against its NCBI parent
+  - [ ] `dev derive-agp --record` each local TriTrypDB genome against its NCBI parent
   - [ ] Map TriTrypDB genome -> NCBI accession (no explicit cross-reference in their FASTA)
   - [ ] **Compare GFFs**: TriTrypDB annotates in chromosome coords, NCBI in scaffold coords;
         lift over via the derived AGP, then measure real annotation differences
@@ -83,6 +67,6 @@
 
 ## Notes
 
-- Git tracks: leishref/data/manifest.csv (the catalog), AGP/*.agp, code, tests
+- Git tracks: leishref/data/*/metadata.yaml (the catalog), AGP/*.agp, code, tests
 - Git ignores: NCBI/*.fa*, Scaffold/*.fa*, MyAssemblies/**/*.fa*, *.pyc, pycache
 - Schema evolving: `release_version` + `version` distinction pending

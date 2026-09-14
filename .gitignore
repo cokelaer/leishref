@@ -11,36 +11,30 @@ build/
 .venv
 venv/
 
-NCBI/*.fa
-NCBI/*.fna
-NCBI/*.fasta
-NCBI/*.gff
-NCBI/*.fai
-TriTryDB68/*.fa
-TriTryDB68/*.fna
-TriTryDB68/*.fasta
-TriTryDB68/*.gff
-TriTryDB68/*.fai
-MyAssemblies/**/*.fa
-MyAssemblies/**/*.fasta
-MyAssemblies/**/*.fai
-Scaffold/**/*.fa
-Scaffold/**/*.fna
-Scaffold/**/*.fasta
-Scaffold/**/*.fai
-Scaffold/**/*.paf
-Scaffold/**/*.log
-Scaffold/**/*.err
-Scaffold/**/*.stats
-Scaffold/**/*.confidence.txt
+# The local database: sequence data, rebuildable from the catalog.
+/data/
+
+# The catalog holds metadata only; sequence must never land in it.
+leishref/data/**/*.fa
+leishref/data/**/*.fna
+leishref/data/**/*.fasta
+leishref/data/**/*.gff
+leishref/data/**/*.fai
+!leishref/data/**/metadata.yaml
+
+# Legacy working directories, kept out of the way.
+NCBI/
+TriTryDB68/
+MyAssemblies/
+Scaffold/
+
 # AGP files describe layout as coordinates, not sequence, so they stay tracked:
 # they are what makes a scaffolded assembly reproducible from its parent.
 !AGP/
 !AGP/*.agp
-!Scaffold/**/*.agp
 
-# Alias-named symlinks created by `leishref link`; anchored to the root so the
-# tracked AGP/ directory is unaffected.
+# Alias-named symlinks created by `leishref link`, anchored to the root so the
+# tracked AGP directory is unaffected.
 /*.fa
 /*.fna
 /*.fasta

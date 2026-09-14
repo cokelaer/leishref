@@ -1,0 +1,12 @@
+identifier: Ltropica.Ld1S.scaffold.pecat.filtered
+source: MyAssembly
+species: Leishmania tropica
+strain: CDC
+files:
+  fasta: Ltropica.Ld1S.scaffold.pecat.filtered.fasta
+checksums:
+  fasta: a9a3d9a674a2ebbccc93f95c3d6c6691
+provenance:
+  zenodo_doi: 10.5281/zenodo.22710153
+date_added: '2026-09-11'
+notes: backfilled from disk

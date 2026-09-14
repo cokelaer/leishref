@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from leishref.links import LinkConflict, link_name, link_row, make_link
+from leishref.links import LinkConflict, link_name, link_paths, make_link
 
 
 @pytest.fixture
@@ -58,22 +58,13 @@ def test_regular_file_is_never_clobbered(tree):
     assert victim.read_text() == "someone's real data"
 
 
-def test_link_row_covers_fasta_and_gff(tree):
+def test_link_paths_covers_every_file_given(tree):
     base, fasta, gff = tree
-    row = {"alias": "Ltrop.ncbi.L590", "filename": fasta.name, "gff_filename": gff.name}
-
-    made = link_row(row, base)
+    made = link_paths("Ltrop.ncbi.L590", [fasta, gff], base)
     assert {p.name for p in made} == {"Ltrop.ncbi.L590.fna", "Ltrop.ncbi.L590.gff"}
 
 
-def test_link_row_skips_files_not_on_disk(tree):
+def test_link_paths_ignores_none(tree):
     base, fasta, _ = tree
-    row = {"alias": "Ltrop.ncbi.L590", "filename": fasta.name, "gff_filename": "absent.gff"}
-
-    made = link_row(row, base)
+    made = link_paths("Ltrop.ncbi.L590", [fasta, None], base)
     assert [p.name for p in made] == ["Ltrop.ncbi.L590.fna"]
-
-
-def test_link_row_without_an_alias_does_nothing(tree):
-    base, fasta, _ = tree
-    assert link_row({"filename": fasta.name}, base) == []

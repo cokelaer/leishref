@@ -53,26 +53,3 @@ def link_paths(alias: str, paths, basedir: Path = Path(".")) -> list[Path]:
         if link is not None:
             made.append(link)
     return made
-
-
-def link_row(row: dict, basedir: Path = Path("."), resolver=None) -> list[Path]:
-    """Create links for a manifest row's fasta and gff, skipping what is not on disk."""
-    from leishref.manifest import resolve_path
-
-    resolver = resolver or resolve_path
-    alias = row.get("alias")
-    if not alias:
-        return []
-
-    made = []
-    for column in ("filename", "gff_filename"):
-        name = row.get(column)
-        if not name:
-            continue
-        path = resolver(name, basedir)
-        if path is None:
-            continue
-        link = make_link(alias, path, basedir)
-        if link is not None:
-            made.append(link)
-    return made

@@ -1,0 +1,12 @@
+identifier: Ltropica.Ld1S.scaffold.flye
+source: MyAssembly
+species: Leishmania tropica
+strain: CDC
+files:
+  fasta: Ltropica.Ld1S.scaffold.flye.fasta
+checksums:
+  fasta: 5618b9abcf657b1b9b85ab7fcb0daaf0
+provenance:
+  zenodo_doi: 10.5281/zenodo.22710142
+date_added: '2026-09-11'
+notes: backfilled from disk

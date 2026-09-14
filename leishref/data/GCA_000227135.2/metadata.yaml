@@ -1,0 +1,20 @@
+identifier: GCA_000227135.2
+source: NCBI
+accession: GCA_000227135.2
+taxon_id: 5661
+species: Leishmania donovani
+assembly_name: ASM22713v2
+files:
+  fasta: GCA_000227135.2_ASM22713v2_genomic.fna
+  gff: GCA_000227135.2_ASM22713v2_genomic.gff
+checksums:
+  fasta: 5ebb2f4e843fb5ad59738e2b00ff7f9a
+  gff: 50baacfa6d4ee003d698302a9f127696
+stats:
+  num_bases: 32444968
+  num_contigs: 36
+  gc_percent: 57.31
+provenance:
+  bioproject: PRJEA61817
+  biosample: SAMEA2271930
+date_added: '2026-09-11'

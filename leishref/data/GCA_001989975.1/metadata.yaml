@@ -1,0 +1,19 @@
+identifier: GCA_001989975.1
+source: NCBI
+accession: GCA_001989975.1
+taxon_id: 5661
+species: Leishmania donovani
+assembly_name: ASM198997v1
+files:
+  fasta: GCA_001989975.1_ASM198997v1_genomic.fna
+checksums:
+  fasta: 1976333f81ec00f84a4e888e6a24dc98
+stats:
+  num_bases: 32196393
+  num_contigs: 36
+  gc_percent: 52.68
+provenance:
+  bioproject: PRJNA297706
+  biosample: SAMN04145217
+  sequencing_technology: Illumina HiSeq
+date_added: '2026-09-11'
