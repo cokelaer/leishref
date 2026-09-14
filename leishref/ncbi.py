@@ -78,30 +78,26 @@ def fetch_fasta_gff(accession: str, outdir: Path) -> tuple[Optional[Path], Optio
 
 
 def fetch_metadata(accession: str) -> dict:
-    """Fetch assembly metadata from NCBI (sequencing tech, bioproject, biosample, raw reads)."""
-    try:
-        cmd = ["datasets", "summary", "genome", "accession", accession, "--as-json-lines"]
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-        if result.returncode != 0:
-            return {}
+    """Fetch assembly metadata from NCBI: taxonomy, assembly name, sequencing tech, project ids."""
+    cmd = ["datasets", "summary", "genome", "accession", accession, "--as-json-lines"]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        return {}
 
-        for line in result.stdout.strip().split("\n"):
-            if not line:
-                continue
-            data = json.loads(line)
-            if "assemblies" in data:
-                for asm in data["assemblies"]:
-                    info = {}
-                    if "assembly_info" in asm:
-                        ai = asm["assembly_info"]
-                        info["assembly_name"] = ai.get("assembly_name")
-                    if "paired_ends" in asm:
-                        info["sequencing_technology"] = "paired-end"
-                    if "bioproject_accn" in asm:
-                        info["bioproject"] = asm.get("bioproject_accn")
-                    if "biosample_accn" in asm:
-                        info["biosample"] = asm.get("biosample_accn")
-                    return info
-        return {}
-    except Exception:
-        return {}
+    for line in result.stdout.strip().split("\n"):
+        if not line:
+            continue
+        data = json.loads(line)
+        info = data.get("assembly_info", {})
+        organism = data.get("organism", {})
+        return {
+            "taxon_id": organism.get("tax_id"),
+            "organism_name": organism.get("organism_name"),
+            "assembly_name": info.get("assembly_name"),
+            "assembly_level": info.get("assembly_level"),
+            "release_date": info.get("release_date"),
+            "sequencing_technology": info.get("sequencing_tech"),
+            "bioproject": info.get("bioproject_accession"),
+            "biosample": (info.get("biosample") or {}).get("accession"),
+        }
+    return {}

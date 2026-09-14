@@ -100,3 +100,52 @@ def publish_deposition(deposition_id: int, sandbox: bool = False) -> dict:
         raise ZenodoError(f"Failed to publish deposition: {r.status_code} {r.text}")
 
     return r.json()
+
+
+def record_id_from_doi(doi: str) -> str:
+    """Extract the Zenodo record id from a DOI such as 10.5281/zenodo.22710142."""
+    marker = "zenodo."
+    if marker not in doi:
+        raise ZenodoError(f"Not a Zenodo DOI: {doi}")
+    return doi.split(marker, 1)[1].strip()
+
+
+def is_sandbox_doi(doi: str) -> bool:
+    """Sandbox DOIs are issued under the 10.5072 prefix."""
+    return doi.startswith("10.5072/")
+
+
+def fetch_record(record_id: str, sandbox: bool = False) -> dict:
+    """Fetch a published record. Public records need no token."""
+    base = "https://sandbox.zenodo.org" if sandbox else "https://zenodo.org"
+    r = requests.get(f"{base}/api/records/{record_id}")
+    if r.status_code != 200:
+        raise ZenodoError(f"Failed to fetch record {record_id}: {r.status_code} {r.text[:200]}")
+    return r.json()
+
+
+def download_record_files(
+    record_id: str, outdir: Path, sandbox: bool = False, only: Optional[list[str]] = None
+) -> list[Path]:
+    """Download a record's files into outdir. `only` filters by filename."""
+    record = fetch_record(record_id, sandbox=sandbox)
+    outdir = Path(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    written = []
+    for entry in record.get("files", []):
+        name = entry.get("key")
+        if only and name not in only:
+            continue
+        url = entry.get("links", {}).get("self")
+        if not url:
+            continue
+        target = outdir / name
+        with requests.get(url, stream=True) as r:
+            if r.status_code != 200:
+                raise ZenodoError(f"Failed to download {name}: {r.status_code}")
+            with open(target, "wb") as fh:
+                for chunk in r.iter_content(chunk_size=1 << 20):
+                    fh.write(chunk)
+        written.append(target)
+    return written

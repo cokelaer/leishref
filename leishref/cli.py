@@ -7,13 +7,21 @@ from pathlib import Path
 import rich_click as click
 
 from leishref.agp import derive_agp, write_agp
-from leishref.aliases import Aliases
 from leishref.checksums import contig_count, gc_percent, md5_file, sequence_length
-from leishref.manifest import DATA_DIRS, Manifest, ManifestRow, resolve_path
+from leishref.manifest import DATA_DIRS, Catalog, ManifestRow, resolve_path, today_iso
 from leishref.ncbi import fetch_fasta_gff, fetch_metadata
-from leishref.scaffold import clean_scaffolded_fasta, parse_agp, run_scaffold
+from leishref.scaffold import clean_scaffolded_fasta, run_scaffold
 from leishref.tritrypdb import download_fasta_gff as tritrypdb_download
-from leishref.zenodo import ZenodoError, create_deposition, publish_deposition, update_metadata, upload_file
+from leishref.zenodo import (
+    ZenodoError,
+    create_deposition,
+    download_record_files,
+    is_sandbox_doi,
+    publish_deposition,
+    record_id_from_doi,
+    update_metadata,
+    upload_file,
+)
 
 
 @click.group()
@@ -22,13 +30,20 @@ def cli():
     pass
 
 
+def _catalog(manifest) -> Catalog:
+    """An explicit --manifest means that one file; otherwise catalog + local overlay."""
+    if manifest:
+        return Catalog(local=manifest, catalog=manifest)
+    return Catalog()
+
+
 @cli.command()
 @click.argument("accession")
 @click.option("--species", help="Species name (inferred from NCBI if not given)")
 @click.option("--strain", help="Strain name (inferred from NCBI if not given)")
 @click.option("--alias", help="Short alias for this genome")
 @click.option("--outdir", type=click.Path(), default="NCBI", help="Output directory")
-@click.option("--manifest", type=click.Path(), default="manifest.csv", help="Manifest CSV")
+@click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
 @click.option("--force", is_flag=True, help="Re-fetch even if already in manifest")
 def fetch(accession, species, strain, alias, outdir, manifest, force):
     """Fetch genome from NCBI. Detects GCA_/GCF_ accessions automatically.
@@ -39,7 +54,7 @@ def fetch(accession, species, strain, alias, outdir, manifest, force):
       leishref fetch GCA_000410715.1 --force
     """
     outdir = Path(outdir)
-    manifest_obj = Manifest(Path(manifest))
+    catalog = _catalog(manifest)
 
     # Detect if it looks like an NCBI accession
     is_accession = accession.upper().startswith(("GCA_", "GCF_"))
@@ -47,7 +62,7 @@ def fetch(accession, species, strain, alias, outdir, manifest, force):
         click.echo(f"Detected NCBI accession: {accession}")
 
     # Check if already in manifest
-    existing = manifest_obj.find_by_accession(accession)
+    existing = catalog.find_by_accession(accession)
     if existing and not force:
         click.echo(f"Already in manifest: {existing.get('filename')}", err=True)
         click.echo(f"Use --force to re-fetch", err=True)
@@ -66,39 +81,34 @@ def fetch(accession, species, strain, alias, outdir, manifest, force):
     md5_gff = md5_file(gff) if gff else None
 
     meta = fetch_metadata(accession)
-    assembly_name = meta.get("assembly_name", "")
-    seq_tech = meta.get("sequencing_technology")
-    bioproject = meta.get("bioproject")
-    biosample = meta.get("biosample")
+    # organism_name is "Genus species strain..."; assembly_name is not a species name.
+    organism = (meta.get("organism_name") or "").split()
 
     row = ManifestRow(
         filename=fasta.name,
         gff_filename=gff.name if gff else None,
         source="NCBI",
         accession=accession,
-        assembly_name=assembly_name,
+        assembly_name=meta.get("assembly_name"),
         release_version=None,
-        species=species or assembly_name.split()[0] if assembly_name else None,
-        strain=strain or (assembly_name.split()[1] if assembly_name and len(assembly_name.split()) > 1 else None),
+        taxon_id=meta.get("taxon_id"),
+        species=species or (" ".join(organism[:2]) if len(organism) >= 2 else None),
+        strain=strain or (" ".join(organism[2:]) or None),
         alias=alias,
         md5sum_fasta=md5_fasta,
         md5sum_gff=md5_gff,
         num_bases=sequence_length(fasta),
         num_contigs=contig_count(fasta),
         gc_percent=gc_percent(fasta),
-        date_added=manifest_obj.today_iso(),
-        sequencing_technology=seq_tech,
-        bioproject=bioproject,
-        biosample=biosample,
+        date_added=today_iso(),
+        sequencing_technology=meta.get("sequencing_technology"),
+        bioproject=meta.get("bioproject"),
+        biosample=meta.get("biosample"),
         notes=None,
     )
 
-    if force:
-        manifest_obj.replace_by_accession(accession, row)
-        click.echo(f"Updated {accession} in manifest")
-    else:
-        manifest_obj.append(row)
-        click.echo(f"Added {accession} to manifest")
+    catalog.upsert_local(row)
+    click.echo(f"{'Updated' if force else 'Added'} {accession} in {catalog.local_path}")
 
 
 @cli.command()
@@ -108,7 +118,7 @@ def fetch(accession, species, strain, alias, outdir, manifest, force):
 @click.option("--strain", help="Strain name")
 @click.option("--alias", help="Short alias")
 @click.option("--outdir", type=click.Path(), default="MyAssemblies", help="Destination directory")
-@click.option("--manifest", type=click.Path(), default="manifest.csv", help="Manifest CSV")
+@click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
 def add(fasta, gff, species, strain, alias, outdir, manifest):
     """Add local fasta/gff files to database and manifest.
 
@@ -119,7 +129,7 @@ def add(fasta, gff, species, strain, alias, outdir, manifest):
     fasta = Path(fasta)
     gff = Path(gff) if gff else None
     outdir = Path(outdir)
-    manifest_obj = Manifest(Path(manifest))
+    catalog = _catalog(manifest)
 
     outdir.mkdir(parents=True, exist_ok=True)
 
@@ -150,11 +160,11 @@ def add(fasta, gff, species, strain, alias, outdir, manifest):
         num_bases=sequence_length(new_fasta),
         num_contigs=contig_count(new_fasta),
         gc_percent=gc_percent(new_fasta),
-        date_added=manifest_obj.today_iso(),
+        date_added=today_iso(),
         notes="added locally",
     )
 
-    manifest_obj.append(row)
+    catalog.upsert_local(row)
     click.echo(f"Added to manifest: {new_fasta.name}")
 
 
@@ -164,7 +174,7 @@ def add(fasta, gff, species, strain, alias, outdir, manifest):
 @click.option("--outdir", type=click.Path(), default="Scaffold", help="Output directory")
 @click.option("--alias", help="Alias for this scaffold")
 @click.option("--clean", is_flag=True, help="Keep only chr-anchored contigs + kinetoplast")
-@click.option("--manifest", type=click.Path(), default="manifest.csv", help="Manifest CSV")
+@click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
 @click.option("--ragtag-bin", help="Path to ragtag.py (auto-detect if not given)")
 def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
     """Run ragtag scaffold on query against reference.
@@ -175,9 +185,9 @@ def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
     """
     query = Path(query)
     outdir = Path(outdir)
-    manifest_obj = Manifest(Path(manifest))
+    catalog = _catalog(manifest)
 
-    ref_row = manifest_obj.find_by_alias(reference)
+    ref_row = catalog.find_by_alias(reference)
     if not ref_row or not ref_row.get("filename"):
         click.echo(f"Reference {reference} not found in manifest", err=True)
         return
@@ -221,10 +231,10 @@ def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
                 num_bases=sequence_length(cleaned_fasta),
                 num_contigs=contig_count(cleaned_fasta),
                 gc_percent=gc_percent(cleaned_fasta),
-                date_added=manifest_obj.today_iso(),
+                date_added=today_iso(),
                 alias=alias,
             )
-            manifest_obj.append(row_cleaned)
+            catalog.upsert_local(row_cleaned)
             click.echo(f"Scaffold (cleaned): {cleaned_fasta.name}")
         else:
             md5_scaffold = md5_file(out_fasta)
@@ -238,10 +248,10 @@ def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
                 num_bases=sequence_length(out_fasta),
                 num_contigs=contig_count(out_fasta),
                 gc_percent=gc_percent(out_fasta),
-                date_added=manifest_obj.today_iso(),
+                date_added=today_iso(),
                 alias=alias,
             )
-            manifest_obj.append(row)
+            catalog.upsert_local(row)
             click.echo(f"Scaffold: {out_fasta.name}")
 
     finally:
@@ -256,7 +266,7 @@ def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
 @click.option("--species", help="Species name (inferred if not given)")
 @click.option("--strain", help="Strain name (inferred if not given)")
 @click.option("--alias", help="Short alias for this genome")
-@click.option("--manifest", type=click.Path(), default="manifest.csv", help="Manifest CSV")
+@click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
 def fetch_tritrypdb(species_strain, outdir, species, strain, alias, manifest):
     """Fetch genome from TriTrypDB release 68.
 
@@ -265,7 +275,7 @@ def fetch_tritrypdb(species_strain, outdir, species, strain, alias, manifest):
       leishref fetch-tritrypdb Leishmania_infantum_JPCM5 --alias Linf
     """
     outdir = Path(outdir)
-    manifest_obj = Manifest(Path(manifest))
+    catalog = _catalog(manifest)
 
     click.echo(f"Fetching {species_strain} from TriTrypDB...")
     fasta, gff = tritrypdb_download(species_strain, outdir)
@@ -290,17 +300,17 @@ def fetch_tritrypdb(species_strain, outdir, species, strain, alias, manifest):
         num_bases=sequence_length(fasta),
         num_contigs=contig_count(fasta),
         gc_percent=gc_percent(fasta),
-        date_added=manifest_obj.today_iso(),
+        date_added=today_iso(),
         notes="fetched from TriTrypDB release 68",
     )
 
-    manifest_obj.append(row)
+    catalog.upsert_local(row)
     click.echo(f"Added {species_strain} to manifest: {fasta.name}")
 
 
 @cli.command()
 @click.argument("scaffold", type=click.Path(exists=True))
-@click.option("--manifest", type=click.Path(), default="manifest.csv")
+@click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
 @click.option("--version", help="Version tag (e.g., v1.0)")
 @click.option("--confirm", is_flag=True, help="Actually publish (else dry-run)")
 @click.option("--sandbox", is_flag=True, help="Publish to sandbox.zenodo.org (test)")
@@ -313,7 +323,7 @@ def publish(scaffold, manifest, version, confirm, sandbox):
       leishref publish scaffold.fa --version v1.0 --confirm
     """
     scaffold = Path(scaffold)
-    manifest_obj = Manifest(Path(manifest))
+    catalog = _catalog(manifest)
 
     # Find corresponding AGP file
     agp_file = scaffold.with_suffix(".agp")
@@ -322,7 +332,7 @@ def publish(scaffold, manifest, version, confirm, sandbox):
         return
 
     # Check if already published
-    row = manifest_obj.find_by_filename(scaffold.name)
+    row = catalog.find_by_filename(scaffold.name)
     if row and row.get("zenodo_doi"):
         click.echo(f"Already published with DOI: {row.get('zenodo_doi')}", err=True)
         click.echo("(To publish a new version, use a new filename)", err=True)
@@ -368,33 +378,24 @@ def publish(scaffold, manifest, version, confirm, sandbox):
         doi = published.get("doi") or published.get("conceptdoi")
         click.echo(f"Published! DOI: {doi}")
 
-        # Update manifest (production only, not sandbox)
-        if not sandbox:
-            if row:
-                row["zenodo_doi"] = doi
-                # For rows without accession (scaffolds), update by filename
-                if row.get("accession"):
-                    manifest_obj.replace_by_accession(row.get("accession"), row)
-                else:
-                    rows = manifest_obj.read()
-                    for i, r in enumerate(rows):
-                        if r.get("filename") == scaffold.name:
-                            rows[i] = row
-                            manifest_obj.write(rows)
-                            break
-            else:
-                new_row = ManifestRow(
+        # Sandbox DOIs are throwaway; recording one would block the real publish.
+        if sandbox:
+            click.echo("Sandbox publish (manifest not updated)")
+        else:
+            updated = (
+                ManifestRow(**{k: v for k, v in row.items() if k != "_origin"})
+                if row
+                else ManifestRow(
                     filename=scaffold.name,
                     gff_filename=agp_file.name,
                     source="Scaffold",
-                    zenodo_doi=doi,
-                    version=version,
-                    date_added=manifest_obj.today_iso(),
+                    date_added=today_iso(),
                 )
-                manifest_obj.append(new_row)
-            click.echo(f"Updated manifest.csv")
-        else:
-            click.echo("Sandbox publish (manifest not updated)")
+            )
+            updated["zenodo_doi"] = doi
+            updated["release_version"] = version or updated.get("release_version")
+            catalog.upsert_local(updated)
+            click.echo(f"Recorded DOI in {catalog.local_path}")
 
     except ZenodoError as e:
         click.echo(f"Zenodo error: {e}", err=True)
@@ -402,7 +403,7 @@ def publish(scaffold, manifest, version, confirm, sandbox):
 
 
 @cli.command()
-@click.option("--manifest", type=click.Path(), default="manifest.csv")
+@click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
 @click.option("--basedir", type=click.Path(), default=".", help="Root to resolve filenames against")
 @click.option("--quick", is_flag=True, help="Check presence only, skip checksums")
 def verify(manifest, basedir, quick):
@@ -412,8 +413,8 @@ def verify(manifest, basedir, quick):
       leishref verify
       leishref verify --quick
     """
-    manifest_obj = Manifest(Path(manifest))
-    rows = manifest_obj.read()
+    catalog = _catalog(manifest)
+    rows = catalog.read()
     basedir = Path(basedir)
 
     missing, mismatch, ok = [], [], 0
@@ -463,7 +464,7 @@ def verify(manifest, basedir, quick):
 @click.argument("child", type=click.Path())
 @click.option("--out", type=click.Path(), help="AGP output path (default AGP/<child stem>.agp)")
 @click.option("--basedir", type=click.Path(), default=".", help="Root to resolve filenames against")
-@click.option("--manifest", type=click.Path(), default="manifest.csv")
+@click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
 @click.option("--record", is_flag=True, help="Write derived_from + agp_filename to the child's manifest row")
 @click.option("--probe-len", default=60, show_default=True, help="Anchor length used to locate blocks")
 def derive_agp_cmd(parent, child, out, basedir, manifest, record, probe_len):
@@ -512,35 +513,112 @@ def derive_agp_cmd(parent, child, out, basedir, manifest, record, probe_len):
         click.echo("Low coverage: these are likely genuinely different assemblies.")
 
     if record:
-        manifest_obj = Manifest(Path(manifest))
-        rows = manifest_obj.read()
-        target = next((r for r in rows if r.get("filename") == child_path.name), None)
+        catalog = _catalog(manifest)
+        target = catalog.find_by_filename(child_path.name)
         if target is None:
             click.echo(f"No manifest row for {child_path.name}; add it first", err=True)
             raise SystemExit(1)
-        target["derived_from"] = parent_path.name
-        target["agp_filename"] = out_path.name
-        manifest_obj.write(rows)
+        updated = ManifestRow(**{k: v for k, v in target.items() if k != "_origin"})
+        updated["derived_from"] = parent_path.name
+        updated["agp_filename"] = out_path.name
+        catalog.upsert_local(updated)
         click.echo(f"Recorded derived_from={parent_path.name} agp_filename={out_path.name}")
 
 
 @cli.command()
-@click.option("--manifest", type=click.Path(), default="manifest.csv")
+@click.argument("name")
+@click.option("--outdir", type=click.Path(), help="Destination (defaults to the source's usual directory)")
+@click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
+@click.option("--force", is_flag=True, help="Download even if the file is already present")
+def download(name, outdir, manifest, force):
+    """Fetch a genome named in the catalog, by alias, filename or accession.
+
+    Resolves whichever source the catalog records -- a Zenodo DOI if the genome was
+    published there, otherwise the NCBI accession -- so callers do not need to know
+    where a given genome lives.
+
+    Examples:
+      leishref download Ld1S
+      leishref download GCA_000410715.1
+      leishref download Ltropica.Ld1S.scaffold.flye.fasta
+    """
+    catalog = _catalog(manifest)
+    row = catalog.resolve(name)
+    if row is None:
+        click.echo(f"Not in catalog: {name}", err=True)
+        click.echo("Run 'leishref info' to list what is available", err=True)
+        raise SystemExit(1)
+
+    filename = row.get("filename")
+    doi = row.get("zenodo_doi")
+    accession = row.get("accession")
+    source = row.get("source") or "?"
+
+    existing = resolve_path(filename) if filename else None
+    if existing and not force:
+        click.echo(f"Already present: {existing}")
+        click.echo("Use --force to download again")
+        return
+
+    if doi:
+        dest = Path(outdir) if outdir else Path("Scaffold" if source == "Scaffold" else "MyAssemblies")
+        click.echo(f"{name} -> {doi} (Zenodo)")
+        written = download_record_files(record_id_from_doi(doi), dest, sandbox=is_sandbox_doi(doi))
+    elif accession:
+        dest = Path(outdir) if outdir else Path("NCBI")
+        click.echo(f"{name} -> {accession} (NCBI)")
+        fasta, gff = fetch_fasta_gff(accession, dest)
+        if not fasta:
+            click.echo(f"NCBI has no data for {accession}", err=True)
+            raise SystemExit(1)
+        written = [p for p in (fasta, gff) if p]
+    else:
+        click.echo(f"{name} has no Zenodo DOI or NCBI accession in the catalog", err=True)
+        if source == "TriTrypDB":
+            click.echo("TriTrypDB requires a login; download by hand, then 'leishref add'", err=True)
+        raise SystemExit(1)
+
+    for path in written:
+        click.echo(f"  {path}")
+
+    recorded = {row.get("filename"): row.get("md5sum_fasta"), row.get("gff_filename"): row.get("md5sum_gff")}
+    bad = False
+    for path in written:
+        want = recorded.get(path.name)
+        if not want:
+            continue
+        if md5_file(path) == want:
+            click.echo(f"  md5 OK: {path.name}")
+        else:
+            click.echo(f"  md5 MISMATCH: {path.name}", err=True)
+            bad = True
+    if bad:
+        raise SystemExit(1)
+
+
+@cli.command()
+@click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
 @click.option("--alias", help="Look up specific alias")
 def info(manifest, alias):
     """Display manifest info with provenance. Warn about untracked files."""
-    manifest_obj = Manifest(Path(manifest))
-    rows = manifest_obj.read()
+    catalog = _catalog(manifest)
+    rows = catalog.read()
 
     if alias:
-        row = manifest_obj.find_by_alias(alias)
+        row = catalog.resolve(alias)
         if row:
             for k, v in row.items():
+                if k == "_origin":
+                    continue
                 click.echo(f"{k}: {v}")
         else:
             click.echo(f"Alias not found: {alias}", err=True)
     else:
-        click.echo(f"Total genomes: {len(rows)}\n")
+        n_catalog, n_local = catalog.counts()
+        click.echo(f"{len(rows)} genomes: {n_catalog} from catalog, {n_local} local")
+        click.echo(f"  catalog: {catalog.catalog_path}")
+        click.echo(f"  local:   {catalog.local_path}" + ("" if catalog.local_path.exists() else " (not created yet)"))
+        click.echo()
         for row in rows:
             filename = row.get("filename", "N/A")
             alias_name = row.get("alias") or "(no alias)"
@@ -548,8 +626,9 @@ def info(manifest, alias):
             accession = row.get("accession") or ""
             zenodo = row.get("zenodo_doi") or ""
             release_ver = row.get("release_version") or ""
+            local_mark = "  [local]" if row.get("_origin") == "local" else ""
 
-            click.echo(f"{filename}")
+            click.echo(f"{filename}{local_mark}")
             click.echo(f"  alias: {alias_name}")
             click.echo(f"  source: {source}", nl=False)
             if accession:

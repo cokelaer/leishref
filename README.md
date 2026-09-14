@@ -3,7 +3,9 @@
 Manage Leishmania genomes from NCBI, TriTrypDB, and custom assemblies with full provenance tracking, user-friendly aliasing, and automated ragtag scaffolding.
 
 **Key features:**
-- Single `manifest.csv` index tracking all genomes with source, accession, md5sums, sequencing metadata
+- A curated catalog ships inside the package, so `pip install leishref` is the only
+  entry point you need — no hunting across NCBI, TriTrypDB and Zenodo
+- `leishref download <alias>` resolves whichever source a genome lives in and checks its md5
 - User aliases for easy reference (e.g., `Ld1S` instead of full filename)
 - Layouts recorded as derivations (parent assembly + AGP) rather than as separate genomes
 - `verify` re-hashes everything on disk against the manifest
@@ -40,7 +42,7 @@ leishref --help
 
 ```
 Leishmania/
-├── manifest.csv              # Master index (git-tracked) — all genomes + metadata
+├── manifest.csv              # YOUR genomes (created on demand, overlays the catalog)
 ├── aliases.csv               # User-defined aliases (git-tracked) — e.g., Ld1S → Ld1S.fa
 ├── NCBI/                     # Raw NCBI downloads (fasta + gff, prefix-matched pairs)
 │   ├── Ld1S.fa
@@ -66,6 +68,8 @@ Leishmania/
 │   ├── ncbi.py               # datasets CLI wrapper
 │   ├── tritrypdb.py          # TriTrypDB release-68 download
 │   ├── agp.py                # AGP derivation, reconstruction
+│   └── data/
+│       └── manifest.csv      # THE CATALOG — ships with the package, PR-updated
 │   ├── scaffold.py           # ragtag wrapper + AGP cleaning
 │   ├── zenodo.py             # Zenodo deposition management
 │   └── cli.py                # CLI entry points
@@ -79,9 +83,65 @@ Leishmania/
 
 ---
 
+## The catalog
+
+`leishref/data/manifest.csv` ships inside the package. It is the curated index of every
+genome leishref knows about: accession, checksums, statistics, Zenodo DOI, provenance.
+It is updated by hand or by pull request, never written to at runtime.
+
+Your own genomes go in a `manifest.csv` in the working directory, created the first time
+you run `add`, `fetch` or `scaffold`. It overlays the catalog: a local row replaces the
+catalog row with the same filename, so you can correct or extend the shipped index
+without editing it.
+
+```console
+$ leishref info
+18 genomes: 17 from catalog, 1 local
+  catalog: .../leishref/data/manifest.csv
+  local:   manifest.csv
+
+my_assembly.fa  [local]
+  alias: MyStrain
+  ...
+```
+
+`--manifest <path>` bypasses both and uses that one file.
+
+### Getting the sequence
+
+The catalog records where each genome actually lives, so one command fetches it:
+
+```bash
+leishref download Ld1S                 # by alias
+leishref download GCA_000410715.1      # by accession
+leishref download Ltropica.Ld1S.scaffold.flye.fasta   # by filename
+```
+
+It prefers a Zenodo DOI when the catalog has one and falls back to the NCBI accession,
+then checks the downloaded file against the recorded md5:
+
+```console
+$ leishref download Ltropica.Ld1S.scaffold.pecat.fasta
+Ltropica.Ld1S.scaffold.pecat.fasta -> 10.5281/zenodo.22710148 (Zenodo)
+  MyAssemblies/Ltropica.Ld1S.scaffold.pecat.fasta
+  MyAssemblies/Ltropica.Ld1S.scaffold.pecat.agp
+  md5 OK: Ltropica.Ld1S.scaffold.pecat.fasta
+```
+
+Zenodo downloads need no token. TriTrypDB genomes have neither a DOI nor an accession,
+so `download` points you at `add` instead.
+
+### Contributing a genome
+
+1. `leishref fetch <accession>` (or `add`) — lands in your local `manifest.csv`
+2. Move the row into `leishref/data/manifest.csv`
+3. Open a PR
+
+---
+
 ## Manifest Schema
 
-Single CSV with 27 columns, one row per genome/scaffold:
+Single CSV with 28 columns, one row per genome/scaffold:
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -91,6 +151,7 @@ Single CSV with 27 columns, one row per genome/scaffold:
 | `accession` | str | NCBI/TriTrypDB accession (e.g., GCA_000410715.1) |
 | `assembly_name` | str | Full assembly name from NCBI |
 | `release_version` | str | Release/version tag |
+| `taxon_id` | int | NCBI taxonomy id (5661 = *L. donovani*, 5666 = *L. tropica*, ...) |
 | `species` | str | Genus species (e.g., Leishmania_major) |
 | `strain` | str | Strain name (e.g., Friedlin) |
 | `alias` | str | User alias for easy lookup |

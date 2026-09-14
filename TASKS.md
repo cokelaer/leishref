@@ -26,6 +26,11 @@
 - [x] `apply_agp()` reconstruction: child FASTA regenerable from parent + AGP
 - [x] Path resolution for bare manifest filenames (`resolve_path`)
 - [x] pytest runnable again (`-p no:asyncio`); AGP test suite added
+- [x] **Catalog ships with the package** (`leishref/data/manifest.csv`), local manifest overlays it
+- [x] **`download` command** — resolves Zenodo DOI or NCBI accession from the catalog, checks md5
+- [x] `taxon_id` column, populated for all NCBI rows
+- [x] Fixed `fetch_metadata`: parsed an obsolete datasets JSON shape, so assembly_name /
+      bioproject / biosample / sequencing_technology were silently empty on every row
 
 ## In Progress / High Priority 🚧
 
@@ -41,15 +46,8 @@
 - [ ] **`leishref materialize <alias>`** — rebuild a child FASTA from parent + AGP,
       so the repo is distributable without shipping third-party sequence
 
-- [ ] **Download subcommand** (fetch genomes from manifest URIs):
-  - [ ] Add `fasta_uri`, `gff_uri` columns to manifest
-  - [ ] `leishref download <alias>` fetches from URIs
-  - [ ] Support HTTP URLs + Zenodo DOI resolution
-  - [ ] Auto-populate URIs when publishing to Zenodo
-  - [ ] Verify checksums after download
-
 - [ ] **Version tracking** (for NCBI/TriTrypDB/Zenodo):
-  - [ ] Populate `release_version` for NCBI (extract from assembly_name)
+  - [ ] Populate `release_version` for NCBI (release_date is available from metadata)
   - [ ] TriTrypDB: store as "tritrypdb-68" or similar
   - [ ] Zenodo: use `--version` flag (v1.0, v2.0) → track in manifest
 

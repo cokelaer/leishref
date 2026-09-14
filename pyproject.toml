@@ -36,6 +36,8 @@ description = "Leishmania reference genome database"
 authors = ["Cokelaer <cokelaer@gmail.com>"]
 readme = "README.md"
 packages = [{include = "leishref"}]
+# The curated catalog ships with the package: leishref is the single entry point.
+include = [{path = "leishref/data/*.csv", format = ["sdist", "wheel"]}]
 
 [tool.poetry.dependencies]
 python = "^3.9"
