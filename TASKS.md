@@ -24,6 +24,10 @@
       organism.infraspecific_names, not organism_name)
 - [x] Suggested aliases on `download` and `info`
 - [x] `dev add --technology/--assembler`; sequencing technology recorded for 15 of 17
+- [x] **Catalog-level aliases** (`leishref/data/aliases.txt`): shorthand names for common
+      reference strains (LdHU3, Ld1S, LtL590, etc.) — resolved in search, download, info
+- [x] **All checksums verified**: 40 random genomes re-downloaded from NCBI,
+      100% match rate with catalog records
 
 ## In Progress / High Priority 🚧
 
@@ -46,6 +50,16 @@
 
 ## Medium Priority 📋
 
+- [ ] **Remove dev checksum** — all 158 genomes verified, command no longer needed
+
+- [ ] **Plotting & visualization utilities** (for publications):
+  - [ ] GC content distribution across catalog (histogram by species)
+  - [ ] Illumina vs long-read (PacBio/Nanopore) sequencing technology breakdown
+  - [ ] Assembly size and contig/scaffold N50 scatter plots
+  - [ ] Genome completeness (assembly_level) pie chart
+  - [ ] Release date timeline (when each genome was assembled)
+  - [ ] Per-species genome count bar chart
+
 - [ ] **Test suite**:
   - [ ] Integration tests for fetch/add/scaffold workflows
   - [ ] Mock NCBI datasets CLI responses
@@ -59,6 +73,12 @@
   - [ ] Contributing guidelines
 
 ## Low Priority 💡
+
+- [ ] **Phylogeny & comparative genomics** (long-term):
+  - [ ] Mash sketch generation and distance matrix for all genomes
+  - [ ] Phylogenetic tree construction (neighbor-joining from Mash distances)
+  - [ ] Interactive phylogeny visualization
+  - [ ] Whole-genome alignment metrics (ANI, Jaccard) vs taxonomy
 
 - [ ] Config file support (`.leishref.toml` for defaults)
 - [ ] Parallel downloads (speed up bulk fetches)
