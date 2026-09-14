@@ -43,3 +43,7 @@ AGP/
 *.swp
 *.swo
 .DS_Store
+
+# Claude Code settings and project-specific task tracking
+.claude/
+TASKS.md
