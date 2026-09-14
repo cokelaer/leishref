@@ -31,6 +31,20 @@ sequana_tools`) and `ragtag.py`.
 
 ---
 
+## Documentation
+
+Full documentation is at `docs/`. Build locally with Sphinx:
+
+```bash
+cd docs
+make html
+open _build/html/index.html
+```
+
+See `docs/index.rst` for the documentation structure.
+
+---
+
 ## Two halves
 
 Using the database and maintaining it are different jobs, so the commands are split:
