@@ -15,7 +15,7 @@ import rich_click as click
 from leishref.agp import derive_agp, write_agp
 from leishref.checksums import genome_stats, md5_file
 from leishref.links import LinkConflict, link_paths
-from leishref.metadata import CATALOG_DIR, LOCAL_DIR, Genome, catalog, find, local, read_genome, today_iso, write_genome
+from leishref.metadata import CATALOG_DIR, LOCAL_DIR, Genome, catalog, find, get_catalog_alias, load_aliases, local, read_genome, today_iso, write_genome
 from leishref.naming import suggest_alias
 from leishref.ncbi import fetch_fasta_gff, fetch_metadata, fetch_metadata_many, species_from_organism
 from leishref.scaffold import clean_scaffolded_fasta, run_scaffold
@@ -131,8 +131,8 @@ def _install(genome: Genome, alias: str, sources, local_root: Path, move: bool =
     return target
 
 
-def _require(genomes, key, what):
-    genome = find(genomes, key)
+def _require(genomes, key, what, catalog_root=None):
+    genome = find(genomes, key, catalog_root)
     if genome is None:
         click.echo(f"Not in {what}: {key}", err=True)
         click.echo("Run 'leishref info' to see what is available", err=True)
@@ -163,8 +163,9 @@ def download(name, alias, local_dir, catalog_dir, force, no_link):
 
       leishref download Ltropica.Ld1S.scaffold.flye --alias flye
     """
-    entries = catalog(Path(catalog_dir) if catalog_dir else None)
-    genome = _require(entries, name, "catalog")
+    cat_root = Path(catalog_dir) if catalog_dir else None
+    entries = catalog(cat_root)
+    genome = _require(entries, name, "catalog", cat_root)
 
     if not alias:
         click.echo("--alias is required: it names this genome in your local database,", err=True)
@@ -244,17 +245,18 @@ def info(name, local_dir, catalog_dir):
 
       leishref info GCA_000410715.1
     """
-    entries = catalog(Path(catalog_dir) if catalog_dir else None)
+    cat_root = Path(catalog_dir) if catalog_dir else None
+    entries = catalog(cat_root)
     installed = local(Path(local_dir))
 
     if name:
-        genome = find(installed, name) or _require(entries, name, "catalog")
+        genome = find(installed, name, cat_root) or _require(entries, name, "catalog", cat_root)
         import yaml
 
         click.echo(yaml.safe_dump(genome.to_dict(), sort_keys=False, default_flow_style=False).rstrip())
         if genome.path:
             click.echo(f"\npath: {genome.path}")
-        if find(installed, name) is None:
+        if find(installed, name, cat_root) is None:
             click.echo(f"suggested alias: {suggest_alias(genome)}")
         return
 
@@ -293,7 +295,8 @@ def search(terms, local_dir, catalog_dir, installed, long_form):
 
       leishref search PRJNA450813
     """
-    entries = catalog(Path(catalog_dir) if catalog_dir else None)
+    cat_root_search = Path(catalog_dir) if catalog_dir else None
+    entries = catalog(cat_root_search)
     here = local(Path(local_dir))
 
     # A local install records where it came from, so matches can be flagged as present.
@@ -302,7 +305,18 @@ def search(terms, local_dir, catalog_dir, installed, long_form):
         origin = genome.provenance.get("catalog_id") or genome.identifier
         by_origin[origin] = genome.identifier
 
+    # Load aliases for matching
+    aliases = load_aliases(cat_root_search)
+    alias_by_accession = {v: k for k, v in aliases.items()}
+
     matches = [g for g in entries if g.matches(terms)]
+    # Also match by aliases
+    for term in terms:
+        for alias, accession in aliases.items():
+            if term.lower() == alias.lower():
+                for g in entries:
+                    if g.accession == accession and g not in matches:
+                        matches.append(g)
     if installed:
         matches = [g for g in matches if g.identifier in by_origin]
 
@@ -327,6 +341,7 @@ def search(terms, local_dir, catalog_dir, installed, long_form):
     # species should not be padded out to the width of the longest name in the catalog.
     id_width = min(max(len(g.identifier) for g in ordered), 38)
     organism_width = min(max(len(_organism(g)) for g in ordered), 44)
+    cat_root = Path(catalog_dir) if catalog_dir else None
 
     for genome in ordered:
         organism = _organism(genome)
@@ -342,7 +357,13 @@ def search(terms, local_dir, catalog_dir, installed, long_form):
         n50 = genome.stats.get("scaffold_n50")
         contiguity = f"N50 {n50 / 1e6:.1f}M" if n50 and n50 >= 1e6 else (f"N50 {n50 / 1e3:.0f}k" if n50 else "")
 
-        suffix = f"  [installed as {by_origin[genome.identifier]}]" if genome.identifier in by_origin else ""
+        suffixes = []
+        alias = get_catalog_alias(genome.accession or genome.identifier, cat_root)
+        if alias:
+            suffixes.append(f"alias: {alias}")
+        if genome.identifier in by_origin:
+            suffixes.append(f"installed as {by_origin[genome.identifier]}")
+        suffix = "  [" + ", ".join(suffixes) + "]" if suffixes else ""
 
         click.echo(
             f"  {genome.identifier:<{id_width}}  {organism[:organism_width]:<{organism_width}}"
@@ -557,8 +578,9 @@ def scaffold(query, reference, alias, clean, catalog_dir, local_dir, no_link):
     query = Path(query)
     root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
     local_root = Path(local_dir)
+    cat_root = Path(catalog_dir) if catalog_dir else None
 
-    ref = find(local(local_root), reference) or find(catalog(Path(catalog_dir) if catalog_dir else None), reference)
+    ref = find(local(local_root), reference, cat_root) or find(catalog(cat_root), reference, cat_root)
     if ref is None or ref.path is None or not ref.fasta:
         click.echo(f"Reference not available locally: {reference}", err=True)
         click.echo(f"Install it first: leishref download {reference} --alias {reference}", err=True)
