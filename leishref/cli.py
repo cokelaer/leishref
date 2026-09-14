@@ -158,7 +158,9 @@ def download(name, alias, local_dir, catalog_dir, force, no_link):
     so it is yours to choose and required.
 
     Examples:
+
       leishref download GCA_000410715.1 --alias Ltrop.L590
+
       leishref download Ltropica.Ld1S.scaffold.flye --alias flye
     """
     entries = catalog(Path(catalog_dir) if catalog_dir else None)
@@ -237,7 +239,9 @@ def info(name, local_dir, catalog_dir):
     """List the catalog and the local database, or show one genome in full.
 
     Examples:
+
       leishref info
+
       leishref info GCA_000410715.1
     """
     entries = catalog(Path(catalog_dir) if catalog_dir else None)
@@ -280,9 +284,13 @@ def search(terms, local_dir, catalog_dir, installed, long_form):
     the result rather than widening it.
 
     Examples:
+
       leishref search donovani
+
       leishref search tropica zenodo
+
       leishref search 5661
+
       leishref search PRJNA450813
     """
     entries = catalog(Path(catalog_dir) if catalog_dir else None)
@@ -349,7 +357,9 @@ def verify(local_dir, quick):
     """Check the local database against the checksums recorded with each genome.
 
     Examples:
+
       leishref verify
+
       leishref verify --quick
     """
     installed = local(Path(local_dir))
@@ -388,6 +398,7 @@ def link(local_dir, basedir):
     """Refresh the alias-named symlinks for everything installed locally.
 
     Examples:
+
       leishref link
     """
     made, conflicts = [], []
@@ -427,7 +438,9 @@ def fetch(accession, alias, species, strain, catalog_dir, local_dir, force, no_l
     the files in the local database rather than discarding them.
 
     Examples:
+
       leishref dev fetch GCA_000410715.1
+
       leishref dev fetch GCA_000410715.1 --alias Ltrop.L590
     """
     root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
@@ -496,7 +509,9 @@ def add(fasta, gff, alias, species, strain, technology, assembler, catalog_dir, 
     """Add a local assembly to the catalog and install it locally.
 
     Examples:
+
       leishref dev add assembly.fa --alias Ltrop.flye --species "Leishmania tropica"
+
       leishref dev add assembly.fa assembly.gff --alias Ltrop.flye
     """
     fasta, gff = Path(fasta), Path(gff) if gff else None
@@ -534,7 +549,9 @@ def scaffold(query, reference, alias, clean, catalog_dir, local_dir, no_link):
     """Scaffold an assembly against a reference with ragtag.
 
     Examples:
+
       leishref dev scaffold --query flye.fa --reference Ltrop.L590 --alias Ltrop.flye
+
       leishref dev scaffold --query flye.fa --reference Ltrop.L590 --alias Ltrop.flye --clean
     """
     query = Path(query)
@@ -605,7 +622,9 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
     Needs ZENODO_TOKEN, or ZENODO_SANDBOX_TOKEN with --sandbox.
 
     Examples:
+
       leishref dev publish Ltrop.flye
+
       leishref dev publish Ltrop.flye --confirm --version v1.0
     """
     genome = _require(local(Path(local_dir)), name, "local database")
@@ -687,7 +706,9 @@ def derive_agp_cmd(parent, child, out, record, local_dir, probe_len):
     source, so a third-party layout can be stored as coordinates rather than sequence.
 
     Examples:
+
       leishref dev derive-agp parent.fna child.fasta
+
       leishref dev derive-agp parent.fna child.fasta --record Ltrop.tritryp68
     """
     parent, child = Path(parent), Path(child)
@@ -774,8 +795,11 @@ def import_cmd(accessions, from_tsv, catalog_dir, overwrite, dry_run):
     missing; `leishref dev checksum` fills those in.
 
     Examples:
+
       leishref dev import GCA_000227135.2 GCA_000410715.1
+
       leishref dev import --from-tsv ~/Downloads/ncbi_dataset.tsv
+
       leishref dev import --from-tsv ncbi_dataset.tsv --dry-run
     """
     wanted = list(accessions) + (_accessions_from_tsv(Path(from_tsv)) if from_tsv else [])
@@ -827,8 +851,11 @@ def checksum(catalog_dir, workdir, keep, limit):
     statistics locally, which also fills in num_gaps.
 
     Examples:
+
       leishref dev checksum
+
       leishref dev checksum --limit 10
+
       leishref dev checksum --keep
     """
     root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
