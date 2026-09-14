@@ -12,6 +12,53 @@ from typing import Optional
 
 import rich_click as click
 
+
+class CommandGroup(click.Group):
+    """Custom group to separate user and developer commands in help."""
+
+    def format_commands(self, ctx, formatter):
+        """Write all the commands to the formatter if they exist."""
+        commands = []
+        user_commands = ["download", "info", "search", "verify"]
+        dev_commands = ["dev"]
+
+        # Separate commands
+        user_cmds = []
+        dev_cmds = []
+        other_cmds = []
+
+        for subcommand in self.list_commands(ctx):
+            cmd = self.get_command(ctx, subcommand)
+            if cmd is None:
+                continue
+            if subcommand in user_commands:
+                user_cmds.append((subcommand, cmd))
+            elif subcommand in dev_commands:
+                dev_cmds.append((subcommand, cmd))
+            else:
+                other_cmds.append((subcommand, cmd))
+
+        # Write user commands
+        if user_cmds:
+            with formatter.section("User Commands"):
+                formatter.write_dl(
+                    [(name, cmd.get_short_help_str(100)) for name, cmd in user_cmds]
+                )
+
+        # Write developer commands
+        if dev_cmds:
+            with formatter.section("Developer Commands"):
+                formatter.write_dl(
+                    [(name, cmd.get_short_help_str(100)) for name, cmd in dev_cmds]
+                )
+
+        # Write other commands (if any)
+        if other_cmds:
+            with formatter.section("Other Commands"):
+                formatter.write_dl(
+                    [(name, cmd.get_short_help_str(100)) for name, cmd in other_cmds]
+                )
+
 from leishref.agp import derive_agp, write_agp
 from leishref.checksums import genome_stats, md5_file
 from leishref.links import LinkConflict, link_paths
@@ -31,7 +78,7 @@ from leishref.zenodo import (
 )
 
 
-@click.group()
+@click.group(cls=CommandGroup)
 def cli():
     """Leishmania reference genome database."""
 
@@ -267,7 +314,8 @@ def info(name, local_dir, catalog_dir):
 
     click.echo(f"\nLocal: {len(installed)} installed  ({Path(local_dir)})")
     for genome in _by_organism(installed):
-        click.echo(f"  {genome.identifier:<38} {_organism(genome)}")
+        source_ref = genome.provenance.get("catalog_id") or genome.accession or ""
+        click.echo(f"  {genome.identifier:<38} {_organism(genome):<50} {source_ref}")
     if not installed:
         click.echo("  (nothing yet -- 'leishref download <name> --alias <alias>')")
 
