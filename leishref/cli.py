@@ -17,7 +17,7 @@ from leishref.checksums import genome_stats, md5_file
 from leishref.links import LinkConflict, link_paths
 from leishref.metadata import CATALOG_DIR, LOCAL_DIR, Genome, catalog, find, local, read_genome, today_iso, write_genome
 from leishref.naming import suggest_alias
-from leishref.ncbi import fetch_fasta_gff, fetch_metadata, fetch_metadata_many
+from leishref.ncbi import fetch_fasta_gff, fetch_metadata, fetch_metadata_many, species_from_organism
 from leishref.scaffold import clean_scaffolded_fasta, run_scaffold
 from leishref.zenodo import (
     ZenodoError,
@@ -66,9 +66,16 @@ def _classify(paths) -> dict:
 
 
 def _organism(genome) -> str:
-    """'Leishmania donovani - BPK282A1', or just the species when no strain is known."""
+    """'Leishmania donovani - BPK282A1', or just the species when no strain is known.
+
+    An undescribed species is sometimes named after the very isolate it was found in, so
+    the strain is dropped when the species already contains it.
+    """
     species = genome.species or "?"
-    return f"{species} - {genome.strain}" if genome.strain else species
+    strain = genome.strain
+    if not strain or strain in species:
+        return species
+    return f"{species} - {strain}"
 
 
 def _by_organism(genomes: list) -> list:
@@ -438,15 +445,14 @@ def fetch(accession, alias, species, strain, catalog_dir, local_dir, force, no_l
             raise SystemExit(1)
 
         meta = fetch_metadata(accession)
-        organism = (meta.get("organism_name") or "").split()
 
         genome = Genome(
             identifier=accession,
             source="NCBI",
             accession=accession,
             taxon_id=meta.get("taxon_id"),
-            species=species or (" ".join(organism[:2]) if len(organism) >= 2 else None),
-            strain=strain or meta.get("strain") or (" ".join(organism[2:]) or None),
+            species=species or species_from_organism(meta.get("organism_name")) or None,
+            strain=strain or meta.get("strain"),
             assembly_name=meta.get("assembly_name"),
             assembly_level=meta.get("assembly_level"),
             release_date=meta.get("release_date"),
@@ -717,15 +723,12 @@ def derive_agp_cmd(parent, child, out, record, local_dir, probe_len):
 
 def _genome_from_ncbi(accession: str, meta: dict) -> Genome:
     """Build a catalog entry from a `datasets summary` record."""
-    # organism_name often carries the strain too ("Leishmania infantum JPCM5"), so the
-    # binomial is taken from its first two tokens rather than used whole.
-    organism = (meta.get("organism_name") or "").split()
     return Genome(
         identifier=accession,
         source="NCBI",
         accession=accession,
         taxon_id=meta.get("taxon_id"),
-        species=" ".join(organism[:2]) if len(organism) >= 2 else None,
+        species=species_from_organism(meta.get("organism_name")) or None,
         strain=meta.get("strain"),
         assembly_name=meta.get("assembly_name"),
         assembly_level=meta.get("assembly_level"),

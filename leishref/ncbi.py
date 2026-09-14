@@ -75,6 +75,27 @@ def fetch_fasta_gff(accession: str, outdir: Path) -> tuple[Optional[Path], Optio
             raise NCBIError(f"datasets command failed: {e}")
 
 
+#: Open nomenclature markers. What follows one of these is part of the taxon name, not
+#: a strain: "Leishmania sp. Ghana" and "Leishmania sp. Namibia" are different organisms.
+OPEN_NOMENCLATURE = ("sp.", "cf.", "aff.", "nr.")
+
+
+def species_from_organism(organism_name) -> str:
+    """The species part of an NCBI organism name.
+
+    organism_name often carries more than the binomial ("Leishmania infantum JPCM5"), so
+    normally the first two tokens are the species. An undescribed species is named by
+    what follows the marker, so that word is kept too, otherwise every unplaced isolate
+    in the genus collapses into a single "Leishmania sp.".
+    """
+    tokens = (organism_name or "").split()
+    if len(tokens) < 2:
+        return " ".join(tokens)
+    if tokens[1].lower() in OPEN_NOMENCLATURE and len(tokens) > 2:
+        return " ".join(tokens[:3])
+    return " ".join(tokens[:2])
+
+
 def _parse_summary(data: dict) -> dict:
     """Pull the fields we keep out of one `datasets summary` record."""
     info = data.get("assembly_info", {})

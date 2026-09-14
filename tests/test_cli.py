@@ -264,3 +264,10 @@ def test_install_records_the_files_it_wrote(tmp_path):
     assert written.files == {"fasta": "GCA_9_genomic.fna", "gff": "GCA_9_genomic.gff"}
     assert written.identifier == "mine"
     assert written.provenance["catalog_id"] == "GCA_9.1"
+
+
+def test_organism_does_not_repeat_a_strain_already_in_the_species():
+    from leishref.cli import _organism
+
+    genome = Genome(species="Leishmania sp. AIIMS/LM/SS/PKDL/LD-974", strain="AIIMS/LM/SS/PKDL/LD-974")
+    assert _organism(genome) == "Leishmania sp. AIIMS/LM/SS/PKDL/LD-974"

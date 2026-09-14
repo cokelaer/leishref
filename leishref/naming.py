@@ -26,6 +26,10 @@ def species_abbrev(species: Optional[str]) -> str:
     if not species:
         return "Unk"
     parts = species.replace("_", " ").split()
+    # "Leishmania sp. Ghana": the marker carries no information, so abbreviate what
+    # follows it, or every unplaced isolate in the genus becomes "Lsp.".
+    if len(parts) > 2 and parts[1].lower() in ("sp.", "cf.", "aff.", "nr."):
+        return parts[0][0].upper() + parts[2][:4].lower()
     if len(parts) >= 2:
         return parts[0][0].upper() + parts[1][:4].lower()
     return parts[0][0].upper() + parts[0][1:5].lower()

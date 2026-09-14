@@ -77,3 +77,46 @@ def test_paired_gca_and_gcf_accessions_suggest_the_same_name():
 def test_suggestions_are_mostly_distinct():
     suggestions = [suggest_alias(g) for g in catalog()]
     assert len(set(suggestions)) >= 0.8 * len(suggestions)
+
+
+@pytest.mark.parametrize(
+    "organism,expected",
+    [
+        ("Leishmania donovani", "Leishmania donovani"),
+        ("Leishmania infantum JPCM5", "Leishmania infantum"),
+        ("Leishmania major strain Friedlin", "Leishmania major"),
+        ("Leishmania sp. Ghana 2012 LV757", "Leishmania sp. Ghana"),
+        ("Leishmania sp. Namibia", "Leishmania sp. Namibia"),
+        ("Leishmania cf. guyanensis/panamensis", "Leishmania cf. guyanensis/panamensis"),
+        ("Leishmania", "Leishmania"),
+        ("", ""),
+    ],
+)
+def test_species_from_organism(organism, expected):
+    from leishref.ncbi import species_from_organism
+
+    assert species_from_organism(organism) == expected
+
+
+def test_open_nomenclature_keeps_distinct_taxa_apart():
+    """Two tokens would make Ghana and Namibia both 'Leishmania sp.'."""
+    from leishref.ncbi import species_from_organism
+
+    ghana = species_from_organism("Leishmania sp. Ghana 2012 LV757")
+    namibia = species_from_organism("Leishmania sp. Namibia")
+    assert ghana != namibia
+    assert species_abbrev(ghana) != species_abbrev(namibia)
+
+
+def test_abbreviation_skips_the_marker():
+    assert species_abbrev("Leishmania sp. Ghana") == "Lghan"
+    assert species_abbrev("Leishmania cf. guyanensis/panamensis") == "Lguya"
+
+
+def test_no_catalog_species_is_a_bare_marker():
+    from leishref.metadata import catalog
+
+    for entry in catalog():
+        if entry.species:
+            last = entry.species.split()[-1].lower()
+            assert last not in ("sp.", "cf.", "aff.", "nr."), f"{entry.identifier}: {entry.species!r}"
