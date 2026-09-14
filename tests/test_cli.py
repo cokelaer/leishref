@@ -109,3 +109,59 @@ def test_info_on_an_unknown_name_fails_clearly(installed):
 
     assert result.exit_code == 1
     assert "Not in catalog" in result.output
+
+
+def test_search_finds_by_species(installed):
+    base, _ = installed
+    result = run(["search", "donovani"], base)
+
+    assert result.exit_code == 0
+    assert "GCA_000227135.2" in result.output
+    assert all("donovani" in line for line in result.output.splitlines() if line.startswith("  "))
+
+
+def test_search_narrows_with_more_terms(installed):
+    base, _ = installed
+    broad = run(["search", "tropica"], base)
+    narrow = run(["search", "tropica", "zenodo"], base)
+
+    assert broad.exit_code == narrow.exit_code == 0
+    assert int(narrow.output.split()[0]) < int(broad.output.split()[0])
+
+
+def test_search_matches_taxon_id(installed):
+    base, _ = installed
+    result = run(["search", "5661"], base)
+    assert result.exit_code == 0
+    assert "donovani" in result.output
+
+
+def test_search_without_a_match_exits_nonzero(installed):
+    base, _ = installed
+    result = run(["search", "xyzzy"], base)
+
+    assert result.exit_code == 1
+    assert "No genome matches" in result.output
+
+
+def test_search_requires_a_term(installed):
+    base, _ = installed
+    assert run(["search"], base).exit_code != 0
+
+
+def test_search_flags_installed_genomes(tmp_path):
+    """A local install records its origin, so search can say it is already present."""
+    from leishref.metadata import catalog as read_catalog
+
+    origin = read_catalog()[0]
+    directory = tmp_path / "data" / "mine"
+    directory.mkdir(parents=True)
+    genome = Genome(
+        identifier="mine",
+        species=origin.species,
+        provenance={"catalog_id": origin.identifier},
+    )
+    write_genome(directory, genome)
+
+    result = run(["search", origin.identifier], tmp_path)
+    assert "installed as mine" in result.output

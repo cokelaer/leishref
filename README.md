@@ -7,7 +7,7 @@ TriTrypDB and Zenodo to find out what exists or where it lives.
 **Key features:**
 - One directory per genome, each with a `metadata.yaml` carrying source, accession,
   checksums, statistics and provenance
-- `leishref download <name> --alias <alias>` installs a genome locally and checks its md5
+- `leishref search donovani` over the whole catalog; `download --alias` installs and checks the md5
 - Alias-named symlinks so you can type `Ltrop.L590.fna` instead of
   `GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna`
 - Layouts recorded as derivations (parent assembly plus an AGP) rather than as separate genomes
@@ -37,6 +37,7 @@ Using the database and maintaining it are different jobs, so the commands are sp
 $ leishref --help
   download   Install a catalog genome into the local database under ALIAS
   info       List the catalog and the local database
+  search     Find catalog genomes matching every term
   verify     Check the local database against recorded checksums
   link       Refresh the alias-named symlinks
   dev        Commands for maintaining the shipped catalog
@@ -138,6 +139,36 @@ leishref info                    # catalog and local database
 leishref info GCA_000410715.1    # one genome, in full
 leishref info Ltrop.L590         # local genomes resolve by alias
 ```
+
+### Search
+
+Terms are matched against the whole record -- species, strain, accession, taxon id,
+assembly name, filenames, provenance -- so you can look a genome up by whatever you
+happen to know about it. Several terms narrow the result rather than widening it.
+
+```console
+$ leishref search donovani
+5 matches for 'donovani'
+
+  GCA_000227135.2      Leishmania donovani       NCBI    32.4 Mb   36 seqs
+  GCA_001989975.1      Leishmania donovani       NCBI    32.2 Mb   36 seqs
+  ...
+
+$ leishref search tropica zenodo
+4 matches for 'tropica zenodo'
+
+  Ltropica.Ld1S.scaffold.flye    Leishmania tropica CDC  MyAssembly  33.6 Mb  76 seqs  [zenodo]
+  ...
+```
+
+```bash
+leishref search 5661            # by taxon id
+leishref search PRJNA450813     # by bioproject
+leishref search tropica --installed   # only what you already have
+leishref search L590 --long     # full records rather than one line each
+```
+
+Genomes already in your local database are flagged `[installed as <alias>]`.
 
 ### Check integrity
 

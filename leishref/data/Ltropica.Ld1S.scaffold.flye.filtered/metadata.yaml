@@ -6,6 +6,10 @@ files:
   fasta: Ltropica.Ld1S.scaffold.flye.filtered.fasta
 checksums:
   fasta: b387ce1f3ec3021e00fea777623789ff
+stats:
+  num_bases: 33505549
+  num_contigs: 68
+  gc_percent: 60.17
 provenance:
   zenodo_doi: 10.5281/zenodo.22710156
 date_added: '2026-09-11'

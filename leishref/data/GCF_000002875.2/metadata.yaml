@@ -11,6 +11,10 @@ files:
 checksums:
   fasta: 562545239846303869ab080646cd632d
   gff: 7f9fffc4473e4ebeff1f90939c9c4828
+stats:
+  num_bases: 32122061
+  num_contigs: 76
+  gc_percent: 59.54
 provenance:
   bioproject: PRJNA12658
   biosample: SAMEA3138175

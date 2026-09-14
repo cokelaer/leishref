@@ -215,6 +215,70 @@ def info(name, local_dir, catalog_dir):
 
 
 @cli.command()
+@click.argument("terms", nargs=-1, required=True)
+@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
+@click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
+@click.option("--installed", is_flag=True, help="Only genomes already in the local database")
+@click.option("--long", "long_form", is_flag=True, help="Show the full record for each match")
+def search(terms, local_dir, catalog_dir, installed, long_form):
+    """Find catalog genomes matching every TERM.
+
+    Terms are matched case-insensitively against the whole record: species, strain,
+    accession, taxon id, assembly name, filenames and provenance. Several terms narrow
+    the result rather than widening it.
+
+    Examples:
+      leishref search donovani
+      leishref search tropica zenodo
+      leishref search 5661
+      leishref search PRJNA450813
+    """
+    entries = catalog(Path(catalog_dir) if catalog_dir else None)
+    here = local(Path(local_dir))
+
+    # A local install records where it came from, so matches can be flagged as present.
+    by_origin = {}
+    for genome in here:
+        origin = genome.provenance.get("catalog_id") or genome.identifier
+        by_origin[origin] = genome.identifier
+
+    matches = [g for g in entries if g.matches(terms)]
+    if installed:
+        matches = [g for g in matches if g.identifier in by_origin]
+
+    query = " ".join(terms)
+    if not matches:
+        click.echo(f"No genome matches {query!r}")
+        click.echo("Run 'leishref info' to list the catalog")
+        raise SystemExit(1)
+
+    click.echo(f"{len(matches)} match{'es' if len(matches) > 1 else ''} for {query!r}\n")
+
+    if long_form:
+        import yaml
+
+        for genome in matches:
+            click.echo(yaml.safe_dump(genome.to_dict(), sort_keys=False, default_flow_style=False).rstrip())
+            click.echo("")
+        return
+
+    for genome in matches:
+        organism = " ".join(filter(None, (genome.species, genome.strain))) or "?"
+        bases = genome.stats.get("num_bases")
+        size = f"{bases / 1e6:.1f} Mb" if bases else ""
+        contigs = genome.stats.get("num_contigs")
+        seqs = f"{contigs} seqs" if contigs else ""
+        flags = []
+        if genome.zenodo_doi:
+            flags.append("zenodo")
+        if genome.identifier in by_origin:
+            flags.append(f"installed as {by_origin[genome.identifier]}")
+        suffix = f"  [{', '.join(flags)}]" if flags else ""
+
+        click.echo(f"  {genome.identifier:<38} {organism:<28} {genome.source or '?':<11} {size:>8} {seqs:>10}{suffix}")
+
+
+@cli.command()
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--quick", is_flag=True, help="Check presence only, skip checksums")
 def verify(local_dir, quick):

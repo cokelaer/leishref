@@ -72,6 +72,33 @@ class Genome:
                 out.append((kind, self.path / name, self.checksums.get(kind)))
         return out
 
+    def haystack(self) -> str:
+        """Everything worth matching a search term against, lowercased.
+
+        Includes provenance identifiers so a bioproject or DOI finds its genome, and
+        the filenames so a name copied off disk does too.
+        """
+        parts = [
+            self.identifier,
+            self.source,
+            self.accession,
+            str(self.taxon_id) if self.taxon_id else None,
+            self.species,
+            self.strain,
+            self.assembly_name,
+            self.release_version,
+            self.notes,
+            *self.files.values(),
+            *(str(v) for v in self.provenance.values()),
+            *(str(v) for v in self.scaffold.values()),
+        ]
+        return " ".join(p for p in parts if p).lower()
+
+    def matches(self, terms) -> bool:
+        """True when every term appears somewhere in this genome's metadata."""
+        haystack = self.haystack()
+        return all(term.lower() in haystack for term in terms)
+
     def to_dict(self) -> dict:
         """YAML-bound fields, dropping empties so the file stays readable."""
         data = {

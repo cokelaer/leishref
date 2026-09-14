@@ -106,3 +106,31 @@ def test_shipped_catalog_records_files_and_checksums():
     for genome in catalog():
         assert genome.fasta, f"{genome.identifier} has no fasta recorded"
         assert genome.checksums.get("fasta"), f"{genome.identifier} has no fasta checksum"
+
+
+def test_haystack_covers_identity_and_provenance(genome):
+    genome.provenance = {"bioproject": "PRJNA450813", "zenodo_doi": "10.5281/zenodo.1"}
+    hay = genome.haystack()
+
+    for expected in ("gca_1.1", "leishmania tropica", "5666", "g.fna", "prjna450813", "zenodo"):
+        assert expected in hay
+
+
+def test_matches_is_case_insensitive(genome):
+    assert genome.matches(["TROPICA"])
+    assert genome.matches(["tropica"])
+
+
+def test_multiple_terms_narrow_rather_than_widen(genome):
+    genome.provenance = {"zenodo_doi": "10.5281/zenodo.1"}
+    assert genome.matches(["tropica", "zenodo"])
+    assert not genome.matches(["tropica", "donovani"])
+
+
+def test_matches_finds_taxon_id_given_as_text(genome):
+    assert genome.matches(["5666"])
+
+
+def test_every_catalog_genome_has_statistics():
+    for entry in catalog():
+        assert entry.stats.get("num_bases"), f"{entry.identifier} has no num_bases"

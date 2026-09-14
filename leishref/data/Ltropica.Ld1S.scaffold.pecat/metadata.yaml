@@ -6,6 +6,10 @@ files:
   fasta: Ltropica.Ld1S.scaffold.pecat.fasta
 checksums:
   fasta: 779a6fcf0ea8cbddbe6624630f0beb35
+stats:
+  num_bases: 34463892
+  num_contigs: 44
+  gc_percent: 59.7
 provenance:
   zenodo_doi: 10.5281/zenodo.22710148
 date_added: '2026-09-11'

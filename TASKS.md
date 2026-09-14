@@ -10,13 +10,14 @@
 - [x] Catalog ships with the package; local database at `data/<alias>/`
 - [x] `download` resolves a Zenodo DOI or NCBI accession and verifies the md5
 - [x] `--alias` compulsory on install; the directory name is the alias
+- [x] `search` across the whole record (species, taxon, accession, provenance)
 - [x] `verify`, non-zero exit on missing files or checksum drift
 - [x] Alias-named relative symlinks (`link`, `--no-link`)
 - [x] NCBI fetch via datasets CLI, with taxonomy and project metadata
 - [x] Ragtag scaffolding with AGP-based cleaning (chrom-anchored plus kinetoplast)
 - [x] Zenodo publishing, sandbox kept separate from production
 - [x] AGP derivation and `apply_agp` reconstruction
-- [x] Genome statistics (num_bases, num_contigs, gc_percent)
+- [x] Genome statistics (num_bases, num_contigs, gc_percent), complete for all 17 entries
 
 ## In Progress / High Priority 🚧
 
