@@ -1,6 +1,6 @@
 # Leishmania Reference Genome Database (leishref)
 
-![leishref logo](doc/logo.png)
+![leishref logo](docs/logo.png)
 
 A curated catalog of Leishmania genomes that ships inside the package, so
 `pip install leishref` is the only entry point you need: no hunting across NCBI,
