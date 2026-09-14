@@ -46,7 +46,7 @@ def test_empty_fields_are_not_written(tmp_path, genome):
 def test_identifier_defaults_to_directory_name(tmp_path):
     directory = tmp_path / "Ltrop.flye"
     directory.mkdir()
-    (directory / "metadata.yaml").write_text("source: MyAssembly\n")
+    (directory / "metadata.yaml").write_text("source: Local\n")
 
     assert read_genome(directory).identifier == "Ltrop.flye"
 
@@ -134,3 +134,16 @@ def test_matches_finds_taxon_id_given_as_text(genome):
 def test_every_catalog_genome_has_statistics():
     for entry in catalog():
         assert entry.stats.get("num_bases"), f"{entry.identifier} has no num_bases"
+
+
+def test_catalog_sources_come_from_a_known_vocabulary():
+    """source says where `download` fetches a genome from, not who assembled it."""
+    allowed = {"NCBI", "Zenodo", "TriTrypDB", "Local", "Scaffold"}
+    for entry in catalog():
+        assert entry.source in allowed, f"{entry.identifier} has source {entry.source!r}"
+
+
+def test_zenodo_sourced_genomes_carry_a_doi():
+    for entry in catalog():
+        if entry.source == "Zenodo":
+            assert entry.zenodo_doi, f"{entry.identifier} is sourced from Zenodo but has no DOI"

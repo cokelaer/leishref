@@ -268,12 +268,8 @@ def search(terms, local_dir, catalog_dir, installed, long_form):
         size = f"{bases / 1e6:.1f} Mb" if bases else ""
         contigs = genome.stats.get("num_contigs")
         seqs = f"{contigs} seqs" if contigs else ""
-        flags = []
-        if genome.zenodo_doi:
-            flags.append("zenodo")
-        if genome.identifier in by_origin:
-            flags.append(f"installed as {by_origin[genome.identifier]}")
-        suffix = f"  [{', '.join(flags)}]" if flags else ""
+        # The source column already says Zenodo, so only installation is worth flagging.
+        suffix = f"  [installed as {by_origin[genome.identifier]}]" if genome.identifier in by_origin else ""
 
         click.echo(f"  {genome.identifier:<38} {organism:<28} {genome.source or '?':<11} {size:>8} {seqs:>10}{suffix}")
 
@@ -436,7 +432,7 @@ def add(fasta, gff, alias, species, strain, catalog_dir, local_dir, no_link):
 
     genome = Genome(
         identifier=alias,
-        source="MyAssembly",
+        source="Local",
         species=species,
         strain=strain,
         files={k: v.name for k, v in (("fasta", fasta), ("gff", gff)) if v},
@@ -589,6 +585,7 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
         return
 
     genome.provenance["zenodo_doi"] = doi
+    genome.source = "Zenodo"
     if version:
         genome.release_version = version
     write_genome(genome.path, genome)
@@ -598,6 +595,7 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
     if (entry / "metadata.yaml").exists():
         shipped = read_genome(entry)
         shipped.provenance["zenodo_doi"] = doi
+        shipped.source = "Zenodo"
         write_genome(entry, shipped)
         click.echo(f"Recorded DOI in {entry}")
 

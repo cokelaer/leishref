@@ -23,7 +23,7 @@ def installed(tmp_path):
         directory,
         Genome(
             identifier="Ltrop.flye",
-            source="MyAssembly",
+            source="Local",
             species="Leishmania tropica",
             files={"fasta": fasta.name},
             checksums={"fasta": md5_file(fasta)},

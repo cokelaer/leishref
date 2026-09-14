@@ -94,6 +94,19 @@ date_added: '2026-09-11'
 The directory is named by accession where there is one. There is no separate index to
 keep in sync: the directory tree *is* the catalog.
 
+`source` says where `download` fetches a genome from, not who assembled it:
+
+| source | meaning |
+|---|---|
+| `NCBI` | fetched by accession through the `datasets` CLI |
+| `Zenodo` | published to Zenodo; retrieved by DOI, no token needed |
+| `TriTrypDB` | downloaded by hand, because their downloads require a login |
+| `Local` | added from disk and not published anywhere yet |
+| `Scaffold` | produced by `dev scaffold` and not published yet |
+
+`dev publish` moves a genome to `Zenodo` when it records the DOI, which is the point at
+which it becomes retrievable by anyone else.
+
 ---
 
 ## Using the database
@@ -157,7 +170,7 @@ $ leishref search donovani
 $ leishref search tropica zenodo
 4 matches for 'tropica zenodo'
 
-  Ltropica.Ld1S.scaffold.flye    Leishmania tropica CDC  MyAssembly  33.6 Mb  76 seqs  [zenodo]
+  Ltropica.Ld1S.scaffold.flye    Leishmania tropica CDC  Zenodo      33.6 Mb  76 seqs  [zenodo]
   ...
 ```
 
