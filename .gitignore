@@ -39,6 +39,14 @@ Scaffold/**/*.confidence.txt
 !AGP/*.agp
 !Scaffold/**/*.agp
 
+# Alias-named symlinks created by `leishref link`; anchored to the root so the
+# tracked AGP/ directory is unaffected.
+/*.fa
+/*.fna
+/*.fasta
+/*.gff
+/*.agp
+
 *.swp
 *.swo
 .DS_Store

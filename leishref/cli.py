@@ -1,5 +1,6 @@
 """CLI entry points for leishref."""
 
+import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -10,6 +11,7 @@ import rich_click as click
 from leishref.agp import derive_agp, write_agp
 from leishref.alias import assign_aliases, unique_alias
 from leishref.checksums import contig_count, gc_percent, md5_file, sequence_length
+from leishref.links import LinkConflict, link_paths, link_row
 from leishref.manifest import DATA_DIRS, Catalog, ManifestRow, resolve_path, today_iso
 from leishref.ncbi import fetch_fasta_gff, fetch_metadata
 from leishref.scaffold import clean_scaffolded_fasta, run_scaffold
@@ -42,6 +44,22 @@ def _autoalias(catalog: Catalog, row: ManifestRow, given: Optional[str]) -> Mani
     return row
 
 
+def _link(row: ManifestRow, no_link: bool, paths=None) -> None:
+    """Create alias-named symlinks in the working directory.
+
+    Callers that just wrote the files pass them explicitly: resolving by name would
+    find a copy still sitting in the working directory rather than the one filed away.
+    """
+    if no_link:
+        return
+    try:
+        made = link_paths(row.get("alias"), paths) if paths else link_row(row)
+        for link in made:
+            click.echo(f"  {link.name} -> {os.readlink(link)}")
+    except LinkConflict as exc:
+        click.echo(f"  not linked: {exc}", err=True)
+
+
 def _catalog(manifest) -> Catalog:
     """An explicit --manifest means that one file; otherwise catalog + local overlay."""
     if manifest:
@@ -56,8 +74,9 @@ def _catalog(manifest) -> Catalog:
 @click.option("--alias", help="Short alias for this genome")
 @click.option("--outdir", type=click.Path(), default="NCBI", help="Output directory")
 @click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
+@click.option("--no-link", is_flag=True, help="Skip the alias-named symlink in the working directory")
 @click.option("--force", is_flag=True, help="Re-fetch even if already in manifest")
-def fetch(accession, species, strain, alias, outdir, manifest, force):
+def fetch(accession, species, strain, alias, outdir, manifest, force, no_link):
     """Fetch genome from NCBI. Detects GCA_/GCF_ accessions automatically.
 
     Examples:
@@ -121,6 +140,7 @@ def fetch(accession, species, strain, alias, outdir, manifest, force):
 
     _autoalias(catalog, row, alias)
     catalog.upsert_local(row)
+    _link(row, no_link, [fasta, gff])
     click.echo(f"{'Updated' if force else 'Added'} {accession} in {catalog.local_path}")
 
 
@@ -132,7 +152,8 @@ def fetch(accession, species, strain, alias, outdir, manifest, force):
 @click.option("--alias", help="Short alias")
 @click.option("--outdir", type=click.Path(), default="MyAssemblies", help="Destination directory")
 @click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
-def add(fasta, gff, species, strain, alias, outdir, manifest):
+@click.option("--no-link", is_flag=True, help="Skip the alias-named symlink in the working directory")
+def add(fasta, gff, species, strain, alias, outdir, manifest, no_link):
     """Add local fasta/gff files to database and manifest.
 
     Examples:
@@ -179,6 +200,7 @@ def add(fasta, gff, species, strain, alias, outdir, manifest):
 
     _autoalias(catalog, row, alias)
     catalog.upsert_local(row)
+    _link(row, no_link, [new_fasta, new_gff])
     click.echo(f"Added to {catalog.local_path}: {new_fasta.name}  (alias {row['alias']})")
 
 
@@ -190,7 +212,8 @@ def add(fasta, gff, species, strain, alias, outdir, manifest):
 @click.option("--clean", is_flag=True, help="Keep only chr-anchored contigs + kinetoplast")
 @click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
 @click.option("--ragtag-bin", help="Path to ragtag.py (auto-detect if not given)")
-def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
+@click.option("--no-link", is_flag=True, help="Skip the alias-named symlink in the working directory")
+def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin, no_link):
     """Run ragtag scaffold on query against reference.
 
     Examples:
@@ -250,6 +273,7 @@ def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
             )
             _autoalias(catalog, row_cleaned, alias)
             catalog.upsert_local(row_cleaned)
+            _link(row_cleaned, no_link, [cleaned_fasta])
             click.echo(f"Scaffold (cleaned): {cleaned_fasta.name}")
         else:
             md5_scaffold = md5_file(out_fasta)
@@ -268,6 +292,7 @@ def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
             )
             _autoalias(catalog, row, alias)
             catalog.upsert_local(row)
+            _link(row, no_link, [out_fasta])
             click.echo(f"Scaffold: {out_fasta.name}")
 
     finally:
@@ -542,6 +567,45 @@ def derive_agp_cmd(parent, child, out, basedir, manifest, record, probe_len):
         click.echo(f"Recorded derived_from={parent_path.name} agp_filename={out_path.name}")
 
 
+@cli.command("link")
+@click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
+@click.option("--basedir", type=click.Path(), default=".", help="Where to create the links")
+def link_cmd(manifest, basedir):
+    """Create alias-named symlinks for every genome present on disk.
+
+    Data files keep the name their source gave them; these give each one a readable
+    handle to pass to other tools. Genomes not present on disk are skipped.
+
+    Examples:
+      leishref link
+    """
+    catalog = _catalog(manifest)
+    basedir = Path(basedir)
+
+    made, skipped, conflicts = [], 0, []
+    for row in catalog.read():
+        if not row.get("alias"):
+            continue
+        try:
+            links = link_row(row, basedir)
+        except LinkConflict as exc:
+            conflicts.append(str(exc))
+            continue
+        if links:
+            made.extend(links)
+        else:
+            skipped += 1
+
+    for link in made:
+        click.echo(f"  {link.name} -> {os.readlink(link)}")
+
+    click.echo(f"\nCreated {len(made)} links, {skipped} already correct or absent")
+    if conflicts:
+        click.echo("\nNot linked:", err=True)
+        for c in conflicts:
+            click.echo(f"  {c}", err=True)
+
+
 @cli.command("alias")
 @click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
 @click.option("--overwrite", is_flag=True, help="Recompute aliases that are already set")
@@ -586,8 +650,9 @@ def alias_cmd(manifest, overwrite, dry_run):
 @click.argument("name")
 @click.option("--outdir", type=click.Path(), help="Destination (defaults to the source's usual directory)")
 @click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
+@click.option("--no-link", is_flag=True, help="Skip the alias-named symlink in the working directory")
 @click.option("--force", is_flag=True, help="Download even if the file is already present")
-def download(name, outdir, manifest, force):
+def download(name, outdir, manifest, force, no_link):
     """Fetch a genome named in the catalog, by alias, filename or accession.
 
     Resolves whichever source the catalog records -- a Zenodo DOI if the genome was
@@ -614,6 +679,7 @@ def download(name, outdir, manifest, force):
     existing = resolve_path(filename) if filename else None
     if existing and not force:
         click.echo(f"Already present: {existing}")
+        _link(row, no_link)
         click.echo("Use --force to download again")
         return
 
@@ -651,6 +717,8 @@ def download(name, outdir, manifest, force):
             bad = True
     if bad:
         raise SystemExit(1)
+
+    _link(row, no_link, written)
 
 
 @cli.command()

@@ -30,6 +30,7 @@
 - [x] `taxon_id` column, populated for all NCBI rows
 - [x] **Alias scheme** `<Lspec>.<source>.<discriminator>`, auto-assigned on fetch/add/scaffold
 - [x] Removed the unused `aliases.py` / `aliases.csv` (superseded by the manifest alias column)
+- [x] **Alias-named symlinks** in the calling directory (`leishref link`, `--no-link` to opt out)
 - [x] Fixed `fetch_metadata`: parsed an obsolete datasets JSON shape, so assembly_name /
       bioproject / biosample / sequencing_technology were silently empty on every row
 

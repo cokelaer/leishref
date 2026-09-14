@@ -214,6 +214,26 @@ leishref alias --overwrite  # recompute all
 
 `fetch`, `add` and `scaffold` assign one automatically unless you pass `--alias`.
 
+### Alias-named symlinks
+
+Data files keep the name their source gave them, which is rarely what you want to type.
+`fetch`, `add`, `scaffold` and `download` drop a symlink named after the alias into the
+directory you ran them from:
+
+```console
+$ leishref download Ltrop.ncbi.L590
+Ltrop.ncbi.L590 -> GCA_000410715.1 (NCBI)
+  Ltrop.ncbi.L590.fna -> NCBI/GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna
+  Ltrop.ncbi.L590.gff -> NCBI/GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.gff
+```
+
+The extension is preserved so file-type sniffing still works, and the link is relative,
+so the tree can be moved or shared without breaking. `leishref link` creates them for
+everything already on disk; `--no-link` opts out per command.
+
+An existing symlink is repointed. A regular file of the same name is never overwritten —
+leishref reports the conflict and moves on.
+
 ---
 
 ## Quick Start
