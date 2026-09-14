@@ -97,14 +97,54 @@ date_added: '2026-09-11'
 The directory is named by accession where there is one. There is no separate index to
 keep in sync: the directory tree *is* the catalog.
 
-`gc_percent` excludes ambiguous bases, so it reports the composition of sequence that was
-actually resolved rather than being diluted by gaps. `num_gaps` counts runs of N rather
-than N bases, so it says how many joins or unknown stretches a sequence contains, and
-`contig_n50` is what separates a chromosome-level assembly from a heap of contigs.
-
 `provenance` is free-form. NCBI supplies bioproject, biosample and sequencing technology
 where it has them; `dev add` takes `--technology` and `--assembler`, and anything else
 useful can simply be added to the file.
+
+### How the statistics are defined
+
+| field | definition |
+|---|---|
+| `num_bases` | total length of all sequences, ambiguous bases included |
+| `num_contigs` | number of records in the FASTA |
+| `gc_percent` | `(G + C) / (A + C + G + T)` — **N excluded from the denominator** |
+| `contig_n50` | length of the contig at which the cumulative sorted length passes half the assembly |
+| `num_ambiguous` | total count of N bases |
+| `num_gaps` | number of *runs* of N, not the number of N bases |
+
+**`gc_percent` excludes ambiguous bases.** This is the usual definition, but it is worth
+stating because the alternative — dividing by every base, N included — is easy to
+implement by accident and silently reports something else. What it reports is not GC
+content but GC content multiplied by the fraction of the assembly that was resolved, so
+the figure falls as an assembly gets gappier even when its actual base composition is
+unchanged.
+
+The effect is not subtle. Every entry in this catalog is a *Leishmania* genome, and the
+genus sits near 59–60% GC. Counting N in the denominator gave:
+
+| genome | gaps | GC counting N | GC excluding N |
+|---|---:|---:|---:|
+| `GCA_003719575.1` | 0 | 59.75% | 59.75% |
+| `GCA_000410715.1` | 1840 | 56.88% | 59.90% |
+| `GCA_001989975.1` | 2346 | 52.68% | 59.44% |
+
+Gap-free assemblies are unaffected, so the error hides until you compare across
+assemblies of differing quality — at which point it looks like a biological difference
+between strains. It is not: it is a 2346-gap assembly. Excluding N puts the whole catalog
+between 59.4 and 60.2%.
+
+If you compare these numbers against another tool and they disagree in the second digit,
+check which denominator that tool uses.
+
+**`num_gaps` counts runs, not bases.** A single 100-N join and a single 10,000-N unknown
+stretch each count as one gap, so the figure answers "how many joins or unresolved
+regions are in here" rather than "how much is missing" — that is `num_ambiguous`. A run
+spanning several wrapped lines still counts once, and a run at the end of one contig is
+not merged with one at the start of the next.
+
+**`contig_n50`** is what separates a chromosome-level assembly from a heap of contigs,
+and is more informative than `num_contigs` alone: `GCA_000410715.1` has 448 sequences at
+N50 303 kb, while the scaffolds here have 76 at N50 1.2 Mb.
 
 `source` says where `download` fetches a genome from, not who assembled it:
 
