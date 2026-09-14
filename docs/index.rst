@@ -3,7 +3,7 @@
 Leishmania Reference Genome Database
 =====================================
 
-.. image:: ../doc/logo.png
+.. image:: logo.png
    :width: 200px
    :align: center
 
