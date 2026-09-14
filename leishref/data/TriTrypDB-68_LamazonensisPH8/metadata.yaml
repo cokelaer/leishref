@@ -6,10 +6,10 @@ assembly_level: chromosome
 release_date: '2023-07-01'
 
 files:
-  fasta: TriTrypDB-68_LamazonensisPH8_AnnotatedCDSs.fasta
+  fasta: TriTrypDB-68_LamazonensisPH8_Genome.fasta
 
 checksums:
-  fasta: "227eef98088369aaeb5b482b8ce62433"
+  fasta: "a366efe35e000eaa3455f0cc45fab663"
 
 stats:
   gc_percent: 59.2
@@ -26,17 +26,26 @@ provenance:
   sequencing_paper: "Goes et al. 2023"
   sequencing_pmid: "37263313"
   tritrypdb_pmid: "36656904"
-  zenodo_doi: "10.5281/zenodo.18755023"
-  zenodo_deposition: "https://zenodo.org/records/18755023"
+  zenodo_cds_deposition: "https://zenodo.org/records/18755023"
 
 license:
   name: Public Domain
   source: VEuPathDB
   note: "TriTrypDB data are provided freely for public use per VEuPathDB policy"
+  redistribution_status: "Pending explicit confirmation from VEuPathDB/TriTrypDB"
+
+access:
+  downloadable: false
+  reason: "TriTrypDB redistribution license not yet confirmed. Download manually from TriTrypDB or wait for Zenodo publication."
 
 date_added: '2026-09-14'
 notes: |
   Genome sequence obtained from TriTrypDB release 68.
   TriTrypDB is part of the VEuPathDB resource.
-  This is a redistribution of the publicly released TriTrypDB reference sequence.
-  For CDSs and protein annotations, see Zenodo record 18755023.
+  Full chromosome assembly (36 sequences, 31 Mb).
+
+  LICENSE PENDING: Email sent to VEuPathDB/TriTrypDB seeking explicit permission
+  to redistribute this genome on Zenodo. For now, requires manual download from
+  TriTrypDB and local registration via 'leishref dev add'.
+
+  For CDSs and protein annotations, see Zenodo record 18755023 (Requena group).
