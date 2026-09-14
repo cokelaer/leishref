@@ -7,6 +7,10 @@ strain: MCER/BR/1981/M6445/Salvaterra
 assembly_name: ASM1446697v1
 assembly_level: Chromosome
 release_date: '2020-09-03'
+files:
+  fasta: GCA_014466975.1_ASM1446697v1_genomic.fna
+checksums:
+  fasta: ace449731bdcc4b153b86c3ef3fdfe42
 stats:
   num_bases: 31924566
   num_ungapped: 31901907
@@ -18,6 +22,7 @@ stats:
   contig_n50: 302081
   contig_l50: 30
   num_ambiguous: 22995
+  num_gaps: 203
 provenance:
   bioproject: PRJNA523126
   biosample: SAMN10964360

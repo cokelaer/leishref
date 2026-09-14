@@ -7,6 +7,10 @@ strain: Friedlin
 assembly_name: Lma_mini
 assembly_level: Contig
 release_date: '2019-10-13'
+files:
+  fasta: GCA_902498725.1_Lma_mini_genomic.fna
+checksums:
+  fasta: 9da6e19933c923c396cdbaa7be8eaec1
 stats:
   num_bases: 2736
   num_ungapped: 2736
@@ -18,6 +22,7 @@ stats:
   contig_n50: 689
   contig_l50: 2
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJEB33887
   biosample: SAMEA5948836

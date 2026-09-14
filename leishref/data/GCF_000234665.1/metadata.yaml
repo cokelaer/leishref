@@ -7,6 +7,12 @@ strain: MHOM/GT/2001/U1103
 assembly_name: ASM23466v4
 assembly_level: Chromosome
 release_date: '2011-11-08'
+files:
+  fasta: GCF_000234665.1_ASM23466v4_genomic.fna
+  gff: GCF_000234665.1_ASM23466v4_genomic.gff
+checksums:
+  fasta: 9ee35a16bb4728810097a854a4922aaa
+  gff: 057262c8f59ccdf904d7f700c89f0fc2
 stats:
   num_bases: 32108741
   num_ungapped: 32074854
@@ -18,6 +24,7 @@ stats:
   contig_n50: 164930
   contig_l50: 56
   num_ambiguous: 34238
+  num_gaps: 349
 provenance:
   bioproject: PRJEA60403
   biosample: SAMEA2272796

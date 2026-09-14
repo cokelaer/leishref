@@ -6,6 +6,12 @@ species: Leishmania infantum
 assembly_name: LINF
 assembly_level: Complete Genome
 release_date: '2020-06-28'
+files:
+  fasta: GCA_900500625.2_LINF_genomic.fna
+  gff: GCA_900500625.2_LINF_genomic.gff
+checksums:
+  fasta: 87ceb6af440239f6914d4ff4ddec1780
+  gff: f174c02a140063cd1ce47293d6974a40
 stats:
   num_bases: 32803248
   num_ungapped: 32803248
@@ -17,6 +23,7 @@ stats:
   contig_n50: 1055293
   contig_l50: 11
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJEB20254
   biosample: SAMEA103972945

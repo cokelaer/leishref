@@ -7,17 +7,22 @@ strain: MHOM/CO/2021/UN0066
 assembly_name: ASM4168236v1
 assembly_level: Chromosome
 release_date: '2024-09-19'
+files:
+  fasta: GCA_041682365.1_ASM4168236v1_genomic.fna
+checksums:
+  fasta: c809e5075488c32fd7af941cc8f1454b
 stats:
-  num_bases: 34118900
-  num_ungapped: 34118900
-  num_scaffolds: 68
-  num_contigs: 68
-  gc_percent: 57.94
+  num_bases: 34144764
+  num_ungapped: 34144764
+  num_scaffolds: 69
+  num_contigs: 69
+  gc_percent: 57.91
   scaffold_n50: 879676
   scaffold_l50: 13
   contig_n50: 879676
   contig_l50: 13
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA1095027
   biosample: SAMN40711900

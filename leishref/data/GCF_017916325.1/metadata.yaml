@@ -7,6 +7,12 @@ strain: LSCM1
 assembly_name: LU_Lmar_1.0
 assembly_level: Chromosome
 release_date: '2021-04-15'
+files:
+  fasta: GCF_017916325.1_LU_Lmar_1.0_genomic.fna
+  gff: GCF_017916325.1_LU_Lmar_1.0_genomic.gff
+checksums:
+  fasta: 90a8f27dd2c5d9d2a5f97d72fbd62334
+  gff: 15c5396143832ac6b7ac43fea72dc118
 stats:
   num_bases: 32413670
   num_ungapped: 32413620
@@ -18,6 +24,7 @@ stats:
   contig_n50: 841843
   contig_l50: 12
   num_ambiguous: 50
+  num_gaps: 5
 provenance:
   bioproject: PRJNA691531
   biosample: SAMN17294109

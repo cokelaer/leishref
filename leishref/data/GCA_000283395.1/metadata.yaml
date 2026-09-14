@@ -7,6 +7,10 @@ strain: Ld 2001
 assembly_name: ASM28339v1
 assembly_level: Contig
 release_date: '2012-08-06'
+files:
+  fasta: GCA_000283395.1_ASM28339v1_genomic.fna
+checksums:
+  fasta: 9e51cd8dd19647536ecb2e9d60aaa3d0
 stats:
   num_bases: 27466456
   num_ungapped: 27466456
@@ -14,10 +18,11 @@ stats:
   num_contigs: 14518
   gc_percent: 55.72
   scaffold_n50: 3370
-  scaffold_l50: 2409
+  scaffold_l50: 2408
   contig_n50: 3370
-  contig_l50: 2409
+  contig_l50: 2408
   num_ambiguous: 443
+  num_gaps: 0
 provenance:
   bioproject: PRJNA171297
   biosample: SAMN02953820

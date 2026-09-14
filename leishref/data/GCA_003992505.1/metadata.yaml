@@ -7,6 +7,10 @@ strain: 210-660
 assembly_name: ASM399250v1
 assembly_level: Contig
 release_date: '2019-01-04'
+files:
+  fasta: GCA_003992505.1_ASM399250v1_genomic.fna
+checksums:
+  fasta: b7a2fced7490e241c3efa0d55c6d9f29
 stats:
   num_bases: 33504997
   num_ungapped: 33504997
@@ -18,6 +22,7 @@ stats:
   contig_n50: 850106
   contig_l50: 12
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA484340
   biosample: SAMN09984809

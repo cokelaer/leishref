@@ -6,6 +6,10 @@ species: Leishmania guyanensis
 assembly_name: Lgu
 assembly_level: Chromosome
 release_date: '2019-10-04'
+files:
+  fasta: GCA_902369315.1_Lgu_genomic.fna
+checksums:
+  fasta: f674fab21f42498f672d84f9103f4b3a
 stats:
   num_bases: 19624
   num_ungapped: 19624
@@ -17,6 +21,7 @@ stats:
   contig_n50: 19624
   contig_l50: 1
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJEB33887
   biosample: SAMEA5854544

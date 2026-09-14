@@ -7,6 +7,10 @@ strain: M2904
 assembly_name: Leishmania_braziliensis_M2904-Dec2022
 assembly_level: Scaffold
 release_date: '2024-03-20'
+files:
+  fasta: GCA_964014045.1_Leishmania_braziliensis_M2904-Dec2022_genomic.fna
+checksums:
+  fasta: 0d68c1fa4cb60b010bb9e439e5968460
 stats:
   num_bases: 33507578
   num_ungapped: 33506578
@@ -18,6 +22,7 @@ stats:
   contig_n50: 1142549
   contig_l50: 10
   num_ambiguous: 1002
+  num_gaps: 1
 provenance:
   bioproject: PRJEB2115
   biosample: SAMEA2700046

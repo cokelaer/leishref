@@ -7,6 +7,10 @@ strain: MDAS/BR/1979/M5533
 assembly_name: ASM5120142v1
 assembly_level: Contig
 release_date: '2025-07-03'
+files:
+  fasta: GCA_051201425.1_ASM5120142v1_genomic.fna
+checksums:
+  fasta: 0abfdfa70ccb0b29ee2bdc0c4f80499d
 stats:
   num_bases: 29394937
   num_ungapped: 29394937
@@ -18,6 +22,7 @@ stats:
   contig_n50: 2464
   contig_l50: 3552
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA1217433
   biosample: SAMN46487453

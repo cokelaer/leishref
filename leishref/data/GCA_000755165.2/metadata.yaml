@@ -7,6 +7,12 @@ strain: MHOM/PA/94/PSC-1
 assembly_name: ASM75516v2
 assembly_level: Complete Genome
 release_date: '2025-06-09'
+files:
+  fasta: GCA_000755165.2_ASM75516v2_genomic.fna
+  gff: GCA_000755165.2_ASM75516v2_genomic.gff
+checksums:
+  fasta: 1da2854d7451423ca23fba0873da8659
+  gff: 7eb98478c6a77a1e07f207b297d8cb36
 stats:
   num_bases: 33860094
   num_ungapped: 33860094
@@ -18,6 +24,7 @@ stats:
   contig_n50: 1204961
   contig_l50: 10
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA235344
   biosample: SAMN02991529

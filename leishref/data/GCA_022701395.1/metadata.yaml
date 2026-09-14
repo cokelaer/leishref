@@ -7,17 +7,22 @@ strain: MHOM/BR/75/M4147
 assembly_name: ASM2270139v1
 assembly_level: Chromosome
 release_date: '2022-03-28'
+files:
+  fasta: GCA_022701395.1_ASM2270139v1_genomic.fna
+checksums:
+  fasta: acbf3c892c33b2c48be6e7de445744b2
 stats:
-  num_bases: 30373395
-  num_ungapped: 30370622
-  num_scaffolds: 41
-  num_contigs: 80
-  gc_percent: 57.57
+  num_bases: 30468204
+  num_ungapped: 30465331
+  num_scaffolds: 141
+  num_contigs: 181
+  gc_percent: 57.48
   scaffold_n50: 1014903
   scaffold_l50: 10
   contig_n50: 818718
   contig_l50: 13
-  num_ambiguous: 3066
+  num_ambiguous: 3166
+  num_gaps: 40
 provenance:
   bioproject: PRJNA808737
   biosample: SAMN26114871

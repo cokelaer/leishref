@@ -7,6 +7,10 @@ strain: MHOM/ES/2016/CATB101
 assembly_name: ASM3717858v1
 assembly_level: Contig
 release_date: '2024-03-15'
+files:
+  fasta: GCA_037178585.1_ASM3717858v1_genomic.fna
+checksums:
+  fasta: 6dfad7c18662c0a3b7d62a1a9b11af4c
 stats:
   num_bases: 32157827
   num_ungapped: 32157827
@@ -18,6 +22,7 @@ stats:
   contig_n50: 479582
   contig_l50: 23
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA881045
   biosample: SAMN38142575

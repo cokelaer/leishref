@@ -7,6 +7,12 @@ strain: Friedlin
 assembly_name: LMJFC_annotationDEFINITIVO
 assembly_level: Complete Genome
 release_date: '2021-10-03'
+files:
+  fasta: GCA_916722125.1_LMJFC_annotationDEFINITIVO_genomic.fna
+  gff: GCA_916722125.1_LMJFC_annotationDEFINITIVO_genomic.gff
+checksums:
+  fasta: 7a08c87d164a1c05436dc064fbfd1ef7
+  gff: be224ef558ffb5fbc9ecf8090a1ac144
 stats:
   num_bases: 32797613
   num_ungapped: 32797613
@@ -18,6 +24,7 @@ stats:
   contig_n50: 1071765
   contig_l50: 11
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJEB25921
   biosample: SAMEA7047763

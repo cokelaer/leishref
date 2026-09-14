@@ -7,6 +7,10 @@ strain: LEM423
 assembly_name: Leishmania_turanica_LEM423-1.0.2
 assembly_level: Scaffold
 release_date: '2013-07-29'
+files:
+  fasta: GCA_000441995.1_Leishmania_turanica_LEM423-1.0.2_genomic.fna
+checksums:
+  fasta: ca1dfd5ce5e3eb28a6e38b41460ff927
 stats:
   num_bases: 32320007
   num_ungapped: 30872140
@@ -18,6 +22,7 @@ stats:
   contig_n50: 39203
   contig_l50: 220
   num_ambiguous: 1448203
+  num_gaps: 1333
 provenance:
   bioproject: PRJNA192712
   biosample: SAMN02212518

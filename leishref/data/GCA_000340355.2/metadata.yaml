@@ -7,6 +7,10 @@ strain: MHOM/BR/75/M2903
 assembly_name: Leishmania_braziliensis_M2903-1.0.6
 assembly_level: Chromosome
 release_date: '2016-09-30'
+files:
+  fasta: GCA_000340355.2_Leishmania_braziliensis_M2903-1.0.6_genomic.fna
+checksums:
+  fasta: 9813cec36a4aa9dea0cedb005838f7b3
 stats:
   num_bases: 35210150
   num_ungapped: 32474153
@@ -17,7 +21,8 @@ stats:
   scaffold_l50: 11
   contig_n50: 62201
   contig_l50: 160
-  num_ambiguous: 2735996
+  num_ambiguous: 2735997
+  num_gaps: 3190
 provenance:
   bioproject: PRJNA165955
   biosample: SAMN04576869

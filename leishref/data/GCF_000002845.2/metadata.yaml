@@ -7,6 +7,12 @@ strain: MHOM/BR/75/M2904
 assembly_name: ASM284v2
 assembly_level: Chromosome
 release_date: '2011-11-07'
+files:
+  fasta: GCF_000002845.2_ASM284v2_genomic.fna
+  gff: GCF_000002845.2_ASM284v2_genomic.gff
+checksums:
+  fasta: 81abc5afa807d387867d94dfb7786ee0
+  gff: 7e1565b44c55ff9708f9b86787d23df0
 stats:
   num_bases: 32068771
   num_ungapped: 31987066
@@ -18,6 +24,7 @@ stats:
   contig_n50: 63680
   contig_l50: 136
   num_ambiguous: 81879
+  num_gaps: 817
 provenance:
   bioproject: PRJEA18663
   biosample: SAMEA2272271

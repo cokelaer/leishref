@@ -6,6 +6,10 @@ species: Leishmania infantum
 assembly_name: Linf
 assembly_level: Chromosome
 release_date: '2019-10-04'
+files:
+  fasta: GCA_902369335.1_Linf_genomic.fna
+checksums:
+  fasta: 78dd44b9626e81fd43fd36defa3bb72c
 stats:
   num_bases: 17897
   num_ungapped: 17897
@@ -17,6 +21,7 @@ stats:
   contig_n50: 17897
   contig_l50: 1
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJEB33887
   biosample: SAMEA5854545

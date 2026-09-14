@@ -7,6 +7,10 @@ strain: MHOM/BR/1981/M6426
 assembly_name: ASM5821881v1
 assembly_level: Contig
 release_date: '2026-06-16'
+files:
+  fasta: GCA_058218815.1_ASM5821881v1_genomic.fna
+checksums:
+  fasta: e38998a2be9ba6b040a06eaf911575c5
 stats:
   num_bases: 32976258
   num_ungapped: 32976258
@@ -18,6 +22,7 @@ stats:
   contig_n50: 840527
   contig_l50: 12
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA1175610
   biosample: SAMN44366952

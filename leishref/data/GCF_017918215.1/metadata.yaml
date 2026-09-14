@@ -7,6 +7,12 @@ strain: GH5
 assembly_name: LU_Lgha_1.0
 assembly_level: Chromosome
 release_date: '2021-04-15'
+files:
+  fasta: GCF_017918215.1_LU_Lgha_1.0_genomic.fna
+  gff: GCF_017918215.1_LU_Lgha_1.0_genomic.gff
+checksums:
+  fasta: 4f032f45ba16575efcc253d43afc3fb7
+  gff: 82bbdbc74a9606cc1451be2dbd94eeaf
 stats:
   num_bases: 35953538
   num_ungapped: 35953057
@@ -18,6 +24,7 @@ stats:
   contig_n50: 961565
   contig_l50: 13
   num_ambiguous: 481
+  num_gaps: 9
 provenance:
   bioproject: PRJNA691536
   biosample: SAMN17294115

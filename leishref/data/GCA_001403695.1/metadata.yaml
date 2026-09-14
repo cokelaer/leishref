@@ -6,6 +6,10 @@ species: Leishmania peruviana
 assembly_name: Leishmania peruviana LEM-1537_V1
 assembly_level: Chromosome
 release_date: '2015-09-17'
+files:
+  fasta: GCA_001403695.1_Leishmania_peruviana_LEM-1537_V1_genomic.fna
+checksums:
+  fasta: 877d5759e1d913a2770ef7e3ab284ed8
 stats:
   num_bases: 33890200
   num_ungapped: 24953264
@@ -15,8 +19,9 @@ stats:
   scaffold_n50: 1047715
   scaffold_l50: 11
   contig_n50: 1362
-  contig_l50: 5220
+  contig_l50: 5219
   num_ambiguous: 8944236
+  num_gaps: 27836
 provenance:
   bioproject: PRJEB7263
   biosample: SAMEA2767110

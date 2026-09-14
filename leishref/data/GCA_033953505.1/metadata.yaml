@@ -7,17 +7,22 @@ strain: M2
 assembly_name: ASM3395350v1
 assembly_level: Chromosome
 release_date: '2023-11-27'
+files:
+  fasta: GCA_033953505.1_ASM3395350v1_genomic.fna
+checksums:
+  fasta: e2357a5cc9c6164b6b57751cd950f0ee
 stats:
-  num_bases: 31903299
-  num_ungapped: 31889639
-  num_scaffolds: 36
-  num_contigs: 84
-  gc_percent: 57.09
+  num_bases: 31932047
+  num_ungapped: 31918387
+  num_scaffolds: 37
+  num_contigs: 85
+  gc_percent: 57.06
   scaffold_n50: 1064496
   scaffold_l50: 11
   contig_n50: 694021
   contig_l50: 15
   num_ambiguous: 13661
+  num_gaps: 48
 provenance:
   bioproject: PRJNA821548
   biosample: SAMN26879708

@@ -7,17 +7,24 @@ strain: MHOM/BR/2013/18 LTA MLF
 assembly_name: ASM4036364v1
 assembly_level: Chromosome
 release_date: '2024-07-01'
+files:
+  fasta: GCA_040363645.1_ASM4036364v1_genomic.fna
+  gff: GCA_040363645.1_ASM4036364v1_genomic.gff
+checksums:
+  fasta: 3f4f5df9b68ebad1fffbff8fe98024f2
+  gff: 91703a6447c8fb9faef9e892c6e9132f
 stats:
   num_bases: 31204482
   num_ungapped: 31034550
   num_scaffolds: 37
   num_contigs: 1744
-  gc_percent: 57.5
+  gc_percent: 57.46
   scaffold_n50: 1068248
   scaffold_l50: 10
   contig_n50: 42518
   contig_l50: 221
-  num_ambiguous: 191988
+  num_ambiguous: 171017
+  num_gaps: 1707
 provenance:
   bioproject: PRJNA995499
   biosample: SAMN36470831

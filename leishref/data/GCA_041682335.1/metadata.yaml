@@ -7,17 +7,22 @@ strain: MHOM/CO/2013/UN0010
 assembly_name: ASM4168233v1
 assembly_level: Chromosome
 release_date: '2024-09-19'
+files:
+  fasta: GCA_041682335.1_ASM4168233v1_genomic.fna
+checksums:
+  fasta: e531b79d4733c5d61481ff8255bfc154
 stats:
-  num_bases: 33933621
-  num_ungapped: 33933621
-  num_scaffolds: 67
-  num_contigs: 67
-  gc_percent: 57.99
+  num_bases: 33962295
+  num_ungapped: 33962295
+  num_scaffolds: 68
+  num_contigs: 68
+  gc_percent: 57.96
   scaffold_n50: 905630
   scaffold_l50: 12
   contig_n50: 905630
   contig_l50: 12
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA1095027
   biosample: SAMN40711883

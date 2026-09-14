@@ -7,6 +7,10 @@ strain: Parrot-TarII
 assembly_name: UL_Ltar_1.0
 assembly_level: Contig
 release_date: '2019-12-20'
+files:
+  fasta: GCA_009770625.1_UL_Ltar_1.0_genomic.fna
+checksums:
+  fasta: e97e0b3972a99bdb09676bc411c7aa7b
 stats:
   num_bases: 31556583
   num_ungapped: 31556583
@@ -18,6 +22,7 @@ stats:
   contig_n50: 7432
   contig_l50: 1277
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA589623
   biosample: SAMN13285789

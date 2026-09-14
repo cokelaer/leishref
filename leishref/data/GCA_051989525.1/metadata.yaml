@@ -7,17 +7,22 @@ strain: MHOM/BR/75/M4147
 assembly_name: USP_Lguy_4147_v1.0
 assembly_level: Chromosome
 release_date: '2025-08-14'
+files:
+  fasta: GCA_051989525.1_USP_Lguy_4147_v1.0_genomic.fna
+checksums:
+  fasta: 3e3af94cdf59ccb0c92e2c4e63d08d70
 stats:
-  num_bases: 32240721
-  num_ungapped: 32238125
-  num_scaffolds: 46
-  num_contigs: 89
-  gc_percent: 57.87
+  num_bases: 32271267
+  num_ungapped: 32268671
+  num_scaffolds: 47
+  num_contigs: 90
+  gc_percent: 57.83
   scaffold_n50: 1067002
   scaffold_l50: 10
   contig_n50: 641953
   contig_l50: 16
   num_ambiguous: 2596
+  num_gaps: 43
 provenance:
   bioproject: PRJNA1167797
   biosample: SAMN44063513

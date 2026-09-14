@@ -7,6 +7,10 @@ strain: MHOM/COL/81/L13
 assembly_name: Leishmania_panamensis_L13-1.3.1
 assembly_level: Scaffold
 release_date: '2013-02-21'
+files:
+  fasta: GCA_000340495.1_Leishmania_panamensis_L13-1.3.1_genomic.fna
+checksums:
+  fasta: 73518b477048bee709867b4e7d3d341a
 stats:
   num_bases: 31263945
   num_ungapped: 30965649
@@ -18,6 +22,7 @@ stats:
   contig_n50: 22660
   contig_l50: 402
   num_ambiguous: 298296
+  num_gaps: 2211
 provenance:
   bioproject: PRJNA165959
   biosample: SAMN01129975

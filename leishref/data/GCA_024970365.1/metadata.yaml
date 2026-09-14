@@ -7,17 +7,24 @@ strain: M4147
 assembly_name: ASM2497036v1
 assembly_level: Complete Genome
 release_date: '2022-09-06'
+files:
+  fasta: GCA_024970365.1_ASM2497036v1_genomic.fna
+  gff: GCA_024970365.1_ASM2497036v1_genomic.gff
+checksums:
+  fasta: 2d54c372303f4cadb4c844c2e0313b0e
+  gff: 2c798865179b957648367b9f97997b5e
 stats:
-  num_bases: 32515841
-  num_ungapped: 32515841
-  num_scaffolds: 35
-  num_contigs: 35
-  gc_percent: 57.91
+  num_bases: 32544702
+  num_ungapped: 32544702
+  num_scaffolds: 36
+  num_contigs: 36
+  gc_percent: 57.88
   scaffold_n50: 1133580
   scaffold_l50: 10
   contig_n50: 1133580
   contig_l50: 10
-  num_ambiguous: 94
+  num_ambiguous: 71
+  num_gaps: 0
 provenance:
   bioproject: PRJNA872130
   biosample: SAMN30439819

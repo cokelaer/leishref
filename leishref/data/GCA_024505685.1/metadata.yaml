@@ -7,17 +7,24 @@ strain: BA788
 assembly_name: BA788
 assembly_level: Chromosome
 release_date: '2022-08-02'
+files:
+  fasta: GCA_024505685.1_BA788_genomic.fna
+  gff: GCA_024505685.1_BA788_genomic.gff
+checksums:
+  fasta: 62d8c6f1c281b76069f60803b75bb247
+  gff: b387f6bb3aa0cd82d08edf55610ffb46
 stats:
-  num_bases: 33476229
-  num_ungapped: 33475229
-  num_scaffolds: 50
-  num_contigs: 51
-  gc_percent: 58.08
+  num_bases: 33503907
+  num_ungapped: 33502907
+  num_scaffolds: 51
+  num_contigs: 52
+  gc_percent: 58.05
   scaffold_n50: 1142394
   scaffold_l50: 10
   contig_n50: 1142394
   contig_l50: 10
-  num_ambiguous: 1000
+  num_ambiguous: 1002
+  num_gaps: 1
 provenance:
   bioproject: PRJNA814324
   biosample: SAMN26547435

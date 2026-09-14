@@ -6,6 +6,10 @@ species: Leishmania amazonensis
 assembly_name: LeiAma1.0
 assembly_level: Scaffold
 release_date: '2013-07-18'
+files:
+  fasta: GCA_000438535.1_LeiAma1.0_genomic.fna
+checksums:
+  fasta: 3a86bcef78dacc6c8e32b2c37d0af9b8
 stats:
   num_bases: 29029348
   num_ungapped: 29004374
@@ -17,6 +21,7 @@ stats:
   contig_n50: 17272
   contig_l50: 479
   num_ambiguous: 25494
+  num_gaps: 572
 provenance:
   bioproject: PRJNA173202
   biosample: SAMN02953847

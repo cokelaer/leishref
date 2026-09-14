@@ -7,6 +7,10 @@ strain: LEM452
 assembly_name: Leishmania_gerbilii_LEM452-1.0.2
 assembly_level: Scaffold
 release_date: '2013-08-05'
+files:
+  fasta: GCA_000443025.1_Leishmania_gerbilii_LEM452-1.0.2_genomic.fna
+checksums:
+  fasta: 9eb985fe2bee7bd724af373a06653aeb
 stats:
   num_bases: 31398648
   num_ungapped: 30818609
@@ -18,6 +22,7 @@ stats:
   contig_n50: 57008
   contig_l50: 161
   num_ambiguous: 580220
+  num_gaps: 756
 provenance:
   bioproject: PRJNA192717
   biosample: SAMN02214423

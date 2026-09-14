@@ -6,6 +6,10 @@ species: Leishmania braziliensis
 assembly_name: Lbraz
 assembly_level: Chromosome
 release_date: '2019-10-04'
+files:
+  fasta: GCA_902369275.1_Lbraz_genomic.fna
+checksums:
+  fasta: 64651ec7a6ff2cf3422534490729300b
 stats:
   num_bases: 17771
   num_ungapped: 17771
@@ -17,6 +21,7 @@ stats:
   contig_n50: 17771
   contig_l50: 1
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJEB33887
   biosample: SAMEA5854543

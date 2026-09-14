@@ -7,6 +7,12 @@ strain: JPCM5
 assembly_name: ASM287v2
 assembly_level: Chromosome
 release_date: '2011-11-08'
+files:
+  fasta: GCA_000002875.2_ASM287v2_genomic.fna
+  gff: GCA_000002875.2_ASM287v2_genomic.gff
+checksums:
+  fasta: de34ee8f242c631c74e0462015d3f5d6
+  gff: e9ecfe1640568f2e6d5b0697691d2a41
 stats:
   num_bases: 32122061
   num_ungapped: 32102100
@@ -18,6 +24,7 @@ stats:
   contig_n50: 302093
   contig_l50: 30
   num_ambiguous: 20333
+  num_gaps: 202
 provenance:
   bioproject: PRJNA12658
   biosample: SAMEA3138175

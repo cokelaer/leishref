@@ -7,17 +7,22 @@ strain: MHOM/CO/07/LL0249
 assembly_name: LL0249
 assembly_level: Chromosome
 release_date: '2024-12-12'
+files:
+  fasta: GCA_044509545.1_LL0249_genomic.fna
+checksums:
+  fasta: 68075f93be822e8595eaab54aec0b471
 stats:
-  num_bases: 34741827
-  num_ungapped: 34741827
-  num_scaffolds: 50
-  num_contigs: 50
-  gc_percent: 57.97
+  num_bases: 34769345
+  num_ungapped: 34769345
+  num_scaffolds: 51
+  num_contigs: 51
+  gc_percent: 57.93
   scaffold_n50: 926338
   scaffold_l50: 12
   contig_n50: 926338
   contig_l50: 12
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA1095027
   biosample: SAMN40711908

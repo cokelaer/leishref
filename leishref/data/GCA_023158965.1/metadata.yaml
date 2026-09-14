@@ -7,6 +7,10 @@ strain: PCM3.1
 assembly_name: ASM2315896v1
 assembly_level: Scaffold
 release_date: '2022-04-27'
+files:
+  fasta: GCA_023158965.1_ASM2315896v1_genomic.fna
+checksums:
+  fasta: ae3d3c5108e7658bed15295bc95f5bf0
 stats:
   num_bases: 32368282
   num_ungapped: 32339921
@@ -18,6 +22,7 @@ stats:
   contig_n50: 584254
   contig_l50: 18
   num_ambiguous: 32097
+  num_gaps: 420
 provenance:
   bioproject: PRJNA741905
   biosample: SAMN19915282

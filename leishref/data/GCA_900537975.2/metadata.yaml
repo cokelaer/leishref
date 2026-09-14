@@ -6,6 +6,12 @@ species: Leishmania braziliensis
 assembly_name: LBRM_annotationDEFINITIVO
 assembly_level: Chromosome
 release_date: '2023-01-04'
+files:
+  fasta: GCA_900537975.2_LBRM_annotationDEFINITIVO_genomic.fna
+  gff: GCA_900537975.2_LBRM_annotationDEFINITIVO_genomic.gff
+checksums:
+  fasta: f51b49e1dc559b9a1240b82db47ecf9c
+  gff: 48eb0ee1c6c905fed707ae9f624aecec
 stats:
   num_bases: 32380552
   num_ungapped: 32380552
@@ -17,6 +23,7 @@ stats:
   contig_n50: 1142551
   contig_l50: 10
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJEB25922
   biosample: SAMEA3469605

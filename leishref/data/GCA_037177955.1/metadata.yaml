@@ -7,6 +7,10 @@ strain: N1HROMA6
 assembly_name: ASM3717795v1
 assembly_level: Contig
 release_date: '2024-03-15'
+files:
+  fasta: GCA_037177955.1_ASM3717795v1_genomic.fna
+checksums:
+  fasta: 511f7f91bda392a371717de256608b61
 stats:
   num_bases: 27120055
   num_ungapped: 27120055
@@ -18,6 +22,7 @@ stats:
   contig_n50: 13423
   contig_l50: 604
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA881045
   biosample: SAMN38142612

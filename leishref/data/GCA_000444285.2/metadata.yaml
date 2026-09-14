@@ -7,6 +7,10 @@ strain: L147
 assembly_name: Leishmania_aethiopica-L147-2.0.3
 assembly_level: Chromosome
 release_date: '2016-09-30'
+files:
+  fasta: GCA_000444285.2_Leishmania_aethiopica-L147-2.0.3_genomic.fna
+checksums:
+  fasta: 34b65524400d0eb14017fccc1ecc90ef
 stats:
   num_bases: 31630816
   num_ungapped: 30987240
@@ -18,6 +22,7 @@ stats:
   contig_n50: 37668
   contig_l50: 254
   num_ambiguous: 643815
+  num_gaps: 1598
 provenance:
   bioproject: PRJNA169673
   biosample: SAMN02214601

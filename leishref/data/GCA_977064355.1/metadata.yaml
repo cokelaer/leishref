@@ -7,6 +7,10 @@ strain: T33
 assembly_name: Leishmania_tarentolae_T33_Italy_2024
 assembly_level: Scaffold
 release_date: '2025-11-20'
+files:
+  fasta: GCA_977064355.1_Leishmania_tarentolae_T33_Italy_2024_genomic.fna
+checksums:
+  fasta: 02e3ded0cc904c02b4025d3fcbe400b9
 stats:
   num_bases: 31929425
   num_ungapped: 31915765
@@ -18,6 +22,7 @@ stats:
   contig_n50: 693999
   contig_l50: 15
   num_ambiguous: 13661
+  num_gaps: 48
 provenance:
   bioproject: PRJEB102635
   biosample: SAMEA120553113

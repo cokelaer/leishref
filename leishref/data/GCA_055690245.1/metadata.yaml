@@ -7,6 +7,10 @@ strain: Lsh3334
 assembly_name: ASM5569024v1
 assembly_level: Scaffold
 release_date: '2026-03-05'
+files:
+  fasta: GCA_055690245.1_ASM5569024v1_genomic.fna
+checksums:
+  fasta: 5eab6e05826cb3752a3713488f54bbcb
 stats:
   num_bases: 31643785
   num_ungapped: 31594986
@@ -18,6 +22,7 @@ stats:
   contig_n50: 85876
   contig_l50: 132
   num_ambiguous: 48799
+  num_gaps: 482
 provenance:
   bioproject: PRJNA1335188
   biosample: SAMN51959454

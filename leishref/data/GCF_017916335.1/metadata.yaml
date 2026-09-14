@@ -7,6 +7,12 @@ strain: LSCM4
 assembly_name: LU_Lori_1.0
 assembly_level: Chromosome
 release_date: '2021-04-15'
+files:
+  fasta: GCF_017916335.1_LU_Lori_1.0_genomic.fna
+  gff: GCF_017916335.1_LU_Lori_1.0_genomic.gff
+checksums:
+  fasta: 0dadcaae6d3c4fe71349a778afa36487
+  gff: 7eca0d9aed0fede340aba585a461b556
 stats:
   num_bases: 34194276
   num_ungapped: 34192569
@@ -18,6 +24,7 @@ stats:
   contig_n50: 871047
   contig_l50: 13
   num_ambiguous: 1707
+  num_gaps: 11
 provenance:
   bioproject: PRJNA691532
   biosample: SAMN17294111

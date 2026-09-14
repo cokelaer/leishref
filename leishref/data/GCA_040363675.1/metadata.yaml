@@ -7,6 +7,12 @@ strain: MHOM/BR/1966/M15733
 assembly_name: ASM4036367v1
 assembly_level: Chromosome
 release_date: '2024-07-01'
+files:
+  fasta: GCA_040363675.1_ASM4036367v1_genomic.fna
+  gff: GCA_040363675.1_ASM4036367v1_genomic.gff
+checksums:
+  fasta: 4cabe8e53d096262e92ba53de59ba44f
+  gff: 9f3174e713d50cf0bd1801af4d478af4
 stats:
   num_bases: 31126262
   num_ungapped: 30976280
@@ -17,7 +23,8 @@ stats:
   scaffold_l50: 10
   contig_n50: 44361
   contig_l50: 198
-  num_ambiguous: 153902
+  num_ambiguous: 150135
+  num_gaps: 1508
 provenance:
   bioproject: PRJNA995499
   biosample: SAMN36470830

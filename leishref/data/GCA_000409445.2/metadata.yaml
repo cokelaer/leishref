@@ -7,6 +7,10 @@ strain: LEM2494
 assembly_name: Leishmania_MAR_LEM2494-1.0.3
 assembly_level: Chromosome
 release_date: '2016-05-17'
+files:
+  fasta: GCA_000409445.2_Leishmania_MAR_LEM2494-1.0.3_genomic.fna
+checksums:
+  fasta: 504980f18c89a3eb8f18ff57cae7fe7d
 stats:
   num_bases: 30813970
   num_ungapped: 30528164
@@ -18,6 +22,7 @@ stats:
   contig_n50: 145034
   contig_l50: 66
   num_ambiguous: 285831
+  num_gaps: 377
 provenance:
   bioproject: PRJNA192703
   biosample: SAMN04576851

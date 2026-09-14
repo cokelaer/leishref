@@ -7,6 +7,10 @@ strain: JRCGR_LM-01
 assembly_name: ASM2078341v1
 assembly_level: Chromosome
 release_date: '2021-11-07'
+files:
+  fasta: GCA_020783415.1_ASM2078341v1_genomic.fna
+checksums:
+  fasta: 8ec9d1ed862d7ed62cbf57514ec09649
 stats:
   num_bases: 32854833
   num_ungapped: 32733245
@@ -18,6 +22,7 @@ stats:
   contig_n50: 43774
   contig_l50: 227
   num_ambiguous: 135713
+  num_gaps: 2507
 provenance:
   bioproject: PRJNA763067
   biosample: SAMN21422215

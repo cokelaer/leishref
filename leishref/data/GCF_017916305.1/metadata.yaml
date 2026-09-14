@@ -7,6 +7,12 @@ strain: CUR178
 assembly_name: LU_Lenr_1.0
 assembly_level: Chromosome
 release_date: '2021-04-15'
+files:
+  fasta: GCF_017916305.1_LU_Lenr_1.0_genomic.fna
+  gff: GCF_017916305.1_LU_Lenr_1.0_genomic.gff
+checksums:
+  fasta: 823216d361f78079c38aa2ab6e4be4ea
+  gff: f618017203eb2208abc7454183a771f5
 stats:
   num_bases: 33318864
   num_ungapped: 33318484
@@ -18,6 +24,7 @@ stats:
   contig_n50: 789958
   contig_l50: 13
   num_ambiguous: 380
+  num_gaps: 11
 provenance:
   bioproject: PRJNA691534
   biosample: SAMN17294112

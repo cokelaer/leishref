@@ -6,6 +6,10 @@ species: Leishmania adleri
 assembly_name: Lad
 assembly_level: Chromosome
 release_date: '2019-10-04'
+files:
+  fasta: GCA_902369305.1_Lad_genomic.fna
+checksums:
+  fasta: ba122bb90b1b3d67f45fc141d6ca1b63
 stats:
   num_bases: 19219
   num_ungapped: 19219
@@ -17,6 +21,7 @@ stats:
   contig_n50: 19219
   contig_l50: 1
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJEB33887
   biosample: SAMEA5854542

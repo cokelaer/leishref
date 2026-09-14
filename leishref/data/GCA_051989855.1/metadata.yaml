@@ -7,17 +7,22 @@ strain: MCEB/BR/84/M8408
 assembly_name: USP_Lsha_8408_v1.0
 assembly_level: Chromosome
 release_date: '2025-08-13'
+files:
+  fasta: GCA_051989855.1_USP_Lsha_8408_v1.0_genomic.fna
+checksums:
+  fasta: 11aad393cf3efb4d42f3c75864dfc963
 stats:
-  num_bases: 32549649
-  num_ungapped: 32538578
-  num_scaffolds: 63
-  num_contigs: 292
-  gc_percent: 57.76
+  num_bases: 32565480
+  num_ungapped: 32554409
+  num_scaffolds: 64
+  num_contigs: 293
+  gc_percent: 57.74
   scaffold_n50: 937220
   scaffold_l50: 10
   contig_n50: 211710
   contig_l50: 46
   num_ambiguous: 11071
+  num_gaps: 229
 provenance:
   bioproject: PRJNA1167797
   biosample: SAMN44063805

@@ -7,6 +7,12 @@ strain: '253'
 assembly_name: LU_LNam_1.0
 assembly_level: Chromosome
 release_date: '2021-04-15'
+files:
+  fasta: GCF_017918225.1_LU_LNam_1.0_genomic.fna
+  gff: GCF_017918225.1_LU_LNam_1.0_genomic.gff
+checksums:
+  fasta: 57e73c29c98ebe6888b95b367dbaa538
+  gff: f3eef66872b80ab1347a2b61066715cb
 stats:
   num_bases: 34118624
   num_ungapped: 34118094
@@ -18,6 +24,7 @@ stats:
   contig_n50: 890967
   contig_l50: 13
   num_ambiguous: 530
+  num_gaps: 8
 provenance:
   bioproject: PRJNA689706
   biosample: SAMN17294129

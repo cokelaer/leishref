@@ -7,6 +7,10 @@ strain: MHOM/HD/2017/M32502/Amapala
 assembly_name: IEC_LinfHon_2
 assembly_level: Contig
 release_date: '2021-05-06'
+files:
+  fasta: GCA_018290745.1_IEC_LinfHon_2_genomic.fna
+checksums:
+  fasta: 5566dc63f14ef91ea65e2556fe71fb21
 stats:
   num_bases: 30617757
   num_ungapped: 30617757
@@ -18,6 +22,7 @@ stats:
   contig_n50: 8707
   contig_l50: 1038
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA722301
   biosample: SAMN10964361

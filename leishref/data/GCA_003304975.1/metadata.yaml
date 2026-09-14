@@ -7,6 +7,10 @@ strain: IOC-L 3564
 assembly_name: IOC-L_3564
 assembly_level: Chromosome
 release_date: '2018-07-11'
+files:
+  fasta: GCA_003304975.1_IOC-L_3564_genomic.fna
+checksums:
+  fasta: 7fd7f35200ae4237ec5ad6ad85d1a85f
 stats:
   num_bases: 38003648
   num_ungapped: 35156055
@@ -16,8 +20,9 @@ stats:
   scaffold_n50: 758103
   scaffold_l50: 14
   contig_n50: 7920
-  contig_l50: 1293
+  contig_l50: 1292
   num_ambiguous: 2849305
+  num_gaps: 7061
 provenance:
   bioproject: PRJNA454506
   biosample: SAMN09009547

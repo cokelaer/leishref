@@ -7,6 +7,10 @@ strain: MHOM/ES/2022/LLM-2503
 assembly_name: ASM3717839v1
 assembly_level: Contig
 release_date: '2024-03-15'
+files:
+  fasta: GCA_037178395.1_ASM3717839v1_genomic.fna
+checksums:
+  fasta: bc34c2f4c80782e0372cd87b8d8864bd
 stats:
   num_bases: 32071762
   num_ungapped: 32071762
@@ -18,6 +22,7 @@ stats:
   contig_n50: 572006
   contig_l50: 19
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA881045
   biosample: SAMN38142588

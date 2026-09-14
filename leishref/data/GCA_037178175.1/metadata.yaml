@@ -7,6 +7,10 @@ strain: MCAN/IL/2011/NT6
 assembly_name: ASM3717817v1
 assembly_level: Contig
 release_date: '2024-03-15'
+files:
+  fasta: GCA_037178175.1_ASM3717817v1_genomic.fna
+checksums:
+  fasta: b5f285da9a863ab444f1bbfa1aad7a3c
 stats:
   num_bases: 32686101
   num_ungapped: 32686101
@@ -18,6 +22,7 @@ stats:
   contig_n50: 469481
   contig_l50: 24
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA881045
   biosample: SAMN38142598

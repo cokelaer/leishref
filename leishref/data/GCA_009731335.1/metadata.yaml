@@ -7,6 +7,12 @@ strain: Parrot Tar II
 assembly_name: Lta_assembly01
 assembly_level: Contig
 release_date: '2019-11-27'
+files:
+  fasta: GCA_009731335.1_Lta_assembly01_genomic.fna
+  gff: GCA_009731335.1_Lta_assembly01_genomic.gff
+checksums:
+  fasta: 5dd01eb367bdaf22aa389201071466b6
+  gff: 9d0aa6655dbaac47b19017ec8b8f5632
 stats:
   num_bases: 35416496
   num_ungapped: 35416496
@@ -18,6 +24,7 @@ stats:
   contig_n50: 663019
   contig_l50: 17
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJDB8419
   biosample: SAMD00191432

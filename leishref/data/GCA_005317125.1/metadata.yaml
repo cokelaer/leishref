@@ -7,6 +7,10 @@ strain: UA301
 assembly_name: ASM531712v1
 assembly_level: Complete Genome
 release_date: '2019-05-14'
+files:
+  fasta: GCA_005317125.1_ASM531712v1_genomic.fna
+checksums:
+  fasta: 34ef0432300038d6bacae595799a87ff
 stats:
   num_bases: 32156470
   num_ungapped: 32156470
@@ -18,6 +22,7 @@ stats:
   contig_n50: 1135553
   contig_l50: 9
   num_ambiguous: 88
+  num_gaps: 0
 provenance:
   bioproject: PRJNA522806
   biosample: SAMN10955936

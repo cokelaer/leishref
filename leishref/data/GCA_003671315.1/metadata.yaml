@@ -7,6 +7,10 @@ strain: HUUFS14
 assembly_name: HUUFS14
 assembly_level: Scaffold
 release_date: '2018-10-22'
+files:
+  fasta: GCA_003671315.1_HUUFS14_genomic.fna
+checksums:
+  fasta: 5c8f99fd5442780df46e6d072ca1860f
 stats:
   num_bases: 32578914
   num_ungapped: 32536451
@@ -17,7 +21,8 @@ stats:
   scaffold_l50: 311
   contig_n50: 25367
   contig_l50: 372
-  num_ambiguous: 42601
+  num_ambiguous: 42580
+  num_gaps: 462
 provenance:
   bioproject: PRJNA398352
   biosample: SAMN07508840

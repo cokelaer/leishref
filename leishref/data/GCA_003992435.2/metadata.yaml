@@ -7,6 +7,10 @@ strain: 215-49
 assembly_name: ASM399243v2
 assembly_level: Chromosome
 release_date: '2025-08-12'
+files:
+  fasta: GCA_003992435.2_ASM399243v2_genomic.fna
+checksums:
+  fasta: 8f908852aeac655fe08084f1ad125ff9
 stats:
   num_bases: 31690181
   num_ungapped: 31686881
@@ -18,6 +22,7 @@ stats:
   contig_n50: 698355
   contig_l50: 15
   num_ambiguous: 3300
+  num_gaps: 33
 provenance:
   bioproject: PRJNA484340
   biosample: SAMN09984810

@@ -7,17 +7,22 @@ strain: MHOM/IN/1983/AG83
 assembly_name: ASM198995v1
 assembly_level: Chromosome
 release_date: '2017-02-07'
+files:
+  fasta: GCA_001989955.1_ASM198995v1_genomic.fna
+checksums:
+  fasta: 7f822df1f427eee649de6d065845e742
 stats:
   num_bases: 32148377
   num_ungapped: 28495501
   num_scaffolds: 36
   num_contigs: 2244
-  gc_percent: 59.45
+  gc_percent: 59.44
   scaffold_n50: 1015993
   scaffold_l50: 11
   contig_n50: 19680
   contig_l50: 441
-  num_ambiguous: 3653600
+  num_ambiguous: 3653324
+  num_gaps: 2208
 provenance:
   bioproject: PRJNA297706
   biosample: SAMN04145466

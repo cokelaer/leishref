@@ -7,6 +7,10 @@ strain: LEM3045
 assembly_name: Leishmania_enrietti_LEM3045-1.0.2
 assembly_level: Chromosome
 release_date: '2016-09-30'
+files:
+  fasta: GCA_000410755.2_Leishmania_enrietti_LEM3045-1.0.2_genomic.fna
+checksums:
+  fasta: 9c5b4d9ee9f8a3dd9a79abd147129fca
 stats:
   num_bases: 30761861
   num_ungapped: 30427026
@@ -18,6 +22,7 @@ stats:
   contig_n50: 101873
   contig_l50: 93
   num_ambiguous: 334898
+  num_gaps: 676
 provenance:
   bioproject: PRJNA192711
   biosample: SAMN02214422

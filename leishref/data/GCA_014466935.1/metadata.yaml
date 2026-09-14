@@ -7,6 +7,10 @@ strain: MHOM/HD/2017/M32502/Amapala
 assembly_name: ASM1446693v1
 assembly_level: Chromosome
 release_date: '2020-09-03'
+files:
+  fasta: GCA_014466935.1_ASM1446693v1_genomic.fna
+checksums:
+  fasta: 8fbe67a91cc7db5aeab92eed60261792
 stats:
   num_bases: 31924975
   num_ungapped: 31902316
@@ -18,6 +22,7 @@ stats:
   contig_n50: 301986
   contig_l50: 30
   num_ambiguous: 22995
+  num_gaps: 203
 provenance:
   bioproject: PRJNA523126
   biosample: SAMN10964361

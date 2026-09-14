@@ -7,6 +7,10 @@ strain: LV39c5
 assembly_name: Leishmania_major_LV39c5-1.0.1
 assembly_level: Scaffold
 release_date: '2013-01-11'
+files:
+  fasta: GCA_000331345.1_Leishmania_major_LV39c5-1.0.1_genomic.fna
+checksums:
+  fasta: ec55879b7e45f725b09ad5cf857ea05d
 stats:
   num_bases: 32327517
   num_ungapped: 31923375
@@ -18,6 +22,7 @@ stats:
   contig_n50: 71814
   contig_l50: 127
   num_ambiguous: 404142
+  num_gaps: 818
 provenance:
   bioproject: PRJNA50301
   biosample: SAMN01129976

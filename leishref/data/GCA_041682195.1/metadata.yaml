@@ -7,17 +7,22 @@ strain: MHOM/CO/12/LL0536
 assembly_name: ASM4168219v1
 assembly_level: Chromosome
 release_date: '2024-09-19'
+files:
+  fasta: GCA_041682195.1_ASM4168219v1_genomic.fna
+checksums:
+  fasta: 749b35112e5118dc9d6d272a54681a69
 stats:
-  num_bases: 34770956
-  num_ungapped: 34770956
-  num_scaffolds: 50
-  num_contigs: 50
-  gc_percent: 57.82
+  num_bases: 34798261
+  num_ungapped: 34798261
+  num_scaffolds: 51
+  num_contigs: 51
+  gc_percent: 57.79
   scaffold_n50: 1052144
   scaffold_l50: 12
   contig_n50: 1052144
   contig_l50: 12
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA1095027
   biosample: SAMN40711934

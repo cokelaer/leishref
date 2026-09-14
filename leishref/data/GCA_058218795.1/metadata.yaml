@@ -7,6 +7,10 @@ strain: MHOM/BR/2002/NMT-RBO 027P
 assembly_name: ASM5821879v1
 assembly_level: Contig
 release_date: '2026-06-16'
+files:
+  fasta: GCA_058218795.1_ASM5821879v1_genomic.fna
+checksums:
+  fasta: 58197383bf655fe618bbc5b89426ea3c
 stats:
   num_bases: 33995374
   num_ungapped: 33995374
@@ -18,6 +22,7 @@ stats:
   contig_n50: 920068
   contig_l50: 11
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA1175610
   biosample: SAMN44366953

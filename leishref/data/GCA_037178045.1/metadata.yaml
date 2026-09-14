@@ -7,6 +7,10 @@ strain: N1HROMA1
 assembly_name: ASM3717804v1
 assembly_level: Contig
 release_date: '2024-03-15'
+files:
+  fasta: GCA_037178045.1_ASM3717804v1_genomic.fna
+checksums:
+  fasta: 4a76ca3005d518523a51d05ed44625b6
 stats:
   num_bases: 26005856
   num_ungapped: 26005856
@@ -18,6 +22,7 @@ stats:
   contig_n50: 34157
   contig_l50: 222
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA881045
   biosample: SAMN38142607

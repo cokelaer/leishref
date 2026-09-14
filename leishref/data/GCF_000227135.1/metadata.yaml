@@ -7,6 +7,12 @@ strain: BPK282A1
 assembly_name: ASM22713v2
 assembly_level: Chromosome
 release_date: '2011-12-13'
+files:
+  fasta: GCF_000227135.1_ASM22713v2_genomic.fna
+  gff: GCF_000227135.1_ASM22713v2_genomic.gff
+checksums:
+  fasta: c486160d3c494e7d2d4a7469dbd8dc3f
+  gff: 2bae097db252d593ab42eb2e2e0f4702
 stats:
   num_bases: 32444968
   num_ungapped: 31252241
@@ -18,6 +24,7 @@ stats:
   contig_n50: 45436
   contig_l50: 197
   num_ambiguous: 1192833
+  num_gaps: 2116
 provenance:
   bioproject: PRJEA61817
   biosample: SAMEA2271930

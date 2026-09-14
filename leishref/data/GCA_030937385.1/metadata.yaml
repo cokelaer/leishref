@@ -7,6 +7,10 @@ strain: LV79
 assembly_name: OSU_LamaLV79
 assembly_level: Chromosome
 release_date: '2023-08-29'
+files:
+  fasta: GCA_030937385.1_OSU_LamaLV79_genomic.fna
+checksums:
+  fasta: 6ed64afc707474490ea4a857a29ed23a
 stats:
   num_bases: 32238651
   num_ungapped: 32238651
@@ -18,6 +22,7 @@ stats:
   contig_n50: 1092207
   contig_l50: 10
   num_ambiguous: 9
+  num_gaps: 0
 provenance:
   bioproject: PRJNA949447
   biosample: SAMN34089951

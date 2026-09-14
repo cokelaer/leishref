@@ -7,6 +7,10 @@ strain: Friedlin
 assembly_name: LmjF
 assembly_level: Chromosome
 release_date: '2019-10-04'
+files:
+  fasta: GCA_902369385.1_LmjF_genomic.fna
+checksums:
+  fasta: f9727711dcce484d66eaa810a7cb89b7
 stats:
   num_bases: 18998
   num_ungapped: 18998
@@ -18,6 +22,7 @@ stats:
   contig_n50: 18998
   contig_l50: 1
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJEB33887
   biosample: SAMEA5854546

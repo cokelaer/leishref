@@ -7,17 +7,22 @@ strain: AIIMS/LM/SS/PKDL/LD-974
 assembly_name: Ld_v2
 assembly_level: Contig
 release_date: '2015-06-10'
+files:
+  fasta: GCA_000981925.2_Ld_v2_genomic.fna
+checksums:
+  fasta: d1481b02b5641b11d313f7061e2e92e2
 stats:
   num_bases: 27848322
   num_ungapped: 27848322
   num_scaffolds: 1100
   num_contigs: 1100
-  gc_percent: 55.8
+  gc_percent: 55.79
   scaffold_n50: 61709
   scaffold_l50: 135
   contig_n50: 61709
   contig_l50: 135
-  num_ambiguous: 5703
+  num_ambiguous: 673
+  num_gaps: 0
 provenance:
   bioproject: PRJNA280137
   biosample: SAMN03457191

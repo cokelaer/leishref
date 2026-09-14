@@ -7,6 +7,10 @@ strain: BHU 1220
 assembly_name: BHU1220
 assembly_level: Chromosome
 release_date: '2013-09-30'
+files:
+  fasta: GCA_000470725.1_BHU1220_genomic.fna
+checksums:
+  fasta: 4361e8a9ad5a4444f15c3d0c0932c4dd
 stats:
   num_bases: 32414853
   num_ungapped: 31204622
@@ -17,7 +21,8 @@ stats:
   scaffold_l50: 11
   contig_n50: 41904
   contig_l50: 207
-  num_ambiguous: 1212985
+  num_ambiguous: 1211098
+  num_gaps: 2230
 provenance:
   bioproject: PRJNA192928
   biosample: SAMN01974509

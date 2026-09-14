@@ -7,17 +7,24 @@ strain: MCEB/BR/1984/M8408
 assembly_name: ASM4036351v1
 assembly_level: Chromosome
 release_date: '2024-06-28'
+files:
+  fasta: GCA_040363515.1_ASM4036351v1_genomic.fna
+  gff: GCA_040363515.1_ASM4036351v1_genomic.gff
+checksums:
+  fasta: eb357e8b32db43dd597be09d204ef7e9
+  gff: 4ba65f345d505f8a86c36b9b8f10040f
 stats:
   num_bases: 31105818
   num_ungapped: 30956381
   num_scaffolds: 37
   num_contigs: 1543
-  gc_percent: 57.62
+  gc_percent: 57.59
   scaffold_n50: 1126938
   scaffold_l50: 10
   contig_n50: 44337
   contig_l50: 201
-  num_ambiguous: 165445
+  num_ambiguous: 149624
+  num_gaps: 1506
 provenance:
   bioproject: PRJNA995499
   biosample: SAMN36470828

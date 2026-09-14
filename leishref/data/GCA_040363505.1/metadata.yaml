@@ -7,17 +7,24 @@ strain: ITUB/BR/1977/M4964
 assembly_name: ASM4036350v1
 assembly_level: Chromosome
 release_date: '2024-06-28'
+files:
+  fasta: GCA_040363505.1_ASM4036350v1_genomic.fna
+  gff: GCA_040363505.1_ASM4036350v1_genomic.gff
+checksums:
+  fasta: b4c18ded825425947f827bbea1f55768
+  gff: 99ae80ae9202dad8a9ffc0e614d6155b
 stats:
   num_bases: 31161156
   num_ungapped: 31018790
   num_scaffolds: 37
   num_contigs: 1473
-  gc_percent: 57.67
+  gc_percent: 57.64
   scaffold_n50: 1010064
   scaffold_l50: 10
   contig_n50: 48106
   contig_l50: 186
-  num_ambiguous: 159613
+  num_ambiguous: 143499
+  num_gaps: 1436
 provenance:
   bioproject: PRJNA995499
   biosample: SAMN36470829

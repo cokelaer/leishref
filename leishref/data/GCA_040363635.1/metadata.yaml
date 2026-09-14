@@ -7,17 +7,24 @@ strain: MDAS/BR/1979/M5533
 assembly_name: ASM4036363v1
 assembly_level: Chromosome
 release_date: '2024-07-01'
+files:
+  fasta: GCA_040363635.1_ASM4036363v1_genomic.fna
+  gff: GCA_040363635.1_ASM4036363v1_genomic.gff
+checksums:
+  fasta: 72afb0a7baeeea70973f93850c2b8b5e
+  gff: c465194da8b953feaadef9fad00a7292
 stats:
   num_bases: 31671382
   num_ungapped: 31501962
   num_scaffolds: 37
   num_contigs: 1749
-  gc_percent: 57.58
+  gc_percent: 57.52
   scaffold_n50: 1031552
   scaffold_l50: 10
   contig_n50: 42232
   contig_l50: 225
-  num_ambiguous: 206429
+  num_ambiguous: 169915
+  num_gaps: 1712
 provenance:
   bioproject: PRJNA995499
   biosample: SAMN36470827

@@ -7,17 +7,22 @@ strain: MHOM/CO/2019/UN0028
 assembly_name: ASM4168234v1
 assembly_level: Chromosome
 release_date: '2024-09-19'
+files:
+  fasta: GCA_041682345.1_ASM4168234v1_genomic.fna
+checksums:
+  fasta: 39dafc3c02092975f0f97904ab214639
 stats:
-  num_bases: 35939307
-  num_ungapped: 35939307
-  num_scaffolds: 71
-  num_contigs: 71
-  gc_percent: 58.02
+  num_bases: 35967034
+  num_ungapped: 35967034
+  num_scaffolds: 72
+  num_contigs: 72
+  gc_percent: 57.99
   scaffold_n50: 872671
   scaffold_l50: 13
   contig_n50: 872671
   contig_l50: 13
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA1095027
   biosample: SAMN40711904

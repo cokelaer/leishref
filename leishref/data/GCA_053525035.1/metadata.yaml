@@ -7,17 +7,22 @@ strain: T33
 assembly_name: ASM5352503v1
 assembly_level: Contig
 release_date: '2025-11-18'
+files:
+  fasta: GCA_053525035.1_ASM5352503v1_genomic.fna
+checksums:
+  fasta: e9198d29bd9561d1f89ca0bfe9009f8a
 stats:
   num_bases: 35411438
   num_ungapped: 35411438
   num_scaffolds: 178
   num_contigs: 178
-  gc_percent: 57.42
+  gc_percent: 57.33
   scaffold_n50: 663171
   scaffold_l50: 17
   contig_n50: 663171
   contig_l50: 17
-  num_ambiguous: 50584
+  num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA1279432
   biosample: SAMN49482003

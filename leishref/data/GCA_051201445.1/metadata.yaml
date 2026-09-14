@@ -7,6 +7,10 @@ strain: MCEB/BR/1984/M8408
 assembly_name: ASM5120144v1
 assembly_level: Contig
 release_date: '2025-07-03'
+files:
+  fasta: GCA_051201445.1_ASM5120144v1_genomic.fna
+checksums:
+  fasta: a7527847f379c8b35edd47da432cd342
 stats:
   num_bases: 31813457
   num_ungapped: 31813457
@@ -18,6 +22,7 @@ stats:
   contig_n50: 4983
   contig_l50: 1834
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA1217433
   biosample: SAMN46487454

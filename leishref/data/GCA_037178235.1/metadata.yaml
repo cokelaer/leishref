@@ -7,6 +7,10 @@ strain: LCAN/ES/2022/CATB104
 assembly_name: ASM3717823v1
 assembly_level: Contig
 release_date: '2024-03-15'
+files:
+  fasta: GCA_037178235.1_ASM3717823v1_genomic.fna
+checksums:
+  fasta: a1d6df78106992d4de6f6078563246ab
 stats:
   num_bases: 32357131
   num_ungapped: 32357131
@@ -18,6 +22,7 @@ stats:
   contig_n50: 464513
   contig_l50: 22
   num_ambiguous: 0
+  num_gaps: 0
 provenance:
   bioproject: PRJNA881045
   biosample: SAMN38142596
