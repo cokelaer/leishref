@@ -299,83 +299,6 @@ def fetch_tritrypdb(species_strain, outdir, species, strain, alias, manifest):
 
 
 @cli.command()
-@click.option("--manifest", type=click.Path(), default="manifest.csv")
-@click.option("--outdir", type=click.Path(), default=".", help="Base directory to scan")
-@click.option("--dry-run", is_flag=True, help="Show what would be added, don't modify manifest")
-def backfill(manifest, outdir, dry_run):
-    """Scan existing files and backfill manifest."""
-    outdir = Path(outdir)
-    manifest_obj = Manifest(Path(manifest))
-    existing_files = {r.get("filename") for r in manifest_obj.read() if r.get("filename")}
-
-    new_rows = []
-
-    click.echo("Scanning NCBI/...")
-    for fpath in (outdir / "NCBI").glob("*.fa*"):
-        if fpath.name in existing_files or fpath.name.endswith(".fai"):
-            continue
-        gff_name = fpath.stem + ".gff"
-        gff_path = fpath.parent / gff_name
-        md5_fa = md5_file(fpath)
-        md5_gf = md5_file(gff_path) if gff_path.exists() else None
-        row = ManifestRow(
-            filename=fpath.name,
-            gff_filename=gff_name if gff_path.exists() else None,
-            source="NCBI",
-            md5sum_fasta=md5_fa,
-            md5sum_gff=md5_gf,
-            date_added=manifest_obj.today_iso(),
-            notes="backfilled from disk",
-        )
-        new_rows.append(row)
-        click.echo(f"  {fpath.name}")
-
-    click.echo("Scanning MyAssemblies/...")
-    for fpath in (outdir / "MyAssemblies").rglob("*.fa*"):
-        if fpath.suffix in [".fai"] or fpath.name in existing_files:
-            continue
-        md5_fa = md5_file(fpath)
-        agp_name = fpath.with_suffix(".agp").name
-        agp_path = fpath.parent / agp_name
-        row = ManifestRow(
-            filename=fpath.name,
-            source="MyAssembly",
-            md5sum_fasta=md5_fa,
-            species=fpath.parent.name.split(".")[0] if "." in fpath.parent.name else fpath.parent.name,
-            strain=fpath.parent.name,
-            date_added=manifest_obj.today_iso(),
-            notes="backfilled from disk",
-        )
-        new_rows.append(row)
-        click.echo(f"  {fpath.name}")
-
-    click.echo("Scanning Scaffold/...")
-    for fpath in (outdir / "Scaffold").glob("*.fa*"):
-        if fpath.suffix in [".fai"] or fpath.name in existing_files:
-            continue
-        md5_fa = md5_file(fpath)
-        agp_name = fpath.with_suffix(".agp").name
-        agp_path = fpath.parent / agp_name
-        row = ManifestRow(
-            filename=fpath.name,
-            source="Scaffold",
-            md5sum_fasta=md5_fa,
-            scaffold_tool_version="ragtag.py",
-            cleaned="cleaned" in fpath.name,
-            date_added=manifest_obj.today_iso(),
-            notes="backfilled from disk",
-        )
-        new_rows.append(row)
-        click.echo(f"  {fpath.name}")
-
-    if dry_run:
-        click.echo(f"\nWould add {len(new_rows)} rows to manifest (dry-run)")
-    else:
-        manifest_obj.append_many(new_rows)
-        click.echo(f"\nAdded {len(new_rows)} rows to manifest")
-
-
-@cli.command()
 @click.argument("scaffold", type=click.Path(exists=True))
 @click.option("--manifest", type=click.Path(), default="manifest.csv")
 @click.option("--version", help="Version tag (e.g., v1.0)")
@@ -641,7 +564,7 @@ def info(manifest, alias):
         # Check for untracked files
         tracked_files = {row.get("filename") for row in rows if row.get("filename")}
         untracked = []
-        for datadir in ["NCBI", "MyAssemblies", "Scaffold", "TriTryDB68"]:
+        for datadir in DATA_DIRS:
             dirpath = Path(datadir)
             if dirpath.exists():
                 for fpath in dirpath.rglob("*.fa*"):

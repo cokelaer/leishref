@@ -5,7 +5,6 @@
 - [x] Init poetry package structure
 - [x] Manifest CSV with 25-column schema (added num_bases, num_contigs, gc_percent)
 - [x] Aliases mapping (user-defined shortcuts)
-- [x] Backfill existing files into manifest
 - [x] NCBI fetch via datasets CLI (fasta+gff) with GFF naming fix
 - [x] TriTrypDB fallback download (stub, URLs prepared)
 - [x] Ragtag scaffolding wrapper + AGP-based cleaning (chrom-anchored + kinetoplast whitelist)

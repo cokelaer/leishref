@@ -31,7 +31,7 @@ cd /path/to/Leishmania
 poetry install
 
 # Verify CLI is available
-leishref backfill --help
+leishref --help
 ```
 
 ---
@@ -108,7 +108,7 @@ Single CSV with 27 columns, one row per genome/scaffold:
 | `biosample` | str | NCBI BioSample accession |
 | `raw_reads_accession` | str | SRA accession for raw reads |
 | `date_added` | str | ISO date added to DB |
-| `notes` | str | Free-text notes (e.g., "backfilled from disk", "length differs from <other>") |
+| `notes` | str | Free-text notes (e.g., "added locally", "length differs from <other>") |
 
 ---
 
@@ -129,33 +129,7 @@ User adds/edits aliases; CLI resolves them. E.g., `--reference Ld1S` looks up al
 
 ## Quick Start
 
-### 1. Backfill existing files (one-time setup)
-
-Scan disk for existing NCBI, MyAssemblies, and Scaffold files; compute md5sums; populate manifest.
-
-```bash
-# Preview what will be added
-leishref backfill --dry-run
-
-# Actually add to manifest.csv
-leishref backfill
-
-# Check manifest
-leishref info
-```
-
-Example output:
-```
-Scanning NCBI/...
-  Ld1S.fa
-Scanning MyAssemblies/...
-  Ltropica.Ld1S.scaffold.pecat.fasta
-  Ltropica.Ld1S.scaffold.flye.fasta
-  ...
-Added 5 rows to manifest
-```
-
-### 2. Fetch a genome from NCBI
+### 1. Fetch a genome from NCBI
 
 Downloads fasta + GFF from NCBI using `datasets` CLI; extracts metadata (sequencing tech, BioProject, BioSample); appends manifest row.
 
@@ -175,7 +149,7 @@ Files created:
 - `NCBI/GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.gff` (GFF)
 - Manifest row added with source=NCBI, md5sums, metadata
 
-### 3. Scaffold a query against a reference
+### 2. Scaffold a query against a reference
 
 Run ragtag to scaffold query fasta against reference; optionally clean (prune unplaced contigs).
 
@@ -199,7 +173,7 @@ leishref scaffold \
 - **Preserves** maxicircle/kinetoplast (matched by name pattern) — important for Leishmania!
 - Original `.fa` and `.cleaned.fa` both tracked in manifest
 
-### 4. Publish a scaffold to Zenodo
+### 3. Publish a scaffold to Zenodo
 
 Create a Zenodo deposition for a single scaffold (fasta + AGP), upload, publish, and get DOI.
 
@@ -229,7 +203,7 @@ Result:
 - DOI written to manifest.csv `zenodo_doi` column
 - Version tracked if `--version` provided
 
-### 5. Look up in manifest
+### 4. Look up in manifest
 
 ```bash
 # All genomes
@@ -342,21 +316,17 @@ leishref publish Scaffold/Ltropica.L590.onLd1S.fa --confirm
 leishref info
 ```
 
-### Backfill existing custom assembly + check
+### Register a custom assembly + scaffold it
 
 ```bash
-# 1. Put assembly in MyAssemblies/MyStrain/
-mkdir -p MyAssemblies/MyStrain
-cp ~/my_assembly.fasta MyAssemblies/MyStrain/
+# 1. Add it (copies into MyAssemblies/, computes md5 and stats)
+leishref add ~/my_assembly.fasta --species Leishmania_major --strain MyStrain --alias MyStrain
 
-# 2. Backfill
-leishref backfill
+# 2. Scaffold onto reference
+leishref scaffold --query MyAssemblies/my_assembly.fasta --reference Ld1S --clean --alias MyStrain.onLd1S
 
-# 3. Edit aliases.csv to add short name
-# Add: MyStrain,MyAssemblies/MyStrain/my_assembly.fasta
-
-# 4. Scaffold onto reference
-leishref scaffold --query MyAssemblies/MyStrain/my_assembly.fasta --reference Ld1S --clean --alias MyStrain.onLd1S
+# 3. Confirm nothing drifted
+leishref verify
 ```
 
 ---
