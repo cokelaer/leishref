@@ -3,10 +3,12 @@
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 import rich_click as click
 
 from leishref.agp import derive_agp, write_agp
+from leishref.alias import assign_aliases, unique_alias
 from leishref.checksums import contig_count, gc_percent, md5_file, sequence_length
 from leishref.manifest import DATA_DIRS, Catalog, ManifestRow, resolve_path, today_iso
 from leishref.ncbi import fetch_fasta_gff, fetch_metadata
@@ -28,6 +30,16 @@ from leishref.zenodo import (
 def cli():
     """Leishmania reference genome database."""
     pass
+
+
+def _autoalias(catalog: Catalog, row: ManifestRow, given: Optional[str]) -> ManifestRow:
+    """Give a row an alias when the caller did not supply one, unique across the catalog."""
+    if given:
+        row["alias"] = given
+    else:
+        taken = {r.get("alias") for r in catalog.read() if r.get("alias")}
+        row["alias"] = unique_alias(row, taken)
+    return row
 
 
 def _catalog(manifest) -> Catalog:
@@ -107,6 +119,7 @@ def fetch(accession, species, strain, alias, outdir, manifest, force):
         notes=None,
     )
 
+    _autoalias(catalog, row, alias)
     catalog.upsert_local(row)
     click.echo(f"{'Updated' if force else 'Added'} {accession} in {catalog.local_path}")
 
@@ -164,8 +177,9 @@ def add(fasta, gff, species, strain, alias, outdir, manifest):
         notes="added locally",
     )
 
+    _autoalias(catalog, row, alias)
     catalog.upsert_local(row)
-    click.echo(f"Added to manifest: {new_fasta.name}")
+    click.echo(f"Added to {catalog.local_path}: {new_fasta.name}  (alias {row['alias']})")
 
 
 @cli.command()
@@ -234,6 +248,7 @@ def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
                 date_added=today_iso(),
                 alias=alias,
             )
+            _autoalias(catalog, row_cleaned, alias)
             catalog.upsert_local(row_cleaned)
             click.echo(f"Scaffold (cleaned): {cleaned_fasta.name}")
         else:
@@ -251,6 +266,7 @@ def scaffold(query, reference, outdir, alias, clean, manifest, ragtag_bin):
                 date_added=today_iso(),
                 alias=alias,
             )
+            _autoalias(catalog, row, alias)
             catalog.upsert_local(row)
             click.echo(f"Scaffold: {out_fasta.name}")
 
@@ -304,8 +320,9 @@ def fetch_tritrypdb(species_strain, outdir, species, strain, alias, manifest):
         notes="fetched from TriTrypDB release 68",
     )
 
+    _autoalias(catalog, row, alias)
     catalog.upsert_local(row)
-    click.echo(f"Added {species_strain} to manifest: {fasta.name}")
+    click.echo(f"Added {species_strain} to manifest: {fasta.name}  (alias {row['alias']})")
 
 
 @cli.command()
@@ -523,6 +540,46 @@ def derive_agp_cmd(parent, child, out, basedir, manifest, record, probe_len):
         updated["agp_filename"] = out_path.name
         catalog.upsert_local(updated)
         click.echo(f"Recorded derived_from={parent_path.name} agp_filename={out_path.name}")
+
+
+@cli.command("alias")
+@click.option("--manifest", type=click.Path(), help="Use this manifest alone, instead of catalog + ./manifest.csv")
+@click.option("--overwrite", is_flag=True, help="Recompute aliases that are already set")
+@click.option("--dry-run", is_flag=True, help="Show what would change without writing")
+def alias_cmd(manifest, overwrite, dry_run):
+    """Fill in aliases of the form <Lspec>.<source>.<discriminator>.
+
+    The discriminator is the strain where one is known -- including strains NCBI
+    records in assembly_name because it left the strain field empty -- and the
+    accession otherwise, since an auto-generated ASM id says less than the accession.
+
+    Examples:
+      leishref alias --dry-run
+      leishref alias
+      leishref alias --manifest leishref/data/manifest.csv --overwrite
+    """
+    catalog = _catalog(manifest)
+    rows = catalog.read()
+    assigned = assign_aliases(rows, overwrite=overwrite)
+
+    changed = [(r, assigned.get(r.get("filename"))) for r in rows if assigned.get(r.get("filename")) != r.get("alias")]
+    if not changed:
+        click.echo("Every row already has an alias")
+        return
+
+    for row, new in changed:
+        old = row.get("alias") or "(none)"
+        click.echo(f"  {row.get('filename')}\n    {old} -> {new}")
+
+    if dry_run:
+        click.echo(f"\nWould set {len(changed)} aliases (dry-run)")
+        return
+
+    for row, new in changed:
+        updated = ManifestRow(**{k: v for k, v in row.items() if k != "_origin"})
+        updated["alias"] = new
+        catalog.upsert_local(updated)
+    click.echo(f"\nSet {len(changed)} aliases in {catalog.local_path}")
 
 
 @cli.command()

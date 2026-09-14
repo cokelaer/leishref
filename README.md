@@ -6,7 +6,7 @@ Manage Leishmania genomes from NCBI, TriTrypDB, and custom assemblies with full 
 - A curated catalog ships inside the package, so `pip install leishref` is the only
   entry point you need — no hunting across NCBI, TriTrypDB and Zenodo
 - `leishref download <alias>` resolves whichever source a genome lives in and checks its md5
-- User aliases for easy reference (e.g., `Ld1S` instead of full filename)
+- Generated aliases (`Ltrop.ncbi.MHOM_LB_2017_IK`) instead of full filenames
 - Layouts recorded as derivations (parent assembly + AGP) rather than as separate genomes
 - `verify` re-hashes everything on disk against the manifest
 - Ragtag scaffolding with AGP-based cleaning to remove unplaced contigs while preserving chromosome-anchored sequences and kinetoplast (maxicircle/kDNA)
@@ -43,7 +43,6 @@ leishref --help
 ```
 Leishmania/
 ├── manifest.csv              # YOUR genomes (created on demand, overlays the catalog)
-├── aliases.csv               # User-defined aliases (git-tracked) — e.g., Ld1S → Ld1S.fa
 ├── NCBI/                     # Raw NCBI downloads (fasta + gff, prefix-matched pairs)
 │   ├── Ld1S.fa
 │   └── Ld1S.gff
@@ -63,7 +62,7 @@ Leishmania/
 ├── leishref/                  # Python package (git-tracked)
 │   ├── __init__.py
 │   ├── manifest.py           # CSV I/O
-│   ├── aliases.py            # Alias resolution
+│   ├── alias.py              # Alias generation
 │   ├── checksums.py          # md5/sequence_length/contig_count
 │   ├── ncbi.py               # datasets CLI wrapper
 │   ├── tritrypdb.py          # TriTrypDB release-68 download
@@ -175,16 +174,45 @@ Single CSV with 28 columns, one row per genome/scaffold:
 
 ## Aliases
 
-Simple CSV: `alias, target`. Target is typically a filename or NCBI accession.
+Every genome carries an alias of the form `<Lspec>.<source>.<discriminator>`:
 
-```csv
-alias,target
-Ld1S,Ld1S.fa
-Ltropica.L590,GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna
-Ltropica.CDC,MyAssemblies/LtropicaCDC/Ltropica.Ld1S.scaffold.flye.fasta
+```
+Ltrop.ncbi.MHOM_LB_2017_IK     GCA_003067545.1
+Ltrop.ncbi.L590                GCA_000410715.1
+Ltrop.ncbi.GCA_048773145.2     GCA_048773145.2
+Linfa.ncbi.JPCM5               GCF_000002875.2
+Ltrop.mine.flye                flye scaffold
+Ltrop.mine.pecat_filtered      filtered pecat scaffold
 ```
 
-User adds/edits aliases; CLI resolves them. E.g., `--reference Ld1S` looks up alias in CSV.
+**Species** is the genus initial plus four letters of the epithet, which keeps close
+neighbours apart (`Ltrop` vs `Ltura`, `Lmajo` vs `Lmart`).
+
+**Source** is where the sequence came from. A TriTrypDB release changes the annotation,
+so it is folded in: `Ltrop.tritryp68.L590` and `Ltrop.tritryp69.L590` sit side by side.
+NCBI accessions already carry their own `.1`/`.2` version, so `ncbi` stays bare. A Zenodo
+DOI is *not* a source -- it records where an assembly was published, not where it came
+from -- so `Ltrop.mine.flye` keeps its origin and the DOI is simply how `download`
+retrieves it.
+
+**Discriminator** is the strain where one is known. NCBI often leaves the strain field
+empty and puts the designation in `assembly_name` instead, so that is mined too:
+`MHOM_LB _2017_IK`, stray space and all, becomes `MHOM_LB_2017_IK`. When the assembly
+name is an auto-generated `ASM<digits>v<n>` the accession is used instead, since an
+opaque submitter id says less than the accession does. For local assemblies nothing in
+the metadata distinguishes one from another, so the filename supplies it: the tokens
+after `scaffold` are what actually differ.
+
+Aliases are lookup keys, not parsed structure, so a discriminator containing dots (an
+accession) is fine. Collisions fall back to the accession, then to a counter.
+
+```bash
+leishref alias --dry-run    # preview
+leishref alias              # fill in anything missing
+leishref alias --overwrite  # recompute all
+```
+
+`fetch`, `add` and `scaffold` assign one automatically unless you pass `--alias`.
 
 ---
 

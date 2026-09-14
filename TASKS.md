@@ -4,7 +4,6 @@
 
 - [x] Init poetry package structure
 - [x] Manifest CSV with 25-column schema (added num_bases, num_contigs, gc_percent)
-- [x] Aliases mapping (user-defined shortcuts)
 - [x] NCBI fetch via datasets CLI (fasta+gff) with GFF naming fix
 - [x] TriTrypDB fallback download (stub, URLs prepared)
 - [x] Ragtag scaffolding wrapper + AGP-based cleaning (chrom-anchored + kinetoplast whitelist)
@@ -29,6 +28,8 @@
 - [x] **Catalog ships with the package** (`leishref/data/manifest.csv`), local manifest overlays it
 - [x] **`download` command** — resolves Zenodo DOI or NCBI accession from the catalog, checks md5
 - [x] `taxon_id` column, populated for all NCBI rows
+- [x] **Alias scheme** `<Lspec>.<source>.<discriminator>`, auto-assigned on fetch/add/scaffold
+- [x] Removed the unused `aliases.py` / `aliases.csv` (superseded by the manifest alias column)
 - [x] Fixed `fetch_metadata`: parsed an obsolete datasets JSON shape, so assembly_name /
       bioproject / biosample / sequencing_technology were silently empty on every row
 
@@ -81,6 +82,6 @@
 
 ## Notes
 
-- Git tracks: manifest.csv, aliases.csv, code, tests
+- Git tracks: leishref/data/manifest.csv (the catalog), AGP/*.agp, code, tests
 - Git ignores: NCBI/*.fa*, Scaffold/*.fa*, MyAssemblies/**/*.fa*, *.pyc, pycache
 - Schema evolving: `release_version` + `version` distinction pending
