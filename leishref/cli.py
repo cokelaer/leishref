@@ -1001,8 +1001,11 @@ def download_ncbi(local_dir, catalog_dir, force, no_link, verbose):
     failed = []
 
     for genome in bar:
-        alias = suggest_alias(genome)  # Use suggested alias (e.g., Ld1S)
-        alias = alias.replace("/", "_")  # Sanitize path separators
+        # Prefer catalog alias (Ld1S, LdBPK), fall back to suggest_alias
+        alias = get_catalog_alias(genome.accession, cat_root) if genome.accession else None
+        if not alias:
+            alias = suggest_alias(genome)
+            alias = alias.replace("/", "_")  # Sanitize path separators
         bar.set_description_str(alias[:28], refresh=True)
 
         captured = io.StringIO()
