@@ -6,6 +6,7 @@ named by whatever alias the user chose, so the directory name *is* the alias and
 has to be kept in sync with a separate index.
 """
 
+import fnmatch
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -18,12 +19,34 @@ METADATA_FILE = "metadata.yaml"
 #: Shipped catalog, updated by hand or by pull request.
 CATALOG_DIR = Path(__file__).parent / "data"
 
+#: Catalog entries are grouped by where the genome came from, one directory per origin.
+CATALOG_GROUPS = ("ncbi", "scaffold", "zenodo", "tritrypdb", "local")
+
 #: Local database, relative to wherever leishref is run.
 LOCAL_DIR = Path("data")
 
 
 def today_iso() -> str:
     return datetime.now().isoformat()[:10]
+
+
+GLOB_CHARS = "*?["
+
+
+def is_glob(term: str) -> bool:
+    """True when a search term is meant to be matched as a wildcard pattern."""
+    return any(char in term for char in GLOB_CHARS)
+
+
+def _term_matches(term: str, haystack: str) -> bool:
+    """Substring match, or a glob match when the term carries wildcards.
+
+    The pattern is padded with ``*`` on both sides so that a wildcard term matches
+    anywhere in the record, exactly as a plain term does.
+    """
+    if is_glob(term):
+        return fnmatch.fnmatch(haystack, f"*{term}*")
+    return term in haystack
 
 
 @dataclass
@@ -97,9 +120,14 @@ class Genome:
         return " ".join(p for p in parts if p).lower()
 
     def matches(self, terms) -> bool:
-        """True when every term appears somewhere in this genome's metadata."""
+        """True when every term appears somewhere in this genome's metadata.
+
+        A term containing a shell wildcard (``*``, ``?`` or ``[...]``) is matched as a
+        glob rather than as a substring, so ``GCA_0002*`` and ``L*tropica`` work and a
+        bare ``*`` matches every genome. Plain terms keep their substring behaviour.
+        """
         haystack = self.haystack()
-        return all(term.lower() in haystack for term in terms)
+        return all(_term_matches(term.lower(), haystack) for term in terms)
 
     def to_dict(self) -> dict:
         """YAML-bound fields, dropping empties so the file stays readable."""
@@ -151,14 +179,47 @@ def write_genome(directory: Path, genome: Genome) -> Path:
     return target
 
 
+def catalog_group(genome) -> str:
+    """The catalog subdirectory a genome belongs in.
+
+    Grouping follows how the genome was *made*, not where it currently lives: a
+    scaffold stays under scaffold/ after it is deposited on Zenodo, so publishing an
+    entry never moves it.
+    """
+    if genome.scaffold:
+        return "scaffold"
+    accession = genome.accession or ""
+    if accession.startswith(("GCA_", "GCF_")):
+        return "ncbi"
+    source = (genome.source or "").lower()
+    if source in ("tritrypdb", "zenodo", "ncbi"):
+        return source
+    if genome.zenodo_doi:
+        return "zenodo"
+    return "local"
+
+
+def catalog_entry_dir(root: Path, genome) -> Path:
+    """Where this genome's metadata.yaml belongs under a catalog root."""
+    return Path(root) / catalog_group(genome) / genome.identifier
+
+
 def iter_genomes(root: Path) -> Iterator[Genome]:
-    """Every genome directory under root, in name order."""
+    """Every genome directory under root, in name order.
+
+    A catalog groups its entries one level deep (data/ncbi/GCA_..., data/scaffold/...),
+    while a local database is flat (data/<alias>), so both shapes are walked.
+    """
     root = Path(root)
     if not root.is_dir():
         return
     for directory in sorted(root.iterdir()):
         if (directory / METADATA_FILE).is_file():
             yield read_genome(directory)
+        elif directory.is_dir():
+            for entry in sorted(directory.iterdir()):
+                if (entry / METADATA_FILE).is_file():
+                    yield read_genome(entry)
 
 
 def catalog(root: Optional[Path] = None) -> list[Genome]:
@@ -188,7 +249,7 @@ def load_aliases(root: Optional[Path] = None) -> dict[str, str]:
                     continue
                 parts = line.split("\t")
                 if len(parts) == 2:
-                    alias, accession = parts
+                    accession, alias = parts
                     aliases[alias.strip()] = accession.strip()
     _ALIASES_CACHE = aliases
     return aliases
