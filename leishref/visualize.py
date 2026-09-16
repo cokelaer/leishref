@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, List
 import matplotlib.pyplot as plt
 import seaborn as sns
-from leishref.metadata import catalog, CATALOG_DIR, load_aliases
+from leishref.metadata import catalog, CATALOG_DIR
 
 
 def plot_genome_sizes(
@@ -24,19 +24,12 @@ def plot_genome_sizes(
     Returns:
         Path to saved plot
     """
-    # Clear alias cache to ensure latest aliases are loaded
-    from leishref import metadata
-    metadata._ALIASES_CACHE = None
-
     entries = catalog(catalog_dir)
     ncbi = [g for g in entries if g.source == "NCBI" and g.accession and g.stats and g.stats.get("num_bases")]
 
-    # Filter out kinetoplast-only genomes by default
+    # Filter out small genomes (kinetoplast-only, < 1 Mb) by default
     if not include_kinetoplast:
-        aliases = load_aliases(catalog_dir)
-        # Reverse mapping: accession -> alias
-        acc_to_alias = {v: k for k, v in aliases.items()}
-        ncbi = [g for g in ncbi if "kinetoplast" not in (acc_to_alias.get(g.accession, "") or "").lower()]
+        ncbi = [g for g in ncbi if g.stats.get("num_bases", 0) >= 1_000_000]
 
     if species_filter:
         ncbi = [g for g in ncbi if any(s.lower() in (g.species or "").lower() for s in species_filter)]
@@ -90,18 +83,11 @@ def plot_genome_size_histogram(
     Returns:
         Path to saved plot
     """
-    # Clear alias cache to ensure latest aliases are loaded
-    from leishref import metadata
-    metadata._ALIASES_CACHE = None
-
     entries = catalog(catalog_dir)
     ncbi = [g for g in entries if g.source == "NCBI" and g.accession and g.stats and g.stats.get("num_bases")]
 
     if not include_kinetoplast:
-        aliases = load_aliases(catalog_dir)
-        # Reverse mapping: accession -> alias
-        acc_to_alias = {v: k for k, v in aliases.items()}
-        ncbi = [g for g in ncbi if "kinetoplast" not in (acc_to_alias.get(g.accession, "") or "").lower()]
+        ncbi = [g for g in ncbi if g.stats.get("num_bases", 0) >= 1_000_000]
 
     if not ncbi:
         raise ValueError("No NCBI genomes with size data found")
