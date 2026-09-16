@@ -28,6 +28,7 @@ from leishref.metadata import CATALOG_DIR, LOCAL_DIR, Genome, catalog, catalog_e
 from leishref.naming import suggest_alias
 from leishref.ncbi import fetch_fasta_gff, fetch_metadata, fetch_metadata_many, species_from_organism
 from leishref.prune import prune_fasta
+from leishref.visualize import plot_genome_sizes, plot_genome_stats
 from leishref.scaffold import clean_scaffolded_fasta, ragtag_version, run_scaffold
 from leishref.zenodo import (
     ZenodoError,
@@ -1066,6 +1067,55 @@ def link(local_dir, basedir):
         click.echo("\nNot linked:", err=True)
         for conflict in conflicts:
             click.echo(f"  {conflict}", err=True)
+
+
+@cli.command("plot-sizes")
+@click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
+@click.option("--output", type=click.Path(), help="Save plot to this file")
+@click.option("--species", multiple=True, help="Filter by species (can repeat)")
+def plot_sizes(catalog_dir, output, species):
+    """Plot genome sizes by species.
+
+    Examples:
+
+    \b
+      leishref plot-sizes
+      leishref plot-sizes --output sizes.png
+      leishref plot-sizes --species donovani --species major
+    """
+    try:
+        out = plot_genome_sizes(
+            Path(catalog_dir) if catalog_dir else None,
+            Path(output) if output else None,
+            list(species) if species else None,
+        )
+        click.echo(f"Saved plot to {out}")
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+
+@cli.command("plot-stats")
+@click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
+@click.option("--output", type=click.Path(), help="Save plot to this file")
+def plot_stats(catalog_dir, output):
+    """Plot genome statistics: size, contig count, GC%.
+
+    Examples:
+
+    \b
+      leishref plot-stats
+      leishref plot-stats --output stats.png
+    """
+    try:
+        out = plot_genome_stats(
+            Path(catalog_dir) if catalog_dir else None,
+            Path(output) if output else None,
+        )
+        click.echo(f"Saved plot to {out}")
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
 
 
 # ------------------------------------------------------------------------ dev commands
