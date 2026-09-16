@@ -455,15 +455,15 @@ def test_a_parent_record_of_a_bare_file_is_just_the_checksum(tmp_path):
     assert _parent_record(fasta, None) == {"file": "loose.fa", "md5": md5_file(fasta)}
 
 
-def test_scaffold_refuses_a_bare_query_with_no_species(installed):
-    """Species comes from the query, so a loose FASTA has to be told what it is."""
+def test_scaffold_requires_query_to_be_catalog_genome(installed):
+    """Query must be an installed catalog genome; bare FASTA files are not allowed."""
     base, _ = installed
     query = base / "loose.fa"
     query.write_text(">c1\nACGTACGT\n")
 
     result = run(["dev", "scaffold", "--query", str(query), "--reference", "Ltrop.flye", "--alias", "x"], base)
-    assert result.exit_code == 2
-    assert "--species" in result.output
+    assert result.exit_code == 1
+    assert "catalog genome" in result.output
 
 
 def test_scaffold_auto_generates_name_from_query_and_reference():
