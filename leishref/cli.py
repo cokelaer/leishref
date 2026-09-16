@@ -1141,6 +1141,9 @@ def link(local_dir, basedir):
 def plot_sizes(catalog_dir, output, species, include_kinetoplast):
     """Plot genome sizes by species.
 
+    Kinetoplast-only entries are excluded by default (they're outliers).
+    Use --include-kinetoplast to show all entries.
+
     Examples:
 
     \b
@@ -1191,6 +1194,9 @@ def plot_stats(catalog_dir, output):
 @click.option("--include-kinetoplast", is_flag=True, help="Include kinetoplast-only genomes")
 def plot_histogram(catalog_dir, output, include_kinetoplast):
     """Plot histogram of genome sizes.
+
+    Kinetoplast-only entries are excluded by default (they're outliers).
+    Use --include-kinetoplast to show all entries.
 
     Examples:
 
