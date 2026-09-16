@@ -71,8 +71,8 @@ Rename sequences in an installed genome using chromosome database::
     leishref rename-sequences Ld1S --flavor roman
 
 Flavors:
-- ``chr`` (default) — Rename to 'chromosome I', 'chromosome II', etc.
-- ``number`` — Rename to '1', '2', '3', etc. (numeric index)
+- ``chr`` — Rename to 'chromosome I', 'chromosome II', etc.
+- ``number`` (default) — Rename to '1', '2', '3', etc. (numeric index)
 - ``roman`` — Rename to 'I', 'II', 'III', etc. (Roman numerals)
 - ``name`` — Use names from local chromosome database
 

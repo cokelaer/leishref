@@ -739,7 +739,7 @@ def verify(local_dir, quick):
 @click.option(
     "--flavor",
     type=click.Choice(["chr", "number", "roman", "name"]),
-    default="chr",
+    default="number",
     show_default=True,
     help="Naming scheme for renamed sequences",
 )
@@ -751,8 +751,8 @@ def rename_sequences_cmd(name, flavor, local_dir, catalog_dir):
     NAME is the local alias of the genome to transform.
 
     Flavors:
-    - chr: 'chromosome I', 'chromosome II', ... (default)
-    - number: '1', '2', '3', ...
+    - chr: 'chromosome I', 'chromosome II', ...
+    - number: '1', '2', '3', ... (default)
     - roman: 'I', 'II', 'III', ...
     - name: use names from chromosome database
 
