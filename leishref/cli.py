@@ -1186,6 +1186,7 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
             {
                 "metadata": {
                     "title": deposition["metadata"]["title"],
+                    "description": description,
                     "creators": deposition["metadata"]["creators"],
                     "version": version or "v1.0",
                     "keywords": keywords,
