@@ -487,7 +487,7 @@ def test_scaffold_auto_generates_name_from_query_and_reference():
     # With catalog aliases, uses them
     query_alias = _genome_alias(query)
     ref_alias = _genome_alias(ref)
-    assert f"{query_alias}.scaffold.{ref_alias}" == "LtL590.scaffold.Ld1S"
+    assert f"{query_alias}.scaffold.{ref_alias}" == "LtrL590.scaffold.Ld1S"
 
     # Test with TriTrypDB genome: should append _tritryp
     tritryp = Genome(
