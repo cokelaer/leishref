@@ -91,25 +91,21 @@ Add a local assembly::
 leishref dev scaffold
 ~~~~~~~~~~~~~~~~~~~~~
 
-Scaffold an assembly against a reference using RagTag. Both query and reference may be
-a path to a FASTA file or the name of an installed genome. The result describes the
-query (so scaffolding *L. tropica* onto *L. donovani* reference yields *L. tropica*
-assembly).
+Scaffold an assembly against a reference using RagTag. Both query and reference must be
+installed catalog genomes. The result describes the query: scaffolding *L. tropica*
+onto *L. donovani* reference yields *L. tropica* assembly, with provenance recorded
+for the reference. Species and strain are inherited from the query metadata.
 
 The scaffold is named as ``<query_alias>.scaffold.<ref_alias>`` by default, where
 aliases resolve to catalog aliases or identifiers. For TriTrypDB genomes, the suffix
 ``_tritryp`` is added to avoid collisions with NCBI names. Species codes use single
 letters where unambiguous (Ld, Lm, Li) and two letters where ambiguous (Ltr, Lta, Ltu).
-Pass ``--alias`` to use a custom name::
+Pass ``--alias`` to use a custom name. The ``--clean`` flag keeps only
+chromosome-anchored contigs plus kinetoplast::
 
     leishref dev scaffold --query LtrL590 --reference Ld1S
-    leishref dev scaffold --query genome.fa --reference Ld1S --alias custom.name \
-        --species "Leishmania tropica" --strain CDC
-    leishref dev scaffold --query LtrL590 --reference Ld1S --alias custom --clean
-
-When the query is a bare FASTA, ``--species`` and ``--strain`` are required; for
-catalog genomes these are read from metadata. The ``--clean`` flag keeps only
-chromosome-anchored contigs plus kinetoplast.
+    leishref dev scaffold --query LtrL590 --reference Ld1S --alias custom.name
+    leishref dev scaffold --query LtrL590 --reference Ld1S --clean
 
 leishref dev publish
 ~~~~~~~~~~~~~~~~~~~~
