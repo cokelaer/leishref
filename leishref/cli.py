@@ -966,24 +966,19 @@ def add(fasta, gff, alias, species, strain, technology, assembler, catalog_dir, 
 
 @dev.command()
 @click.option("--query", required=True, help="Assembly to scaffold: a FASTA file, catalog id or local alias")
-@click.option("--reference", required=True, help="Reference genome: a FASTA file, catalog id or local alias")
+@click.option("--reference", required=True, help="Reference genome: catalog id or local alias")
 @click.option("--alias", help="Name for the resulting scaffold (auto-generated as <query>.scaffold.<reference> if omitted)")
-@click.option("--species", help="Species of the scaffolded assembly, when the query is a bare file")
-@click.option("--strain", help="Strain of the scaffolded assembly, when the query is a bare file")
 @click.option("--clean", is_flag=True, help="Keep only chr-anchored contigs plus kinetoplast")
 @click.option("--catalog-dir", type=click.Path(), help="Write the entry here instead")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
-def scaffold(query, reference, alias, species, strain, clean, catalog_dir, local_dir, no_link):
+def scaffold(query, reference, alias, clean, catalog_dir, local_dir, no_link):
     """Scaffold an assembly against a reference with ragtag.
 
-    Both sides may be a FASTA file or the name of an installed genome, so any assembly
-    in the database can be laid out on any other. What went in is recorded under
-    scaffold: the catalog identifier and md5 of each parent, and the ragtag version.
-
-    The result describes the *query*: scaffolding L. tropica onto an L. donovani
-    reference produces an L. tropica assembly. When the query is a bare file there is
-    nothing to take that from, so pass --species and --strain.
+    Both query and reference must be installed catalog genomes. The result describes
+    the query: scaffolding L. tropica onto L. donovani yields an L. tropica assembly,
+    with L. donovani appearing only in the provenance. Species and strain are taken
+    from the query metadata.
 
     The scaffold is named as <query_alias>.scaffold.<reference_alias> by default; pass
     --alias to override with a custom name.
@@ -992,8 +987,8 @@ def scaffold(query, reference, alias, species, strain, clean, catalog_dir, local
 
     \b
       leishref dev scaffold --query Ltrop.ncbi.L590 --reference Ld1S
-      leishref dev scaffold --query flye.fa --reference Ld1S --species "Leishmania tropica" --strain CDC
-      leishref dev scaffold --query Ltrop.ncbi.L590 --reference Ld1S --alias custom.scaffold.name --clean
+      leishref dev scaffold --query Ltrop.ncbi.L590 --reference Ld1S --alias custom.name
+      leishref dev scaffold --query Ltrop.ncbi.L590 --reference Ld1S --clean
     """
     root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
     local_root = Path(local_dir)
@@ -1003,22 +998,24 @@ def scaffold(query, reference, alias, species, strain, clean, catalog_dir, local
     ref_fasta, ref = _resolve_assembly(reference, local_root, cat_root, "--reference")
     query = query_fasta
 
+    if query_genome is None:
+        click.echo("--query must be an installed catalog genome (not a bare FASTA file).", err=True)
+        raise SystemExit(1)
+    if ref is None:
+        click.echo("--reference must be an installed catalog genome.", err=True)
+        raise SystemExit(1)
+
     if not alias:
-        if query_genome is None or ref is None:
-            click.echo("Cannot auto-generate scaffold name: query and reference must be catalog genomes.", err=True)
-            click.echo("Pass --alias to name the scaffold manually.", err=True)
-            raise SystemExit(1)
         query_alias = _genome_alias(query_genome, cat_root)
         ref_alias = _genome_alias(ref, cat_root)
         alias = f"{query_alias}.scaffold.{ref_alias}"
         click.echo(f"Auto-generated scaffold name: {alias}")
 
-    species = species or (query_genome.species if query_genome else None)
-    strain = strain or (query_genome.strain if query_genome else None)
+    species = query_genome.species
+    strain = query_genome.strain
     if not species:
-        click.echo("Unknown species for the scaffolded assembly.", err=True)
-        click.echo('Pass --species (and --strain), or give --query the name of a catalog genome.', err=True)
-        raise SystemExit(2)
+        click.echo(f"Cannot determine species from query {query_genome.identifier}.", err=True)
+        raise SystemExit(1)
 
     click.echo(f"Scaffolding {query.name} onto {reference}...")
     with tempfile.TemporaryDirectory() as tmp:
