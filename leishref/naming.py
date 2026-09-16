@@ -87,6 +87,8 @@ def discriminator(genome) -> str:
 
 def suggest_alias(genome) -> str:
     """A readable name for this genome, for the user to accept or ignore."""
+    if genome.source == "Leishref scaffold" and genome.identifier:
+        return genome.identifier
     return ".".join(
         (
             species_abbrev(genome.species),
