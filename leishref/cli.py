@@ -69,11 +69,11 @@ click.rich_click.COMMAND_GROUPS = {
     "leishref": [
         {
             "name": "Using the database",
-            "commands": ["search", "info", "download", "restore", "link", "verify"],
+            "commands": ["search", "info", "download", "restore", "verify", "rename-sequences"],
         },
         {
-            "name": "Maintaining the shipped catalog",
-            "commands": ["dev"],
+            "name": "For maintainers and developers",
+            "commands": ["dev", "link"],
         },
     ],
     "leishref dev": [
@@ -427,12 +427,7 @@ def _require(genomes, key, what, catalog_root=None):
 @click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
 @click.option("--force", is_flag=True, help="Download again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
-@click.option(
-    "--rename-sequences",
-    type=click.Choice(["chr", "number", "roman", "name"]),
-    help="Rename sequences using chromosome database (chr=chromosome I, number=1, roman=I, name=from database)",
-)
-def download(name, alias, local_dir, catalog_dir, force, no_link, rename_sequences):
+def download(name, alias, local_dir, catalog_dir, force, no_link):
     """Install a catalog genome into the local database under ALIAS.
 
     NAME picks the genome out of the catalog by accession or catalog id. ALIAS is the
@@ -487,20 +482,6 @@ def download(name, alias, local_dir, catalog_dir, force, no_link, rename_sequenc
         installed = _install(genome, alias, written, Path(local_dir))
 
     click.echo(f"Installed into {installed}")
-
-    if rename_sequences and genome.accession:
-        local_genome = read_genome(installed)
-        fasta_path = None
-        for kind, path, _ in local_genome.file_paths():
-            if kind == "fasta" and path.exists():
-                fasta_path = path
-                break
-
-        if fasta_path:
-            click.echo(f"Renaming sequences ({rename_sequences} flavor)...")
-            cat_root = Path(catalog_dir) if catalog_dir else None
-            renamed = rename_fasta_sequences(fasta_path, genome.accession, rename_sequences, cat_root)
-            fasta_path.write_text(renamed)
 
     local_genome = read_genome(installed)
     bad = False
@@ -751,6 +732,65 @@ def verify(local_dir, quick):
 
     if missing or mismatch:
         raise SystemExit(1)
+
+
+@cli.command("rename-sequences")
+@click.argument("name")
+@click.option(
+    "--flavor",
+    type=click.Choice(["chr", "number", "roman", "name"]),
+    default="chr",
+    show_default=True,
+    help="Naming scheme for renamed sequences",
+)
+@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
+@click.option("--catalog-dir", type=click.Path(), help="Path to chromosome database")
+def rename_sequences_cmd(name, flavor, local_dir, catalog_dir):
+    """Rename sequences in an installed genome using chromosome database.
+
+    NAME is the local alias of the genome to transform.
+
+    Flavors:
+    - chr: 'chromosome I', 'chromosome II', ... (default)
+    - number: '1', '2', '3', ...
+    - roman: 'I', 'II', 'III', ...
+    - name: use names from chromosome database
+
+    Examples:
+
+    \b
+      leishref rename-sequences Ld1S
+      leishref rename-sequences Ld1S --flavor number
+      leishref rename-sequences Ld1S --flavor roman
+    """
+    genome = _require(local(Path(local_dir)), name, "local database")
+
+    if not genome.accession:
+        click.echo(f"Genome {name} has no accession; cannot look up chromosome info", err=True)
+        raise SystemExit(1)
+
+    fasta_path = None
+    for kind, path, _ in genome.file_paths():
+        if kind == "fasta" and path.exists():
+            fasta_path = path
+            break
+
+    if not fasta_path:
+        click.echo(f"No FASTA file found for {name}", err=True)
+        raise SystemExit(1)
+
+    cat_root = Path(catalog_dir) if catalog_dir else None
+    click.echo(f"Renaming sequences in {fasta_path.name} ({flavor} flavor)...")
+    renamed = rename_fasta_sequences(fasta_path, genome.accession, flavor, cat_root)
+    fasta_path.write_text(renamed)
+
+    # Recompute checksum
+    new_checksum = md5_file(fasta_path)
+    genome.checksums["fasta"] = new_checksum
+    write_genome(genome.path, genome)
+
+    click.echo(f"Renamed {fasta_path.name}")
+    click.echo(f"Updated checksum: {new_checksum}")
 
 
 @cli.command()

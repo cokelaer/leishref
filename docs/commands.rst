@@ -11,20 +11,10 @@ Install a genome from the catalog::
 
     leishref download --alias ALIAS ACCESSION
     leishref download GCA_002243465.1 --alias Ld1S
-    leishref download GCA_002243465.1 --alias Ld1S --rename-sequences chr
 
 Options:
 - ``--alias ALIAS`` — Local directory name (required)
 - ``--no-link`` — Don't create symlinks
-- ``--rename-sequences [chr|number|roman|name]`` — Rename sequences using chromosome database:
-
-  * ``chr`` — Rename to 'chromosome I', 'chromosome II', etc.
-  * ``number`` — Rename to '1', '2', '3', etc. (numeric index)
-  * ``roman`` — Rename to 'I', 'II', 'III', etc. (Roman numerals)
-  * ``name`` — Use names from local chromosome database
-
-  Requires chromosome info in local database (populated during ``leishref dev fetch`` from NCBI).
-  Original Zenodo files unchanged; renaming applied only to local installation.
 
 leishref info
 ~~~~~~~~~~~~~
@@ -70,6 +60,27 @@ Check integrity of local genomes::
     leishref verify
 
 Verifies MD5 checksums.
+
+leishref rename-sequences
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Rename sequences in an installed genome using chromosome database::
+
+    leishref rename-sequences Ld1S
+    leishref rename-sequences Ld1S --flavor number
+    leishref rename-sequences Ld1S --flavor roman
+
+Flavors:
+- ``chr`` (default) — Rename to 'chromosome I', 'chromosome II', etc.
+- ``number`` — Rename to '1', '2', '3', etc. (numeric index)
+- ``roman`` — Rename to 'I', 'II', 'III', etc. (Roman numerals)
+- ``name`` — Use names from local chromosome database
+
+Requires chromosome info in local database (populated during ``leishref dev fetch`` from NCBI).
+Rewrites FASTA file in-place and updates stored checksum.
+
+Developer and maintainer commands
+----------------------------------
 
 leishref link
 ~~~~~~~~~~~~~
