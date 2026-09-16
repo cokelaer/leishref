@@ -23,13 +23,15 @@ Download all NCBI genomes from the catalog::
 
     leishref download-ncbi
     leishref download-ncbi --force
+    leishref download-ncbi --verbose
 
-Uses accession as local alias for each genome. Shows progress bar. Reports
-failed downloads without stopping the batch.
+Uses accession as local alias for each genome. Quiet by default (progress bar only).
+Reports failed downloads without stopping the batch.
 
 Options:
 - ``--force`` — Download again even if already installed
 - ``--no-link`` — Skip alias-named symlinks
+- ``--verbose`` — Show each download details (MD5, etc) instead of progress bar
 
 leishref info
 ~~~~~~~~~~~~~
