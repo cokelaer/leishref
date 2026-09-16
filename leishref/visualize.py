@@ -24,6 +24,10 @@ def plot_genome_sizes(
     Returns:
         Path to saved plot
     """
+    # Clear alias cache to ensure latest aliases are loaded
+    from leishref import metadata
+    metadata._ALIASES_CACHE = None
+
     entries = catalog(catalog_dir)
     ncbi = [g for g in entries if g.source == "NCBI" and g.accession and g.stats and g.stats.get("num_bases")]
 
@@ -86,6 +90,10 @@ def plot_genome_size_histogram(
     Returns:
         Path to saved plot
     """
+    # Clear alias cache to ensure latest aliases are loaded
+    from leishref import metadata
+    metadata._ALIASES_CACHE = None
+
     entries = catalog(catalog_dir)
     ncbi = [g for g in entries if g.source == "NCBI" and g.accession and g.stats and g.stats.get("num_bases")]
 
