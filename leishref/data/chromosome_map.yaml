@@ -1,0 +1,15 @@
+# Chromosome/replicon name mapping for genomes
+# Maps accession to list of chromosomes/replicons in order
+# Updated when fetching genomes from NCBI with chromosome information
+
+# Example structure:
+# GCA_000002545.2:
+#   - accession: NC_007067.7
+#     name: chromosome I
+#     index: 1
+#   - accession: NC_007068.7
+#     name: chromosome II
+#     index: 2
+#   - accession: NC_007069.7
+#     name: mitochondrion
+#     index: 3

@@ -22,6 +22,7 @@ from tqdm import tqdm
 
 from leishref.agp import derive_agp, write_agp
 from leishref.checksums import genome_stats, md5_file
+from leishref.chromosomes import rename_fasta_sequences
 from leishref.links import LinkConflict, link_paths
 from leishref.metadata import CATALOG_DIR, LOCAL_DIR, Genome, catalog, catalog_entry_dir, catalog_group, find, get_catalog_alias, is_glob, load_aliases, local, read_genome, today_iso, write_genome
 from leishref.naming import suggest_alias
@@ -426,7 +427,12 @@ def _require(genomes, key, what, catalog_root=None):
 @click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
 @click.option("--force", is_flag=True, help="Download again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
-def download(name, alias, local_dir, catalog_dir, force, no_link):
+@click.option(
+    "--rename-sequences",
+    type=click.Choice(["chr", "number", "roman", "name"]),
+    help="Rename sequences using chromosome database (chr=chromosome I, number=1, roman=I, name=from database)",
+)
+def download(name, alias, local_dir, catalog_dir, force, no_link, rename_sequences):
     """Install a catalog genome into the local database under ALIAS.
 
     NAME picks the genome out of the catalog by accession or catalog id. ALIAS is the
@@ -481,6 +487,20 @@ def download(name, alias, local_dir, catalog_dir, force, no_link):
         installed = _install(genome, alias, written, Path(local_dir))
 
     click.echo(f"Installed into {installed}")
+
+    if rename_sequences and genome.accession:
+        local_genome = read_genome(installed)
+        fasta_path = None
+        for kind, path, _ in local_genome.file_paths():
+            if kind == "fasta" and path.exists():
+                fasta_path = path
+                break
+
+        if fasta_path:
+            click.echo(f"Renaming sequences ({rename_sequences} flavor)...")
+            cat_root = Path(catalog_dir) if catalog_dir else None
+            renamed = rename_fasta_sequences(fasta_path, genome.accession, rename_sequences, cat_root)
+            fasta_path.write_text(renamed)
 
     local_genome = read_genome(installed)
     bad = False
