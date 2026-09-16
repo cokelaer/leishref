@@ -1121,6 +1121,12 @@ def _zenodo_description(genome) -> str:
         if genome.stats:
             lines.append(f"Sequences: {genome.stats.get('num_scaffolds', 'unknown')} scaffolds")
 
+    lines.extend([
+        "",
+        "Citation: If using this assembly, please cite the leishref project:",
+        "  https://github.com/cokelaer/leishref",
+    ])
+
     return "\n".join(lines)
 
 
@@ -1157,15 +1163,23 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
         click.echo("Add --confirm to publish")
         return
 
+    author = click.prompt("Author name")
     try:
         title = f"Leishmania genome: {genome.identifier}"
         description = _zenodo_description(genome)
-        deposition = create_deposition(title, description, ["Leishmania Database"], sandbox=sandbox)
+        creators = ["Leishmania Database"]
+        if author:
+            creators.append(author)
+        deposition = create_deposition(title, description, creators, sandbox=sandbox)
         click.echo(f"Created deposition {deposition['id']}")
 
         for path in payload:
             click.echo(f"Uploading {path.name}...")
             upload_file(deposition["id"], path, sandbox=sandbox)
+
+        keywords = ["leishmania", "genome", "assembly", "leishref"]
+        if genome.source == "Leishref scaffold":
+            keywords.append("scaffold")
 
         update_metadata(
             deposition["id"],
@@ -1174,8 +1188,14 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
                     "title": deposition["metadata"]["title"],
                     "creators": deposition["metadata"]["creators"],
                     "version": version or "v1.0",
-                    "keywords": ["leishmania", "genome", "assembly"],
+                    "keywords": keywords,
                     "upload_type": "dataset",
+                    "related_identifiers": [
+                        {
+                            "identifier": "https://github.com/cokelaer/leishref",
+                            "relation": "isPartOf",
+                        }
+                    ],
                 }
             },
             sandbox=sandbox,
