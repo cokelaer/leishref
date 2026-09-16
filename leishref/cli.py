@@ -70,7 +70,7 @@ click.rich_click.COMMAND_GROUPS = {
     "leishref": [
         {
             "name": "Using the database",
-            "commands": ["search", "info", "download", "restore", "verify", "rename-sequences", "prune-scaffold"],
+            "commands": ["search", "info", "download", "download-ncbi", "restore", "verify", "rename-sequences", "prune-scaffold"],
         },
         {
             "name": "For maintainers and developers",
@@ -958,6 +958,58 @@ def restore(accessions, local_dir, catalog_dir, force, no_link, dry_run, from_in
     if failed:
         _console(err=True).print(f"[bold red]{len(failed)} failed:[/] {escape(', '.join(failed))}")
         raise SystemExit(1)
+
+
+@cli.command("download-ncbi")
+@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
+@click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
+@click.option("--force", is_flag=True, help="Download again even if already installed")
+@click.option("--no-link", is_flag=True, help="Skip the alias-named symlinks")
+def download_ncbi(local_dir, catalog_dir, force, no_link):
+    """Download all NCBI entries from the catalog.
+
+    Examples:
+
+    \b
+      leishref download-ncbi
+      leishref download-ncbi --force
+    """
+    entries = catalog(Path(catalog_dir) if catalog_dir else None)
+    ncbi_genomes = [g for g in entries if g.source == "NCBI" and g.accession]
+
+    if not ncbi_genomes:
+        click.echo("No NCBI genomes found in catalog")
+        return
+
+    click.echo(f"Found {len(ncbi_genomes)} NCBI genomes. Starting downloads...")
+    bar = tqdm(ncbi_genomes, unit="genome", dynamic_ncols=True)
+    failed = []
+
+    for genome in bar:
+        alias = genome.accession  # Use accession as local alias
+        bar.set_description_str(alias[:28], refresh=True)
+
+        try:
+            click.get_current_context().invoke(
+                download,
+                name=genome.accession,
+                alias=alias,
+                local_dir=local_dir,
+                catalog_dir=catalog_dir,
+                force=force,
+                no_link=no_link,
+            )
+        except SystemExit as exc:
+            if exc.code:
+                failed.append(alias)
+
+    if failed:
+        click.echo(f"\nFailed: {len(failed)}/{len(ncbi_genomes)}", err=True)
+        for alias in failed:
+            click.echo(f"  {alias}", err=True)
+        raise SystemExit(1)
+    else:
+        click.echo(f"\nDownloaded {len(ncbi_genomes)} NCBI genomes")
 
 
 @cli.command()
