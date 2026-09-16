@@ -10,10 +10,21 @@ leishref download
 Install a genome from the catalog::
 
     leishref download --alias ALIAS ACCESSION
+    leishref download GCA_002243465.1 --alias Ld1S
+    leishref download GCA_002243465.1 --alias Ld1S --rename-sequences chr
 
 Options:
-- ``--alias ALIAS`` — Local directory name
+- ``--alias ALIAS`` — Local directory name (required)
 - ``--no-link`` — Don't create symlinks
+- ``--rename-sequences [chr|number|roman|name]`` — Rename sequences using chromosome database:
+
+  * ``chr`` — Rename to 'chromosome I', 'chromosome II', etc.
+  * ``number`` — Rename to '1', '2', '3', etc. (numeric index)
+  * ``roman`` — Rename to 'I', 'II', 'III', etc. (Roman numerals)
+  * ``name`` — Use names from local chromosome database
+
+  Requires chromosome info in local database (populated during ``leishref dev fetch`` from NCBI).
+  Original Zenodo files unchanged; renaming applied only to local installation.
 
 leishref info
 ~~~~~~~~~~~~~
