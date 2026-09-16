@@ -1001,7 +1001,7 @@ def download_ncbi(local_dir, catalog_dir, force, no_link, verbose):
     failed = []
 
     for genome in bar:
-        alias = genome.accession  # Use accession as local alias
+        alias = suggest_alias(genome)  # Use suggested alias (e.g., Ld1S)
         bar.set_description_str(alias[:28], refresh=True)
 
         captured = io.StringIO()
