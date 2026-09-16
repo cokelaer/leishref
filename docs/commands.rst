@@ -79,6 +79,19 @@ Flavors:
 Requires chromosome info in local database (populated during ``leishref dev fetch`` from NCBI).
 Rewrites FASTA file in-place and updates stored checksum.
 
+leishref prune-scaffold
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Remove unmapped contigs, keeping only chromosome sequences and kinetoplast::
+
+    leishref prune-scaffold Ld1S
+
+Removes sequences not found in chromosome database while automatically preserving
+kinetoplast sequences (recognized by patterns: kinetoplast, maxicircle, maxi,
+mitochondrion, etc.). Rewrites FASTA in-place and updates statistics.
+
+Requires chromosome info in local database (populated during ``leishref dev fetch``).
+
 Developer and maintainer commands
 ----------------------------------
 
