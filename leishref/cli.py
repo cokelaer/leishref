@@ -22,11 +22,12 @@ from tqdm import tqdm
 
 from leishref.agp import derive_agp, write_agp
 from leishref.checksums import genome_stats, md5_file
-from leishref.chromosomes import rename_fasta_sequences
+from leishref.chromosomes import get_chromosome_info, rename_fasta_sequences
 from leishref.links import LinkConflict, link_paths
 from leishref.metadata import CATALOG_DIR, LOCAL_DIR, Genome, catalog, catalog_entry_dir, catalog_group, find, get_catalog_alias, is_glob, load_aliases, local, read_genome, today_iso, write_genome
 from leishref.naming import suggest_alias
 from leishref.ncbi import fetch_fasta_gff, fetch_metadata, fetch_metadata_many, species_from_organism
+from leishref.prune import prune_fasta
 from leishref.scaffold import clean_scaffolded_fasta, ragtag_version, run_scaffold
 from leishref.zenodo import (
     ZenodoError,
@@ -69,7 +70,7 @@ click.rich_click.COMMAND_GROUPS = {
     "leishref": [
         {
             "name": "Using the database",
-            "commands": ["search", "info", "download", "restore", "verify", "rename-sequences"],
+            "commands": ["search", "info", "download", "restore", "verify", "rename-sequences", "prune-scaffold"],
         },
         {
             "name": "For maintainers and developers",
@@ -791,6 +792,63 @@ def rename_sequences_cmd(name, flavor, local_dir, catalog_dir):
 
     click.echo(f"Renamed {fasta_path.name}")
     click.echo(f"Updated checksum: {new_checksum}")
+
+
+@cli.command("prune-scaffold")
+@click.argument("name")
+@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
+@click.option("--catalog-dir", type=click.Path(), help="Path to chromosome database")
+def prune_scaffold_cmd(name, local_dir, catalog_dir):
+    """Remove unmapped contigs, keeping only chromosome sequences and kinetoplast.
+
+    NAME is the local alias of the genome to prune.
+
+    Requires genome accession and chromosome info in local database.
+    Kinetoplast sequences are preserved automatically.
+
+    Examples:
+
+    \b
+      leishref prune-scaffold Ld1S
+    """
+    genome = _require(local(Path(local_dir)), name, "local database")
+
+    if not genome.accession:
+        click.echo(f"Genome {name} has no accession; cannot look up chromosome info", err=True)
+        raise SystemExit(1)
+
+    cat_root = Path(catalog_dir) if catalog_dir else None
+    chrom_info = get_chromosome_info(genome.accession, cat_root)
+
+    if not chrom_info:
+        click.echo(f"No chromosome info found for {genome.accession}", err=True)
+        click.echo("Populate chromosome database using 'leishref dev fetch'", err=True)
+        raise SystemExit(1)
+
+    fasta_path = None
+    for kind, path, _ in genome.file_paths():
+        if kind == "fasta" and path.exists():
+            fasta_path = path
+            break
+
+    if not fasta_path:
+        click.echo(f"No FASTA file found for {name}", err=True)
+        raise SystemExit(1)
+
+    mapped_names = {info.get("accession") for info in chrom_info if info.get("accession")}
+    click.echo(f"Pruning {fasta_path.name} ({len(mapped_names)} mapped + kinetoplast)...")
+    pruned = prune_fasta(fasta_path, mapped_names)
+    fasta_path.write_text(pruned)
+
+    # Recompute stats and checksum
+    new_checksum = md5_file(fasta_path)
+    genome.checksums["fasta"] = new_checksum
+    genome.stats = genome_stats(fasta_path)
+    write_genome(genome.path, genome)
+
+    click.echo(f"Pruned {fasta_path.name}")
+    click.echo(f"  Sequences: {genome.stats.get('num_scaffolds', 'unknown')}")
+    click.echo(f"  Checksum: {new_checksum}")
 
 
 @cli.command()
