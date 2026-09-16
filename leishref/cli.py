@@ -1087,6 +1087,43 @@ def scaffold(query, reference, alias, clean, catalog_dir, local_dir, no_link):
     _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
 
 
+def _zenodo_description(genome) -> str:
+    """Build rich description for Zenodo deposit."""
+    lines = [
+        "Leishmania genome assembly from the leishref initiative.",
+        "",
+        "Repository: https://github.com/cokelaer/leishref",
+    ]
+
+    if genome.source == "Leishref scaffold":
+        scaf = genome.scaffold or {}
+        query = scaf.get("query", {})
+        ref = scaf.get("reference", {})
+        num_scaffolds = genome.stats.get("num_scaffolds", "unknown")
+        num_contigs = genome.stats.get("num_contigs", "unknown")
+
+        lines.extend([
+            "",
+            f"Scaffolded assembly:",
+            f"  Query: {query.get('name', 'unknown')} ({query.get('species', 'unknown')})",
+            f"  Reference: {ref.get('name', 'unknown')} ({ref.get('species', 'unknown')})",
+            f"  Tool: {scaf.get('tool', 'unknown')} {scaf.get('tool_version', '')}".strip(),
+            f"  Result: {num_scaffolds} scaffolds, {num_contigs} contigs",
+        ])
+    else:
+        lines.extend([
+            "",
+            f"Accession: {genome.accession or 'N/A'}",
+            f"Species: {genome.species or 'unknown'}",
+            f"Strain: {genome.strain or 'unknown'}",
+            f"Assembly level: {genome.assembly_level or 'unknown'}",
+        ])
+        if genome.stats:
+            lines.append(f"Sequences: {genome.stats.get('num_scaffolds', 'unknown')} scaffolds")
+
+    return "\n".join(lines)
+
+
 @dev.command()
 @click.argument("name")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
@@ -1122,7 +1159,8 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
 
     try:
         title = f"Leishmania genome: {genome.identifier}"
-        deposition = create_deposition(title, title, ["Leishmania Database"], sandbox=sandbox)
+        description = _zenodo_description(genome)
+        deposition = create_deposition(title, description, ["Leishmania Database"], sandbox=sandbox)
         click.echo(f"Created deposition {deposition['id']}")
 
         for path in payload:
