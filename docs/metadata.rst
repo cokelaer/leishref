@@ -164,3 +164,24 @@ from, so ``--species`` and ``--strain`` are required.
 
 Entries written before this naming scheme use ``--alias`` for custom names or flat
 ``scaffold.reference_alias`` and are left as they are.
+
+Publishing scaffolds
+--------------------
+
+Scaffolds created with ``leishref dev scaffold`` live in the local database initially.
+To make them available for sharing, use ``leishref dev publish``:
+
+1. Create and install the scaffold::
+
+    leishref dev scaffold --query LtrL590 --reference Ld1S
+
+2. Publish to Zenodo (uploads both FASTA and AGP)::
+
+    leishref dev publish LtrL590.scaffold.Ld1S --confirm --version v1.0
+
+3. The command records the DOI and updates both the local copy and the catalog entry,
+   so the scaffold appears in ``leishref info`` with a ``zenodo`` marker.
+
+For testing, use ``--sandbox`` to publish to sandbox.zenodo.org first::
+
+    leishref dev publish LtrL590.scaffold.Ld1S --confirm --sandbox

@@ -110,9 +110,23 @@ chromosome-anchored contigs plus kinetoplast::
 leishref dev publish
 ~~~~~~~~~~~~~~~~~~~~
 
-Deposit on Zenodo::
+Deposit an installed genome on Zenodo and record the DOI in the catalog. Requires
+``ZENODO_TOKEN`` (or ``ZENODO_SANDBOX_TOKEN`` with ``--sandbox``).
 
-    leishref dev publish FASTA
+The command uploads all associated files: FASTA plus optional AGP (for scaffolds),
+and records the DOI so the genome appears in the catalog as ``Zenodo`` source::
+
+    leishref dev publish LtrL590.scaffold.Ld1S
+    leishref dev publish LtrL590.scaffold.Ld1S --confirm --version v1.0
+    leishref dev publish LtrL590.scaffold.Ld1S --sandbox  # test run
+
+Options:
+- ``--confirm`` — Actually publish; without it, shows what would be uploaded (dry-run)
+- ``--version`` — Version tag (default ``v1.0``)
+- ``--sandbox`` — Publish to sandbox.zenodo.org for testing
+
+For scaffolds, both the FASTA and AGP files are uploaded. The ``--alias`` from
+``leishref download`` is used to locate the genome in the local database.
 
 leishref dev derive-agp
 ~~~~~~~~~~~~~~~~~~~~~~~
