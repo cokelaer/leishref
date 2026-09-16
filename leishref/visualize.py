@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, List
 import matplotlib.pyplot as plt
 import seaborn as sns
-from leishref.metadata import catalog, CATALOG_DIR
+from leishref.metadata import catalog, CATALOG_DIR, load_aliases
 
 
 def plot_genome_sizes(
@@ -29,7 +29,10 @@ def plot_genome_sizes(
 
     # Filter out kinetoplast-only genomes by default
     if not include_kinetoplast:
-        ncbi = [g for g in ncbi if "kinetoplast" not in (g.identifier or "").lower()]
+        aliases = load_aliases(catalog_dir)
+        # Reverse mapping: accession -> alias
+        acc_to_alias = {v: k for k, v in aliases.items()}
+        ncbi = [g for g in ncbi if "kinetoplast" not in (acc_to_alias.get(g.accession, "") or "").lower()]
 
     if species_filter:
         ncbi = [g for g in ncbi if any(s.lower() in (g.species or "").lower() for s in species_filter)]
@@ -87,7 +90,10 @@ def plot_genome_size_histogram(
     ncbi = [g for g in entries if g.source == "NCBI" and g.accession and g.stats and g.stats.get("num_bases")]
 
     if not include_kinetoplast:
-        ncbi = [g for g in ncbi if "kinetoplast" not in (g.identifier or "").lower()]
+        aliases = load_aliases(catalog_dir)
+        # Reverse mapping: accession -> alias
+        acc_to_alias = {v: k for k, v in aliases.items()}
+        ncbi = [g for g in ncbi if "kinetoplast" not in (acc_to_alias.get(g.accession, "") or "").lower()]
 
     if not ncbi:
         raise ValueError("No NCBI genomes with size data found")
