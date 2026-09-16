@@ -1600,6 +1600,60 @@ def import_cmd(accessions, from_tsv, catalog_dir, overwrite, dry_run):
     click.echo("Checksums are still missing; run 'leishref dev checksum' to fill them in")
 
 
+@dev.command("check-aliases")
+@click.option("--catalog-dir", type=click.Path(), help="Check this catalog instead")
+def check_aliases(catalog_dir):
+    """Check for duplicate accessions and aliases.
+
+    Examples:
+
+    \b
+      leishref dev check-aliases
+    """
+    from collections import defaultdict
+
+    # Check catalog accessions
+    cat_root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
+    entries = catalog(cat_root)
+
+    accessions = defaultdict(list)
+    for g in entries:
+        if g.accession:
+            accessions[g.accession].append(g.identifier)
+
+    dups = {acc: ids for acc, ids in accessions.items() if len(ids) > 1}
+
+    if dups:
+        click.echo("Duplicate accessions in catalog:", err=True)
+        for acc, ids in sorted(dups.items()):
+            click.echo(f"  {acc}: {', '.join(ids)}", err=True)
+        raise SystemExit(1)
+    else:
+        click.echo("✓ No duplicate accessions in catalog")
+
+    # Check aliases
+    aliases_file = CATALOG_DIR / "aliases.txt"
+    if aliases_file.exists():
+        aliases = defaultdict(list)
+        for line in aliases_file.read_text().split('\n'):
+            if line and not line.startswith('#'):
+                parts = line.split('\t')
+                if len(parts) == 2:
+                    accession, alias = parts
+                    aliases[alias].append(accession)
+
+        dups_aliases = {alias: accs for alias, accs in aliases.items() if len(accs) > 1}
+        if dups_aliases:
+            click.echo("Duplicate aliases:", err=True)
+            for alias, accs in sorted(dups_aliases.items()):
+                click.echo(f"  {alias}: {', '.join(accs)}", err=True)
+            raise SystemExit(1)
+        else:
+            click.echo(f"✓ No duplicate aliases ({len(aliases)} total)")
+
+    click.echo("✓ All checks passed")
+
+
 @dev.command()
 @click.option("--catalog-dir", type=click.Path(), help="Update entries here instead")
 @click.option("--workdir", type=click.Path(), default="NCBI", show_default=True, help="Where downloads land")
