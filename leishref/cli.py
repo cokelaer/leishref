@@ -1165,7 +1165,7 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
     try:
         title = f"Leishmania genome: {genome.identifier}"
         description = _zenodo_description(genome)
-        creators = ["Leishmania Database"]
+        creators = ["LeishRef"]
         if author:
             creators.append(author)
         deposition = create_deposition(title, description, creators, sandbox=sandbox)
