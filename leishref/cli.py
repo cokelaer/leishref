@@ -1058,7 +1058,7 @@ def scaffold(query, reference, alias, clean, catalog_dir, local_dir, no_link):
 
         genome = Genome(
             identifier=alias,
-            source="Scaffold",
+            source="Leishref scaffold",
             species=species,
             strain=strain,
             assembly_level="Scaffold",
