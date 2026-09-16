@@ -462,6 +462,19 @@ def download(name, alias, local_dir, catalog_dir, force, no_link):
     doi = genome.zenodo_doi
     accession = genome.accession
 
+    # Check if files already exist locally with correct checksums
+    target = Path(local_dir) / alias
+    if not force and target.exists() and genome.checksums:
+        local_checksums = {}
+        for kind, path, _ in genome.file_paths():
+            if path and path.exists():
+                local_checksums[kind] = md5_file(path)
+
+        if all(local_checksums.get(k) == v for k, v in genome.checksums.items() if k in ("fasta", "gff")):
+            click.echo(f"Files already present with correct checksums, skipping download")
+            _link(alias, [p for _, p, _ in genome.file_paths() if p and p.exists()], no_link)
+            return
+
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         if doi:
