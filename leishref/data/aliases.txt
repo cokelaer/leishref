@@ -13,9 +13,11 @@
 # - Strain discriminator: appended to species code (e.g., Ld1S, LdBPK, LtrL590)
 # - MHOM strains: Ld.MHOM_BR_75_M2904 format
 # - RefSeq/GenBank: GCF has no suffix; GCA with same assembly gets _GCA suffix
-# - Multiple versions of same strain: add assembly version suffix (e.g., LiJPCM5_ASM287v2)
+# - Same strain, several assemblies: suffix with release year (e.g., LpaMHOM_PA_94_PSC-1_2014,
+#   LpaMHOM_PA_94_PSC-1_2025) or submitter tag (_USP); same year -> append b, c (…_2017, …_2017b)
+# - Never include ATCC numbers, ASM identifiers, or annotation notes (they live in metadata.yaml)
+# - Leishmania sp.: Lsp + isolate/place (LspGhana, LspNamibia, LspLEM2494)
 # - Special cases: descriptive suffix like _kinetoplast
-# - Year could be added to shorten aliases.
 #
 # NOTE: Kinetoplast-only entries (Lad_kinetoplast, Lbr_kinetoplast, Li_kinetoplast)
 # are excluded by default from plot commands (plot-sizes, plot-histogram) to avoid
@@ -71,8 +73,8 @@ GCA_000227135.2	LdBPK282A1_GCA
 GCA_000283395.1	Ld2001
 GCA_000316305.1	Ld39
 GCA_000470725.1	LdBHU_1220
-GCA_001989955.1	LdMHOM_IN_1983_AG83_v1
-GCA_001989975.1	LdMHOM_IN_1983_AG83_v2
+GCA_001989955.1	LdMHOM_IN_1983_AG83_2017
+GCA_001989975.1	LdMHOM_IN_1983_AG83_2017b
 GCA_002243465.1	Ld1S
 GCA_003719575.1	LdCL
 GCA_003730175.1	LdFDAARGOS_360
@@ -91,10 +93,10 @@ GCA_000443025.1	LgeLEM452
 
 # Leishmania guyanensis
 GCA_003664525.1	Lgu204-365
-GCA_022701395.1	LguMHOM_BR_75_M4147
+GCA_022701395.1	LguMHOM_BR_75_M4147_2022
 GCA_024970365.1	LguM4147
 GCA_041682325.1	LguMHOM_CO_2018_UN0003
-GCA_051201275.1	LguMHOM_BR_75_M4147_v2
+GCA_051201275.1	LguMHOM_BR_75_M4147_2025
 GCA_051989525.1	LguMHOM_BR_75_M4147_USP
 GCA_902369315.1	Lgu_kinetoplast
 
@@ -173,8 +175,8 @@ GCA_977035625.1	LmeT33
 GCF_000234665.1	LmeMHOM_GT_2001_U1103
 
 # Leishmania naiffi
-GCA_040363635.1	LnaMDAS_BR_1979_M5533_v1
-GCA_051201425.1	LnaMDAS_BR_1979_M5533_v2
+GCA_040363635.1	LnaMDAS_BR_1979_M5533_2024
+GCA_051201425.1	LnaMDAS_BR_1979_M5533_2025
 
 # Leishmania orientalis
 GCA_017916335.1	LorLSCM4_GCA
@@ -183,8 +185,8 @@ GCF_017916335.1	LorLSCM4
 
 # Leishmania panamensis
 GCA_000340495.1	LpaMHOM_COL_81_L13
-GCA_000755165.1	LpaMHOM_PA_94_PSC-1_v1
-GCA_000755165.2	LpaMHOM_PA_94_PSC-1_v2
+GCA_000755165.1	LpaMHOM_PA_94_PSC-1_GCA
+GCA_000755165.2	LpaMHOM_PA_94_PSC-1_2025
 GCA_041682195.1	LpaMHOM_CO_12_LL0536
 GCA_041682215.1	LpaMHOM_CO_16_LL0772
 GCF_000755165.1	LpaMHOM_PA_94_PSC-1
@@ -197,24 +199,24 @@ GCA_055690245.1	LpeLsh3334
 GCA_055690285.1	LpeLsh3395
 
 # Leishmania shawi
-GCA_040363515.1	LshMCEB_BR_1984_M8408
+GCA_040363515.1	LshMCEB_BR_1984_M8408_2024
 GCA_040363645.1	LshMHOM_BR_2013_18
-GCA_051201445.1	LshMCEB_BR_1984_M8408_v2
-GCA_051989855.1	LshMCEB_BR_84_M8408
+GCA_051201445.1	LshMCEB_BR_1984_M8408_2025
+GCA_051989855.1	LshMCEB_BR_1984_M8408_USP
 
 # Leishmania sp. AIIMS_LM_SS_PKDL_LD-974
-GCA_000981925.2	LeiAIIMS_LM_SS_PKDL_LD-974
+GCA_000981925.2	LspLD-974
 
 # Leishmania sp. Ghana
-GCA_017918215.1	LeiGH5_GCA
-GCF_017918215.1	LeiGH5
+GCA_017918215.1	LspGhana_GCA
+GCF_017918215.1	LspGhana
 
 # Leishmania sp. MAR
-GCA_000409445.2	LeiLEM2494
+GCA_000409445.2	LspLEM2494
 
 # Leishmania sp. Namibia
-GCA_017918225.1	LspNaminia253_GCA
-GCF_017918225.1	LspNaminia253
+GCA_017918225.1	LspNamibia_GCA
+GCF_017918225.1	LspNamibia
 
 # Leishmania tarentolae
 GCA_009731335.1	LtaParrot_Tar_II
