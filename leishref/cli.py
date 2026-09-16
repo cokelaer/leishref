@@ -224,23 +224,49 @@ def _organism(genome) -> str:
 def _resolve_assembly(value, local_root: Path, cat_root, what: str):
     """A FASTA to scaffold with, given either a path or a genome name.
 
-    Returns (path, genome or None). A name is looked up in the local database first and
-    then in the catalog, and has to be installed: scaffolding needs the sequence, not
-    just the metadata. A plain path is taken as is, and carries no metadata with it.
+    Returns (path, genome or None). A name is looked up in the local database first.
+    If not found locally but exists in the catalog, downloads it to a temporary
+    directory. A plain path is taken as is with no metadata.
     """
     as_path = Path(value)
     if as_path.exists() and as_path.is_file():
         return as_path, None
 
-    genome = find(local(local_root), value, cat_root) or find(catalog(cat_root), value, cat_root)
-    if genome is None:
+    # Try local first
+    genome = find(local(local_root), value, cat_root)
+    if genome and genome.path and genome.fasta and (genome.path / genome.fasta).exists():
+        return genome.path / genome.fasta, genome
+
+    # Try catalog
+    cat_genome = find(catalog(cat_root), value, cat_root)
+    if cat_genome is None:
         click.echo(f"{what} is neither a file nor a known genome: {value}", err=True)
         raise SystemExit(1)
-    if genome.path is None or not genome.fasta or not (genome.path / genome.fasta).exists():
-        click.echo(f"{what} is not installed locally: {value}", err=True)
-        click.echo(f"Install it first: leishref download {value} --alias {value}", err=True)
+
+    # Download from catalog to temp directory
+    if not cat_genome.fasta or not cat_genome.accession:
+        click.echo(f"{what} is in catalog but has no downloadable FASTA: {value}", err=True)
         raise SystemExit(1)
-    return genome.path / genome.fasta, genome
+
+    import tempfile
+    tmp_dir = Path(tempfile.gettempdir()) / "leishref_scaffold" / cat_genome.identifier
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    fasta_path = tmp_dir / cat_genome.fasta
+
+    if not fasta_path.exists():
+        click.echo(f"Downloading {cat_genome.identifier} to temporary directory...")
+        try:
+            from leishref.ncbi import fetch_fasta_gff
+            fetch_fasta_gff(cat_genome.accession, str(tmp_dir))
+        except Exception as e:
+            click.echo(f"Failed to download {cat_genome.identifier}: {e}", err=True)
+            raise SystemExit(1)
+
+    if not fasta_path.exists():
+        click.echo(f"Download succeeded but FASTA file not found: {fasta_path}", err=True)
+        raise SystemExit(1)
+
+    return fasta_path, cat_genome
 
 
 def _parent_record(path: Path, genome) -> dict:
