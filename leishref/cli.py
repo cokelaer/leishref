@@ -906,7 +906,8 @@ def restore(accessions, local_dir, catalog_dir, force, no_link, dry_run, from_in
             if not origin:
                 click.echo(f"  no catalog origin recorded, skipping: {genome.identifier}", err=True)
                 continue
-            _record_download(Path(local_dir), origin, genome.identifier)
+            alias = genome.path.name  # Local directory name is the alias
+            _record_download(Path(local_dir), origin, alias)
             written += 1
         click.echo(f"Recorded {written} genome{'s' if written != 1 else ''} in {path}")
         return
