@@ -83,8 +83,8 @@ click.rich_click.COMMAND_GROUPS = {
             "commands": ["fetch", "add", "import", "scaffold", "derive-agp"],
         },
         {
-            "name": "Publishing and checking",
-            "commands": ["publish", "checksum"],
+            "name": "Publishing and managing",
+            "commands": ["publish", "checksum", "remove"],
         },
     ],
 }
@@ -1345,6 +1345,36 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
         shipped.source = "Zenodo"
         write_genome(entry, shipped)
         click.echo(f"Recorded DOI in {entry}")
+
+
+@dev.command()
+@click.argument("identifier")
+@click.option("--catalog-dir", type=click.Path(), help="Remove from here instead of shipped catalog")
+@click.option("--force", is_flag=True, help="Don't ask for confirmation")
+def remove(identifier, catalog_dir, force):
+    """Remove a genome entry from the catalog.
+
+    IDENTIFIER is the genome identifier or accession to remove.
+
+    Examples:
+
+    \b
+      leishref dev remove LtrL590.scaffold.Ld1S
+      leishref dev remove GCA_000227135.2 --force
+    """
+    cat_root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
+    genome = _require(catalog(cat_root), identifier, "catalog", cat_root)
+
+    if not force:
+        click.echo(f"Remove {genome.identifier}?")
+        if not click.confirm("Continue"):
+            raise SystemExit(0)
+
+    entry_path = genome.path
+    click.echo(f"Removing {entry_path}...")
+    import shutil
+    shutil.rmtree(entry_path, ignore_errors=False)
+    click.echo(f"Removed {entry_path}")
 
 
 @dev.command("derive-agp")
