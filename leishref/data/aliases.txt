@@ -3,7 +3,19 @@
 #
 # ⚠️  MANUALLY MAINTAINED — Do not auto-regenerate
 # Edit this file directly to add/modify aliases and add comments/decisions.
-# Add new entries with: accession<TAB>alias
+#
+# NAMING RULES:
+# - Species code: L + 1-2 letter abbreviation
+#   * Unambiguous (1 letter): Ld (donovani), Lm (major), Li (infantum)
+#   * Ambiguous t-species (2 letters): Ltr (tropica), Lta (tarentolae), Ltu (turanica)
+#   * Ambiguous a-species (2 letters): Lad (adleri), Lae (aethiopica), Lam (amazonensis), Lar (arabica)
+#   * Other species: L + 2 letters (e.g., Lb=braziliensis, Le=enriettii, Lg=guyanensis)
+# - Strain discriminator: appended to species code (e.g., Ld1S, LdBPK, LtrL590)
+# - MHOM strains: Ld.MHOM_BR_75_M2904 format
+# - RefSeq/GenBank: GCF has no suffix; GCA with same assembly gets _GCA suffix
+# - Multiple versions of same strain: add assembly version suffix (e.g., LiJPCM5_ASM287v2)
+# - Special cases: descriptive suffix like _kinetoplast
+#
 # Organized by species for readability.
 
 # Leishmania adleri
