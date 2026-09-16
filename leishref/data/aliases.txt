@@ -2,7 +2,7 @@
 # Format: accession<TAB>alias
 
 # Leishmania adleri
-GCA_902369305.1	Lad
+GCA_902369305.1	Lad_kinetoplast
 
 # Leishmania aethiopica
 GCA_000444285.2	LaeL147
