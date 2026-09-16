@@ -27,6 +27,24 @@ def find_ragtag_bin() -> str:
     raise RagtagError("ragtag.py not found in PATH or conda envs")
 
 
+def ragtag_version(ragtag_bin: Optional[str] = None) -> str:
+    """The version string ragtag reports, or "unknown" when it will not say.
+
+    A published scaffold is only reproducible if the tool that made it is named
+    exactly, so the version is read from the binary rather than assumed.
+    """
+    ragtag_bin = ragtag_bin or find_ragtag_bin()
+    try:
+        result = subprocess.run([ragtag_bin, "--version"], capture_output=True, text=True, check=False)
+    except OSError:
+        return "unknown"
+    reported = (result.stdout or result.stderr or "").strip().splitlines()
+    if not reported:
+        return "unknown"
+    # ragtag prints either "v2.1.0" or "RagTag v2.1.0"
+    return reported[-1].split()[-1].lstrip("v") or "unknown"
+
+
 def run_scaffold(reference_fasta: Path, query_fasta: Path, outdir: Path) -> tuple[Path, Path]:
     """Run ragtag.py scaffold. Return (fasta, agp) paths."""
     outdir = Path(outdir)
@@ -47,8 +65,8 @@ def run_scaffold(reference_fasta: Path, query_fasta: Path, outdir: Path) -> tupl
         if not scaffold_fasta.exists() or not scaffold_agp.exists():
             raise RagtagError("ragtag did not produce output files")
 
-        out_fasta = outdir / "ragtag.scaffold.fasta"
-        out_agp = outdir / "ragtag.scaffold.agp"
+        out_fasta = outdir / "scaffold.fasta"
+        out_agp = outdir / "scaffold.agp"
         out_fasta.write_bytes(scaffold_fasta.read_bytes())
         out_agp.write_bytes(scaffold_agp.read_bytes())
 
