@@ -16,6 +16,21 @@ Options:
 - ``--alias ALIAS`` — Local directory name (required)
 - ``--no-link`` — Don't create symlinks
 
+leishref download-ncbi
+~~~~~~~~~~~~~~~~~~~~~~
+
+Download all NCBI genomes from the catalog::
+
+    leishref download-ncbi
+    leishref download-ncbi --force
+
+Uses accession as local alias for each genome. Shows progress bar. Reports
+failed downloads without stopping the batch.
+
+Options:
+- ``--force`` — Download again even if already installed
+- ``--no-link`` — Skip alias-named symlinks
+
 leishref info
 ~~~~~~~~~~~~~
 
