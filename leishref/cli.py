@@ -1040,6 +1040,70 @@ def download_ncbi(local_dir, catalog_dir, force, no_link, verbose):
         click.echo(f"\nDownloaded {len(ncbi_genomes)} NCBI genomes")
 
 
+@cli.command("download-ncbi-refseq")
+@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
+@click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
+@click.option("--force", is_flag=True, help="Download again even if already installed")
+@click.option("--no-link", is_flag=True, help="Skip the alias-named symlinks")
+@click.option("--verbose", is_flag=True, help="Show each download details instead of progress bar")
+def download_ncbi_refseq(local_dir, catalog_dir, force, no_link, verbose):
+    """Download all RefSeq (GCF) NCBI entries from the catalog.
+
+    Examples:
+
+    \b
+      leishref download-ncbi-refseq
+      leishref download-ncbi-refseq --force
+    """
+    entries = catalog(Path(catalog_dir) if catalog_dir else None)
+    ncbi_genomes = [g for g in entries if g.source == "NCBI" and g.accession and g.accession.startswith("GCF_")]
+
+    if not ncbi_genomes:
+        click.echo("No RefSeq (GCF) genomes found in catalog")
+        return
+
+    click.echo(f"Downloading {len(ncbi_genomes)} RefSeq genomes...")
+    bar = tqdm(ncbi_genomes, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
+    failed = []
+
+    for genome in bar:
+        catalog_root = Path(catalog_dir) if catalog_dir else None
+        alias = get_catalog_alias(genome.accession, catalog_root) if genome.accession else None
+        if not alias:
+            alias = suggest_alias(genome)
+            alias = alias.replace("/", "_")
+        bar.set_description_str(alias[:28], refresh=True)
+
+        captured = io.StringIO()
+        try:
+            with contextlib.ExitStack() as stack:
+                if not verbose:
+                    stack.enter_context(contextlib.redirect_stdout(captured))
+                    stack.enter_context(contextlib.redirect_stderr(captured))
+                click.get_current_context().invoke(
+                    download,
+                    name=genome.accession,
+                    alias=alias,
+                    local_dir=local_dir,
+                    catalog_dir=catalog_dir,
+                    force=force,
+                    no_link=no_link,
+                )
+        except SystemExit as exc:
+            if exc.code:
+                failed.append(alias)
+                if verbose:
+                    click.echo(f"  Failed: {alias}", err=True)
+
+    if failed:
+        click.echo(f"\nFailed: {len(failed)}/{len(ncbi_genomes)}", err=True)
+        for alias in failed:
+            click.echo(f"  {alias}", err=True)
+        raise SystemExit(1)
+    else:
+        click.echo(f"\nDownloaded {len(ncbi_genomes)} RefSeq genomes")
+
+
 @cli.command()
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--basedir", type=click.Path(), default=".", help="Where to create the links")
