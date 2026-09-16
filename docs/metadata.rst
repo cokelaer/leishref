@@ -110,3 +110,56 @@ Example
       catalog_id: GCA_000227135.2
       ncbi_bioproject: PRJNA12345
       sequencing_technology: illumina
+
+Scaffolded assemblies
+---------------------
+
+An assembly produced by ``leishref dev scaffold`` records both parents, so the result
+can be reproduced and the two inputs recognised later by checksum.
+
+The identifier follows the pattern ``<query_alias>.scaffold.<ref_alias>``, which is
+auto-generated when ``--alias`` is omitted. For TriTrypDB genomes, the alias includes
+a ``_tritryp`` suffix to avoid collision with NCBI genomes::
+
+    identifier: LtL590.scaffold.Ld1S
+    source: Scaffold
+    species: Leishmania tropica       # the query, not the reference
+    strain: L590
+    assembly_level: Scaffold
+    scaffold:
+      query:
+        file: GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna
+        md5: 2f1c...
+        name: GCA_000410715.1
+        species: Leishmania tropica
+        strain: L590
+      reference:
+        file: GCA_002243465.1_ASM224346v1_genomic.fna
+        md5: ce46...
+        name: GCA_002243465.1
+        species: Leishmania donovani
+        strain: Ld1S
+        assembly_level: Chromosome
+      tool: RagTag
+      tool_version: 2.1.0
+      cleaned: true
+
+**scaffold.query** / **scaffold.reference** (mapping)
+    What went in. ``name`` is the catalog identifier rather than a local alias, since an
+    alias can be renamed while the identifier stays valid; ``md5`` identifies the exact
+    file used. A parent given as a bare FASTA path has only ``file`` and ``md5``.
+
+**scaffold.tool**, **scaffold.tool_version** (string)
+    The scaffolder and the version it reported, read from the binary at run time.
+
+**scaffold.cleaned** (bool)
+    Present when ``--clean`` was used, meaning only chromosome-anchored contigs and the
+    kinetoplast were kept.
+
+Species and strain describe the query. Scaffolding *L. tropica* onto an *L. donovani*
+reference yields an *L. tropica* assembly; the reference appears only under
+``scaffold.reference``. When the query is a bare FASTA there is nothing to take this
+from, so ``--species`` and ``--strain`` are required.
+
+Entries written before this naming scheme use ``--alias`` for custom names or flat
+``scaffold.reference_alias`` and are left as they are.
