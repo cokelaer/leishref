@@ -1,21 +1,21 @@
 # Common aliases for catalog genomes
-# Format: alias<TAB>accession
+# Format: accession<TAB>alias
 # These are shorthand names users can use in place of accessions
 
 # Leishmania donovani reference strains
-LdHU3	GCA_900635355.2
-Ld1S	GCA_000227135.2
-LdBPK	GCA_000227135.2
-LdBPK282A1	GCA_000227135.2
+GCA_900635355.2	LdHU3
+GCA_002243465.1	Ld1S
+GCA_000227135.2	LdBPK
+GCA_000227135.2	LdBPK282A1
 
 # Leishmania major reference strains
-LmFV9	GCA_000227635.1
+GCA_000227635.1	LmFV9
 
 # Leishmania infantum reference strains
-LinJPC	GCA_000002545.2
+GCA_000002545.2	LinJPC
 
 # Leishmania mexicana reference strains
-LmxMHOM	GCA_000002585.1
+GCA_000002585.1	LmxMHOM
 
 # Leishmania tropica reference strains
-LtL590	GCA_000410715.1
+GCA_000410715.1	LtL590
