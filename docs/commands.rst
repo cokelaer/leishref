@@ -163,6 +163,21 @@ Options:
 For scaffolds, both the FASTA and AGP files are uploaded. The ``--alias`` from
 ``leishref download`` is used to locate the genome in the local database.
 
+leishref dev remove
+~~~~~~~~~~~~~~~~~~~
+
+Remove a genome entry from the catalog::
+
+    leishref dev remove LtrL590.scaffold.Ld1S
+    leishref dev remove GCA_000227135.2 --force
+
+Deletes the entire entry directory. Asks for confirmation unless ``--force`` is used.
+Useful for removing invalid, duplicate, or superceded entries.
+
+Options:
+- ``--force`` — Skip confirmation prompt
+- ``--catalog-dir`` — Remove from alternate catalog location
+
 leishref dev derive-agp
 ~~~~~~~~~~~~~~~~~~~~~~~
 
