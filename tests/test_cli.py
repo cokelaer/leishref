@@ -271,3 +271,258 @@ def test_organism_does_not_repeat_a_strain_already_in_the_species():
 
     genome = Genome(species="Leishmania sp. AIIMS/LM/SS/PKDL/LD-974", strain="AIIMS/LM/SS/PKDL/LD-974")
     assert _organism(genome) == "Leishmania sp. AIIMS/LM/SS/PKDL/LD-974"
+
+
+@pytest.fixture
+def recorded(tmp_path):
+    """A local database holding one genome installed from a real catalog entry."""
+    from leishref.metadata import catalog as read_catalog
+
+    origin = read_catalog()[0]
+    directory = tmp_path / "data" / "mine"
+    directory.mkdir(parents=True)
+    write_genome(
+        directory,
+        Genome(identifier="mine", species=origin.species, provenance={"catalog_id": origin.identifier}),
+    )
+    return tmp_path, origin.identifier
+
+
+def test_download_of_an_installed_genome_records_it(recorded):
+    """Re-running download on something already present still writes the recipe line."""
+    base, name = recorded
+    result = run(["download", name, "--alias", "mine", "--no-link"], base)
+
+    assert result.exit_code == 0
+    assert f"{name}\tmine" in (base / "data" / "accessions.txt").read_text()
+
+
+def test_an_alias_is_recorded_once(recorded):
+    base, name = recorded
+    for _ in range(3):
+        run(["download", name, "--alias", "mine", "--no-link"], base)
+
+    lines = [ln for ln in (base / "data" / "accessions.txt").read_text().splitlines() if not ln.startswith("#")]
+    assert lines == [f"{name}\tmine"]
+
+
+def test_restore_lists_what_it_would_do(recorded):
+    base, name = recorded
+    run(["download", name, "--alias", "mine", "--no-link"], base)
+
+    result = run(["restore", "--dry-run"], base)
+    assert result.exit_code == 0
+    assert "mine" in result.output
+    assert "installed" in result.output
+
+
+def test_restore_reports_a_genome_that_is_no_longer_there(recorded):
+    """A recorded alias whose directory was deleted shows up as missing."""
+    base, name = recorded
+    run(["download", name, "--alias", "mine", "--no-link"], base)
+    (base / "data" / "mine" / "metadata.yaml").unlink()
+
+    result = run(["restore", "--dry-run"], base)
+    assert "missing" in result.output
+
+
+def test_restore_without_an_accessions_file_fails_clearly(tmp_path):
+    result = run(["restore"], tmp_path)
+    assert result.exit_code == 1
+    assert "No accessions file" in result.output
+
+
+def test_restore_reads_an_explicit_file(recorded):
+    base, name = recorded
+    shared = base / "shared.txt"
+    shared.write_text(f"# comment\n{name}\tmine\n")
+
+    result = run(["restore", "--file", str(shared), "--dry-run"], base)
+    assert result.exit_code == 0
+    assert "mine" in result.output
+
+
+def test_a_malformed_accessions_line_is_skipped(recorded):
+    base, name = recorded
+    shared = base / "shared.txt"
+    shared.write_text(f"{name}\tmine\nthis line has three\tfields\there\n")
+
+    result = run(["restore", "--file", str(shared), "--dry-run"], base)
+    assert result.exit_code == 0
+    assert "skipping" in result.output
+
+
+def test_from_installed_describes_an_existing_database(recorded):
+    """A database built before accessions.txt existed can still write its own recipe."""
+    base, name = recorded
+    result = run(["restore", "--from-installed"], base)
+
+    assert result.exit_code == 0
+    assert f"{name}\tmine" in (base / "data" / "accessions.txt").read_text()
+
+
+def test_from_installed_skips_a_genome_with_no_origin(tmp_path):
+    directory = tmp_path / "data" / "orphan"
+    directory.mkdir(parents=True)
+    write_genome(directory, Genome(identifier="orphan", source="Local"))
+
+    result = run(["restore", "--from-installed"], tmp_path)
+    assert "no catalog origin recorded" in result.output
+    assert "Recorded 0 genomes" in result.output
+
+
+def test_restore_is_quiet_about_the_genomes_that_worked(recorded):
+    """The per-genome chatter of download is swallowed unless something failed."""
+    base, name = recorded
+    run(["restore", "--from-installed"], base)
+
+    result = run(["restore", "--no-link"], base)
+    assert result.exit_code == 0
+    assert "Already installed" not in result.output
+    assert "Restored 1/1" in result.output
+
+
+def test_restore_verbose_shows_each_download(recorded):
+    base, name = recorded
+    run(["restore", "--from-installed"], base)
+
+    result = run(["restore", "--verbose", "--no-link"], base)
+    assert result.exit_code == 0
+    assert "Already installed" in result.output
+
+
+def test_a_failed_restore_reports_why(recorded):
+    """What download printed is kept back and shown for the genomes that failed."""
+    base, _ = recorded
+    shared = base / "shared.txt"
+    shared.write_text("NOT_A_GENOME\tbroken\n")
+
+    result = run(["restore", "--file", str(shared)], base)
+    assert result.exit_code == 1
+    assert "failed: broken <- NOT_A_GENOME" in result.output
+    assert "Not in catalog: NOT_A_GENOME" in result.output
+
+
+def test_scaffold_resolves_a_genome_name_to_its_fasta(installed):
+    """--query and --reference take a name as readily as a path."""
+    from leishref.cli import _resolve_assembly
+
+    base, fasta = installed
+    path, genome = _resolve_assembly("Ltrop.flye", base / "data", None, "--query")
+
+    assert path == fasta
+    assert genome.identifier == "Ltrop.flye"
+
+
+def test_scaffold_takes_a_path_as_it_is(tmp_path):
+    from leishref.cli import _resolve_assembly
+
+    fasta = tmp_path / "loose.fa"
+    fasta.write_text(">c1\nACGT\n")
+    path, genome = _resolve_assembly(str(fasta), tmp_path / "data", None, "--query")
+
+    assert path == fasta
+    assert genome is None
+
+
+def test_scaffold_rejects_a_name_that_is_neither_file_nor_genome(tmp_path):
+    from leishref.cli import _resolve_assembly
+
+    with pytest.raises(SystemExit):
+        _resolve_assembly("no_such_thing", tmp_path / "data", None, "--query")
+
+
+def test_a_parent_record_names_the_catalog_entry_and_its_checksum(installed):
+    """A published scaffold has to say exactly which assemblies it came from."""
+    from leishref.cli import _parent_record
+    from leishref.metadata import read_genome
+
+    base, fasta = installed
+    record = _parent_record(fasta, read_genome(base / "data" / "Ltrop.flye"))
+
+    assert record["file"] == fasta.name
+    assert record["md5"] == md5_file(fasta)
+    assert record["name"] == "Ltrop.flye"
+    assert record["species"] == "Leishmania tropica"
+
+
+def test_a_parent_record_of_a_bare_file_is_just_the_checksum(tmp_path):
+    from leishref.cli import _parent_record
+
+    fasta = tmp_path / "loose.fa"
+    fasta.write_text(">c1\nACGT\n")
+    assert _parent_record(fasta, None) == {"file": "loose.fa", "md5": md5_file(fasta)}
+
+
+def test_scaffold_refuses_a_bare_query_with_no_species(installed):
+    """Species comes from the query, so a loose FASTA has to be told what it is."""
+    base, _ = installed
+    query = base / "loose.fa"
+    query.write_text(">c1\nACGTACGT\n")
+
+    result = run(["dev", "scaffold", "--query", str(query), "--reference", "Ltrop.flye", "--alias", "x"], base)
+    assert result.exit_code == 2
+    assert "--species" in result.output
+
+
+def test_scaffold_auto_generates_name_from_query_and_reference():
+    """Scaffold name is auto-generated as <query_alias>.scaffold.<ref_alias> when --alias is omitted."""
+    from leishref.cli import _genome_alias
+    from leishref.metadata import Genome
+
+    # Test with NCBI genomes that have aliases
+    query = Genome(
+        identifier="GCA_000410715.1",
+        source="NCBI",
+        species="Leishmania tropica",
+        accession="GCA_000410715.1",
+    )
+    ref = Genome(
+        identifier="GCA_002243465.1",
+        source="NCBI",
+        species="Leishmania donovani",
+        accession="GCA_002243465.1",
+    )
+
+    # With catalog aliases, uses them
+    query_alias = _genome_alias(query)
+    ref_alias = _genome_alias(ref)
+    assert f"{query_alias}.scaffold.{ref_alias}" == "LtL590.scaffold.Ld1S"
+
+    # Test with TriTrypDB genome: should append _tritryp
+    tritryp = Genome(
+        identifier="Lsp.Ghana",
+        source="TriTrypDB",
+        species="Leishmania species",
+    )
+    tritryp_alias = _genome_alias(tritryp)
+    assert tritryp_alias == "Lsp.Ghana_tritryp"
+
+
+def test_info_counts_each_catalog_section(installed):
+    base, _ = installed
+    result = run(["info"], base)
+
+    assert result.exit_code == 0
+    for label in ("NCBI", "TriTrypDB", "Scaffold"):
+        assert label in result.output
+
+
+def test_info_sections_are_in_reading_order(installed):
+    """Upstream archives first, then what was derived here."""
+    base, _ = installed
+    output = run(["info"], base).output
+
+    order = [output.index(f"\n{label} (") for label in ("NCBI", "TriTrypDB", "Scaffold") if f"\n{label} (" in output]
+    assert order == sorted(order)
+
+
+def test_info_counts_add_up_to_the_catalog_total(installed):
+    import re
+
+    base, _ = installed
+    output = run(["info"], base).output
+
+    total = int(re.search(r"Catalog: (\d+) genomes", output).group(1))
+    counted = sum(int(n) for n in re.findall(r"^  (?:NCBI|TriTrypDB|Scaffold|Other)\s+(\d+)$", output, re.M))
+    assert counted == total
