@@ -965,7 +965,8 @@ def restore(accessions, local_dir, catalog_dir, force, no_link, dry_run, from_in
 @click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
 @click.option("--force", is_flag=True, help="Download again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlinks")
-def download_ncbi(local_dir, catalog_dir, force, no_link):
+@click.option("--verbose", is_flag=True, help="Show each download details instead of progress bar")
+def download_ncbi(local_dir, catalog_dir, force, no_link, verbose):
     """Download all NCBI entries from the catalog.
 
     Examples:
@@ -981,27 +982,34 @@ def download_ncbi(local_dir, catalog_dir, force, no_link):
         click.echo("No NCBI genomes found in catalog")
         return
 
-    click.echo(f"Found {len(ncbi_genomes)} NCBI genomes. Starting downloads...")
-    bar = tqdm(ncbi_genomes, unit="genome", dynamic_ncols=True)
+    click.echo(f"Downloading {len(ncbi_genomes)} NCBI genomes...")
+    bar = tqdm(ncbi_genomes, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
     failed = []
 
     for genome in bar:
         alias = genome.accession  # Use accession as local alias
         bar.set_description_str(alias[:28], refresh=True)
 
+        captured = io.StringIO()
         try:
-            click.get_current_context().invoke(
-                download,
-                name=genome.accession,
-                alias=alias,
-                local_dir=local_dir,
-                catalog_dir=catalog_dir,
-                force=force,
-                no_link=no_link,
-            )
+            with contextlib.ExitStack() as stack:
+                if not verbose:
+                    stack.enter_context(contextlib.redirect_stdout(captured))
+                    stack.enter_context(contextlib.redirect_stderr(captured))
+                click.get_current_context().invoke(
+                    download,
+                    name=genome.accession,
+                    alias=alias,
+                    local_dir=local_dir,
+                    catalog_dir=catalog_dir,
+                    force=force,
+                    no_link=no_link,
+                )
         except SystemExit as exc:
             if exc.code:
                 failed.append(alias)
+                if verbose:
+                    click.echo(f"  Failed: {alias}", err=True)
 
     if failed:
         click.echo(f"\nFailed: {len(failed)}/{len(ncbi_genomes)}", err=True)
