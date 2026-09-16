@@ -45,6 +45,13 @@ def ragtag_version(ragtag_bin: Optional[str] = None) -> str:
     return reported[-1].split()[-1].lstrip("v") or "unknown"
 
 
+def trim_ragtag_suffix(fasta_path: Path) -> str:
+    """Remove _RagTag suffix from FASTA sequence headers."""
+    content = fasta_path.read_text()
+    trimmed = content.replace("_RagTag", "")
+    return trimmed
+
+
 def run_scaffold(reference_fasta: Path, query_fasta: Path, outdir: Path) -> tuple[Path, Path]:
     """Run ragtag.py scaffold. Return (fasta, agp) paths."""
     outdir = Path(outdir)
@@ -67,7 +74,7 @@ def run_scaffold(reference_fasta: Path, query_fasta: Path, outdir: Path) -> tupl
 
         out_fasta = outdir / "scaffold.fasta"
         out_agp = outdir / "scaffold.agp"
-        out_fasta.write_bytes(scaffold_fasta.read_bytes())
+        out_fasta.write_text(trim_ragtag_suffix(scaffold_fasta))
         out_agp.write_bytes(scaffold_agp.read_bytes())
 
         return out_fasta, out_agp
