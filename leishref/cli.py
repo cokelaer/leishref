@@ -1088,11 +1088,10 @@ def scaffold(query, reference, alias, clean, catalog_dir, local_dir, no_link):
 
 
 def _zenodo_description(genome) -> str:
-    """Build rich description for Zenodo deposit."""
+    """Build rich description for Zenodo deposit with HTML formatting."""
     lines = [
-        "Leishmania genome assembly from the leishref initiative.",
-        "",
-        "Repository: https://github.com/cokelaer/leishref",
+        "<p>Leishmania genome assembly from the leishref initiative.</p>",
+        "<p>Repository: <a href=\"https://github.com/cokelaer/leishref\">https://github.com/cokelaer/leishref</a></p>",
     ]
 
     if genome.source == "Leishref scaffold":
@@ -1102,30 +1101,29 @@ def _zenodo_description(genome) -> str:
         num_scaffolds = genome.stats.get("num_scaffolds", "unknown")
         num_contigs = genome.stats.get("num_contigs", "unknown")
 
-        lines.extend([
-            "",
-            f"Scaffolded assembly:",
-            f"  Query: {query.get('name', 'unknown')} ({query.get('species', 'unknown')})",
-            f"  Reference: {ref.get('name', 'unknown')} ({ref.get('species', 'unknown')})",
-            f"  Tool: {scaf.get('tool', 'unknown')} {scaf.get('tool_version', '')}".strip(),
-            f"  Result: {num_scaffolds} scaffolds, {num_contigs} contigs",
-        ])
+        lines.append(
+            f"<p><strong>Scaffolded assembly:</strong><br/>"
+            f"Query: {query.get('name', 'unknown')} ({query.get('species', 'unknown')})<br/>"
+            f"Reference: {ref.get('name', 'unknown')} ({ref.get('species', 'unknown')})<br/>"
+            f"Tool: {scaf.get('tool', 'unknown')} {scaf.get('tool_version', '')}".strip() + "<br/>"
+            f"Result: {num_scaffolds} scaffolds, {num_contigs} contigs</p>"
+        )
     else:
-        lines.extend([
-            "",
-            f"Accession: {genome.accession or 'N/A'}",
-            f"Species: {genome.species or 'unknown'}",
-            f"Strain: {genome.strain or 'unknown'}",
-            f"Assembly level: {genome.assembly_level or 'unknown'}",
-        ])
+        lines.append(
+            f"<p>"
+            f"Accession: {genome.accession or 'N/A'}<br/>"
+            f"Species: {genome.species or 'unknown'}<br/>"
+            f"Strain: {genome.strain or 'unknown'}<br/>"
+            f"Assembly level: {genome.assembly_level or 'unknown'}"
+        )
         if genome.stats:
-            lines.append(f"Sequences: {genome.stats.get('num_scaffolds', 'unknown')} scaffolds")
+            lines[-1] += f"<br/>Sequences: {genome.stats.get('num_scaffolds', 'unknown')} scaffolds"
+        lines[-1] += "</p>"
 
-    lines.extend([
-        "",
-        "Citation: If using this assembly, please cite the leishref project:",
-        "  https://github.com/cokelaer/leishref",
-    ])
+    lines.append(
+        "<p><strong>Citation:</strong> If using this assembly, please cite the leishref project:<br/>"
+        "<a href=\"https://github.com/cokelaer/leishref\">https://github.com/cokelaer/leishref</a></p>"
+    )
 
     return "\n".join(lines)
 
