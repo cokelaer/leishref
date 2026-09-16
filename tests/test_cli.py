@@ -235,7 +235,8 @@ def test_info_lists_the_catalog_in_organism_order(installed):
     result = run(["info"], base)
 
     listed = [line for line in result.output.splitlines() if line.startswith("  GC")]
-    organisms = [line.split(None, 1)[1] for line in listed]
+    # Extract organism name, stripping alias if present
+    organisms = [line.split(None, 1)[1].split(" (alias:")[0] for line in listed]
     assert organisms == sorted(organisms, key=str.lower)
 
 

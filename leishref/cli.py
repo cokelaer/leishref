@@ -537,9 +537,11 @@ def info(name, local_dir, catalog_dir):
             continue
         console.print(f"\n[bold]{label}[/] [dim]({len(sections[group])})[/]")
         for genome in _by_organism(sections[group]):
-            doi = "  zenodo" if genome.zenodo_doi else ""
+            doi = "[green]  zenodo[/]" if genome.zenodo_doi else ""
+            alias = _genome_alias(genome, cat_root)
+            alias_txt = f"[dim] (alias: {escape(alias)})[/]" if alias != genome.identifier else ""
             console.print(
-                f"  [bold cyan]{escape(genome.identifier):<38}[/] {escape(_organism(genome))}[green]{doi}[/]"
+                f"  [bold cyan]{escape(genome.identifier):<38}[/] {escape(_organism(genome))}{doi}{alias_txt}"
             )
 
     console.print(f"\n[bold]Local:[/] [bold]{len(installed)}[/] installed  [dim]({Path(local_dir)})[/]")
