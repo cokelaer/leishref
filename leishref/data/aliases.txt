@@ -18,4 +18,4 @@ GCA_000002545.2	LinJPC
 GCA_000002585.1	LmxMHOM
 
 # Leishmania tropica reference strains
-GCA_000410715.1	LtL590
+GCA_000410715.1	LtrL590

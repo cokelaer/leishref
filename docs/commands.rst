@@ -98,13 +98,14 @@ assembly).
 
 The scaffold is named as ``<query_alias>.scaffold.<ref_alias>`` by default, where
 aliases resolve to catalog aliases or identifiers. For TriTrypDB genomes, the suffix
-``_tritryp`` is added to avoid collisions with NCBI names. Pass ``--alias`` to use
-a custom name::
+``_tritryp`` is added to avoid collisions with NCBI names. Species codes use single
+letters where unambiguous (Ld, Lm, Li) and two letters where ambiguous (Ltr, Lta, Ltu).
+Pass ``--alias`` to use a custom name::
 
-    leishref dev scaffold --query Ltrop.ncbi.L590 --reference Ld1S
+    leishref dev scaffold --query LtrL590 --reference Ld1S
     leishref dev scaffold --query genome.fa --reference Ld1S --alias custom.name \
         --species "Leishmania tropica" --strain CDC
-    leishref dev scaffold --query Ltrop.ncbi.L590 --reference Ld1S --alias custom --clean
+    leishref dev scaffold --query LtrL590 --reference Ld1S --alias custom --clean
 
 When the query is a bare FASTA, ``--species`` and ``--strain`` are required; for
 catalog genomes these are read from metadata. The ``--clean`` flag keeps only

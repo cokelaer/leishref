@@ -119,9 +119,10 @@ can be reproduced and the two inputs recognised later by checksum.
 
 The identifier follows the pattern ``<query_alias>.scaffold.<ref_alias>``, which is
 auto-generated when ``--alias`` is omitted. For TriTrypDB genomes, the alias includes
-a ``_tritryp`` suffix to avoid collision with NCBI genomes::
+a ``_tritryp`` suffix to avoid collision with NCBI genomes. Species codes use single
+letters where unambiguous (Ld, Lm, Li) and two letters where ambiguous (Ltr, Lta, Ltu)::
 
-    identifier: LtL590.scaffold.Ld1S
+    identifier: LtrL590.scaffold.Ld1S
     source: Scaffold
     species: Leishmania tropica       # the query, not the reference
     strain: L590
