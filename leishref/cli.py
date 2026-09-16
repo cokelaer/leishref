@@ -28,7 +28,7 @@ from leishref.metadata import CATALOG_DIR, LOCAL_DIR, Genome, catalog, catalog_e
 from leishref.naming import suggest_alias
 from leishref.ncbi import fetch_fasta_gff, fetch_metadata, fetch_metadata_many, species_from_organism
 from leishref.prune import prune_fasta
-from leishref.visualize import plot_genome_sizes, plot_genome_stats
+from leishref.visualize import plot_genome_sizes, plot_genome_stats, plot_genome_size_histogram
 from leishref.scaffold import clean_scaffolded_fasta, ragtag_version, run_scaffold
 from leishref.zenodo import (
     ZenodoError,
@@ -1073,7 +1073,8 @@ def link(local_dir, basedir):
 @click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
 @click.option("--output", type=click.Path(), help="Save plot to this file")
 @click.option("--species", multiple=True, help="Filter by species (can repeat)")
-def plot_sizes(catalog_dir, output, species):
+@click.option("--include-kinetoplast", is_flag=True, help="Include kinetoplast-only genomes")
+def plot_sizes(catalog_dir, output, species, include_kinetoplast):
     """Plot genome sizes by species.
 
     Examples:
@@ -1082,12 +1083,14 @@ def plot_sizes(catalog_dir, output, species):
       leishref plot-sizes
       leishref plot-sizes --output sizes.png
       leishref plot-sizes --species donovani --species major
+      leishref plot-sizes --include-kinetoplast
     """
     try:
         out = plot_genome_sizes(
             Path(catalog_dir) if catalog_dir else None,
             Path(output) if output else None,
             list(species) if species else None,
+            include_kinetoplast=include_kinetoplast,
         )
         click.echo(f"Saved plot to {out}")
     except ValueError as e:
@@ -1111,6 +1114,32 @@ def plot_stats(catalog_dir, output):
         out = plot_genome_stats(
             Path(catalog_dir) if catalog_dir else None,
             Path(output) if output else None,
+        )
+        click.echo(f"Saved plot to {out}")
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+
+@cli.command("plot-histogram")
+@click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
+@click.option("--output", type=click.Path(), help="Save plot to this file")
+@click.option("--include-kinetoplast", is_flag=True, help="Include kinetoplast-only genomes")
+def plot_histogram(catalog_dir, output, include_kinetoplast):
+    """Plot histogram of genome sizes.
+
+    Examples:
+
+    \b
+      leishref plot-histogram
+      leishref plot-histogram --output histogram.png
+      leishref plot-histogram --include-kinetoplast
+    """
+    try:
+        out = plot_genome_size_histogram(
+            Path(catalog_dir) if catalog_dir else None,
+            Path(output) if output else None,
+            include_kinetoplast=include_kinetoplast,
         )
         click.echo(f"Saved plot to {out}")
     except ValueError as e:

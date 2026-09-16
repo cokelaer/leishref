@@ -11,6 +11,7 @@ def plot_genome_sizes(
     catalog_dir: Optional[Path] = None,
     output_path: Optional[Path] = None,
     species_filter: Optional[List[str]] = None,
+    include_kinetoplast: bool = False,
 ) -> Path:
     """Plot genome sizes by species.
 
@@ -18,12 +19,17 @@ def plot_genome_sizes(
         catalog_dir: Catalog directory (default: CATALOG_DIR)
         output_path: Save plot to this path (default: genomes_by_size.png)
         species_filter: Plot only these species (optional)
+        include_kinetoplast: Include kinetoplast-only genomes (default: False)
 
     Returns:
         Path to saved plot
     """
     entries = catalog(catalog_dir)
     ncbi = [g for g in entries if g.source == "NCBI" and g.accession and g.stats and g.stats.get("num_bases")]
+
+    # Filter out kinetoplast-only genomes by default
+    if not include_kinetoplast:
+        ncbi = [g for g in ncbi if "kinetoplast" not in (g.identifier or "").lower()]
 
     if species_filter:
         ncbi = [g for g in ncbi if any(s.lower() in (g.species or "").lower() for s in species_filter)]
@@ -54,6 +60,49 @@ def plot_genome_sizes(
 
     if output_path is None:
         output_path = Path("genomes_by_size.png")
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return output_path
+
+
+def plot_genome_size_histogram(
+    catalog_dir: Optional[Path] = None,
+    output_path: Optional[Path] = None,
+    include_kinetoplast: bool = False,
+) -> Path:
+    """Plot histogram of genome sizes.
+
+    Args:
+        catalog_dir: Catalog directory (default: CATALOG_DIR)
+        output_path: Save plot to this path (default: genome_size_histogram.png)
+        include_kinetoplast: Include kinetoplast-only genomes (default: False)
+
+    Returns:
+        Path to saved plot
+    """
+    entries = catalog(catalog_dir)
+    ncbi = [g for g in entries if g.source == "NCBI" and g.accession and g.stats and g.stats.get("num_bases")]
+
+    if not include_kinetoplast:
+        ncbi = [g for g in ncbi if "kinetoplast" not in (g.identifier or "").lower()]
+
+    if not ncbi:
+        raise ValueError("No NCBI genomes with size data found")
+
+    sizes = [g.stats.get("num_bases", 0) / 1e6 for g in ncbi]  # Convert to Mb
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.hist(sizes, bins=15, color="steelblue", edgecolor="black", alpha=0.7)
+    ax.set_xlabel("Genome size (Mb)", fontsize=11)
+    ax.set_ylabel("Number of genomes", fontsize=11)
+    ax.set_title(f"Distribution of Leishmania Genome Sizes (n={len(ncbi)})", fontsize=12, fontweight="bold")
+    ax.grid(axis="y", alpha=0.3)
+
+    if output_path is None:
+        output_path = Path("genome_size_histogram.png")
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
