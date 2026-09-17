@@ -11,14 +11,14 @@ def _species_label(name: str) -> str:
     return name.split()[-1][:3]
 
 
-def _plot_boxplot(ax, series: list, labels: list, ylabel: str, title: str, log_scale: bool = False):
+def _plot_boxplot(ax, series: list, labels: list, ylabel: str, title: str, symlog_scale: bool = False):
     if not series:
         ax.text(0.5, 0.5, "No data", transform=ax.transAxes, ha="center", va="center")
         ax.set_title(title)
         return
     ax.boxplot(series, tick_labels=labels)
-    if log_scale:
-        ax.set_yscale("log")
+    if symlog_scale:
+        ax.set_yscale("symlog", linthresh=1)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
     ax.tick_params(axis="x", rotation=45)
@@ -162,27 +162,25 @@ def plot_genome_stats(
     _plot_boxplot(axes[0], sizes, species_short, "Genome size (Mb)", "Genome Size Distribution")
 
     # Scaffolds
-    scaffolds = [[g.stats.get("num_scaffolds", 0) for g in by_species[sp] if g.stats.get("num_scaffolds", 0) > 0] for sp in species_names]
-    scaffold_data = [(label, values) for label, values in zip(species_short, scaffolds) if values]
+    scaffolds = [[g.stats.get("num_scaffolds", 0) for g in by_species[sp]] for sp in species_names]
     _plot_boxplot(
         axes[1],
-        [values for _, values in scaffold_data],
-        [label for label, _ in scaffold_data],
-        "Number of scaffolds (log scale)",
+        scaffolds,
+        species_short,
+        "Number of scaffolds (symlog scale)",
         "Scaffold Count Distribution",
-        log_scale=True,
+        symlog_scale=True,
     )
 
     # Contigs
-    contigs = [[g.stats.get("num_contigs", 0) for g in by_species[sp] if g.stats.get("num_contigs", 0) > 0] for sp in species_names]
-    contig_data = [(label, values) for label, values in zip(species_short, contigs) if values]
+    contigs = [[g.stats.get("num_contigs", 0) for g in by_species[sp]] for sp in species_names]
     _plot_boxplot(
         axes[2],
-        [values for _, values in contig_data],
-        [label for label, _ in contig_data],
-        "Number of contigs (log scale)",
+        contigs,
+        species_short,
+        "Number of contigs (symlog scale)",
         "Contig Count Distribution",
-        log_scale=True,
+        symlog_scale=True,
     )
 
     # Scaffold N50
@@ -240,6 +238,9 @@ def plot_chromosome_length_histogram(
         lengths.extend([length / 1e6 for length in _iter_fasta_lengths(fasta_path) if length > 0])
 
     if not lengths:
+        if species_filter:
+            filter_text = ", ".join(species_filter)
+            raise ValueError(f"No local FASTA files found for species filter: {filter_text}")
         raise ValueError("No local FASTA files found; use a local catalog/database with installed genomes")
 
     fig, axes = plt.subplots(2, 1, figsize=(12, 8), gridspec_kw={"height_ratios": [4, 1]}, sharex=True)
