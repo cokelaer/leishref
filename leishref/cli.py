@@ -207,6 +207,15 @@ def _classify(paths) -> dict:
     return roles
 
 
+def _save_chromosome_correspondence(accession: str, correspondence: list[dict], root: Path):
+    """Persist chromosome correspondence for one assembly accession."""
+    from leishref.chromosomes import load_chromosome_map, save_chromosome_map
+
+    chrom_map = load_chromosome_map(root)
+    chrom_map[accession] = correspondence
+    save_chromosome_map(chrom_map, root)
+
+
 SOURCE_STYLES = {
     "GenBank": "cyan",
     "RefSeq": "magenta",
@@ -1348,13 +1357,9 @@ def fetch(accession, alias, species, strain, catalog_dir, local_dir, force, no_l
         write_genome(entry, genome)
         click.echo(f"Catalog entry: {entry}")
 
-        from leishref.chromosomes import load_chromosome_map, save_chromosome_map
-
         correspondence = fetch_chromosome_correspondence(accession)
         if correspondence:
-            chrom_map = load_chromosome_map(root)
-            chrom_map[accession] = correspondence
-            save_chromosome_map(chrom_map, root)
+            _save_chromosome_correspondence(accession, correspondence, root)
             click.echo(f"Updated chromosome mapping for {accession}")
         else:
             click.echo(f"Warning: no chromosome mapping returned for {accession}", err=True)
@@ -1386,11 +1391,7 @@ def fetch_chromosomes(accession, catalog_dir, save):
         )
 
     if save:
-        from leishref.chromosomes import load_chromosome_map, save_chromosome_map
-
-        chrom_map = load_chromosome_map(root)
-        chrom_map[accession] = correspondence
-        save_chromosome_map(chrom_map, root)
+        _save_chromosome_correspondence(accession, correspondence, root)
         click.echo(f"Updated {root / 'chromosome_map.yaml'}")
 
 

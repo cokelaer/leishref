@@ -70,7 +70,34 @@ def test_fetch_chromosome_correspondence_uses_sequence_report(monkeypatch):
     assert parsed[0]["name"] == "chromosome 1"
 
 
+def test_parse_sequence_correspondence_uses_chromosome_number_for_index():
+    records = [
+        {
+            "reports": [
+                {
+                    "genbank_accession": "CP000002.1",
+                    "assigned_molecule": "2",
+                    "assigned_molecule_location_type": "Chromosome",
+                },
+                {
+                    "genbank_accession": "CP000001.1",
+                    "assigned_molecule": "1",
+                    "assigned_molecule_location_type": "Chromosome",
+                },
+            ]
+        }
+    ]
+    parsed = ncbi._parse_sequence_correspondence(records, "GCA_123456789.1")
+    by_accession = {entry["accession"]: entry["index"] for entry in parsed}
+    assert by_accession["CP000001.1"] == 1
+    assert by_accession["CP000002.1"] == 2
+
+
 def test_get_chromosome_info_falls_back_to_paired_accession(tmp_path):
     save_chromosome_map({"GCA_123.1": [{"accession": "CP1.1", "index": 1, "name": "chromosome 1"}]}, tmp_path)
     parsed = get_chromosome_info("GCF_123.1", tmp_path)
     assert parsed and parsed[0]["accession"] == "CP1.1"
+
+
+def test_invalid_roman_chromosome_token_is_not_interpreted_as_index():
+    assert ncbi._parse_roman_numeral("IC") is None

@@ -567,3 +567,34 @@ def test_rename_sequences_with_roman_flavor(installed):
     content = output_file.read_text()
     assert ">I\n" in content
     assert ">c1" not in content
+
+
+def test_dev_fetch_chromosomes_saves_mapping_by_default(tmp_path, monkeypatch):
+    import yaml
+
+    monkeypatch.setattr(
+        "leishref.cli.fetch_chromosome_correspondence",
+        lambda accession: [
+            {
+                "accession": "CP000001.1",
+                "index": 1,
+                "name": "chromosome 1",
+                "genbank_accession": "CP000001.1",
+                "refseq_accession": "NC_000001.1",
+            }
+        ],
+    )
+
+    result = run(["dev", "fetch-chromosomes", "GCA_123.1", "--catalog-dir", "catalog"], tmp_path)
+    assert result.exit_code == 0
+    mapping_file = tmp_path / "catalog" / "chromosome_map.yaml"
+    assert mapping_file.exists()
+    saved = yaml.safe_load(mapping_file.read_text())
+    assert saved["GCA_123.1"][0]["name"] == "chromosome 1"
+
+
+def test_dev_fetch_chromosomes_exits_nonzero_when_no_mapping(tmp_path, monkeypatch):
+    monkeypatch.setattr("leishref.cli.fetch_chromosome_correspondence", lambda accession: [])
+    result = run(["dev", "fetch-chromosomes", "GCA_123.1", "--catalog-dir", "catalog"], tmp_path)
+    assert result.exit_code == 1
+    assert "No chromosome mapping found" in result.output
