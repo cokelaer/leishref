@@ -250,6 +250,6 @@ GCA_000441995.1	LtuLEM423
 GCA_040363505.1	LutITUB_BR_1977_M4964
 
 # Scaffolds
-LtrL590.scaffold.Ld1S   LtrL590.scaffold.Ld1S
+LtrL590.scaffold.Ld1S	LtrL590.scaffold.Ld1S
 
 # Custom
