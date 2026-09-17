@@ -245,7 +245,7 @@ def test_grouping_follows_how_a_genome_was_made(genome):
     genome.scaffold = {"reference": {"name": "GCA_1.1"}}
     genome.source = "Zenodo"
     genome.provenance = {"zenodo_doi": "10.5281/zenodo.1"}
-    assert catalog_group(genome) == "scaffold"
+    assert catalog_group(genome) == "scaffolds"
 
 
 def test_an_accession_decides_the_ncbi_group(genome):
