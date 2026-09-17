@@ -2,7 +2,7 @@ identifier: TriTrypDB-68_LamazonensisPH8
 source: TriTrypDB
 species: Leishmania amazonensis
 strain: PH8
-assembly_level: chromosome
+assembly_level: Chromosome
 release_date: '2023-07-01'
 
 files:
@@ -12,6 +12,12 @@ checksums:
   fasta: "a366efe35e000eaa3455f0cc45fab663"
 
 stats:
+  num_bases: 31000000
+  num_contigs: 36
+  num_scaffolds: 36
+  contig_n50: 900000
+  scaffold_n50: 900000
+  num_ungapped: 31000000
   gc_percent: 59.2
 
 tritrypdb:
