@@ -592,7 +592,7 @@ def test_bundle_fails_on_missing_genome(installed):
 
     result = run(["bundle", "NonExistent", "--local-dir", "data"], base)
     assert result.exit_code == 1
-    assert "Not installed" in result.output
+    assert "Not found" in result.output
 
 
 def test_bundle_multiple_genomes(tmp_path):
@@ -631,15 +631,14 @@ def test_bundle_multiple_genomes(tmp_path):
         assert len(members) == 2
 
 
-def test_bundle_with_wildcard_pattern(tmp_path):
-    """Bundle accepts wildcard patterns for genome names."""
+def test_bundle_from_symlinks(tmp_path):
+    """Bundle can resolve and pack files from symlinks in current directory."""
     import tarfile
 
+    # Setup local database
     data_dir = tmp_path / "data"
     data_dir.mkdir()
-
-    # Create genomes with similar names
-    for name in ("Ld1S", "LdBPK", "Ltrop.L590"):
+    for name in ("Ld1S", "LdBPK"):
         genome_dir = data_dir / name
         genome_dir.mkdir()
         fasta = genome_dir / "assembly.fa"
@@ -655,78 +654,25 @@ def test_bundle_with_wildcard_pattern(tmp_path):
             ),
         )
 
-    output = tmp_path / "Ld.tar.gz"
-    result = run(["bundle", "Ld*", "--local-dir", "data", "--output", str(output)], tmp_path)
-    assert result.exit_code == 0
-    assert output.exists()
+    # Create symlinks in work directory
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    (work_dir / "Ld1S.fna").symlink_to(data_dir / "Ld1S" / "assembly.fa")
+    (work_dir / "LdBPK.fna").symlink_to(data_dir / "LdBPK" / "assembly.fa")
 
-    with tarfile.open(output, "r:gz") as tar:
-        members = tar.getnames()
-        assert "Ld1S/assembly.fa" in members
-        assert "LdBPK/assembly.fa" in members
-        assert "Ltrop.L590/assembly.fa" not in members
-        assert len(members) == 2
-
-
-def test_bundle_with_mixed_names_and_wildcards(tmp_path):
-    """Bundle handles mix of exact names and wildcard patterns."""
-    import tarfile
-
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
-
-    # Create genomes
-    for name in ("Ld1S", "LdBPK", "Ltrop.L590", "Ltrop.DC"):
-        genome_dir = data_dir / name
-        genome_dir.mkdir()
-        fasta = genome_dir / "assembly.fa"
-        fasta.write_text(f">seq_{name}\nACGT\n")
-
-        write_genome(
-            genome_dir,
-            Genome(
-                identifier=name,
-                source="Local",
-                files={"fasta": fasta.name},
-                checksums={"fasta": md5_file(fasta)},
-            ),
-        )
-
-    output = tmp_path / "mixed.tar.gz"
-    result = run(["bundle", "Ld*", "Ltrop.L590", "--local-dir", "data", "--output", str(output)], tmp_path)
-    assert result.exit_code == 0
-    assert output.exists()
-
-    with tarfile.open(output, "r:gz") as tar:
-        members = tar.getnames()
-        assert "Ld1S/assembly.fa" in members
-        assert "LdBPK/assembly.fa" in members
-        assert "Ltrop.L590/assembly.fa" in members
-        assert "Ltrop.DC/assembly.fa" not in members
-        assert len(members) == 3
-
-
-def test_bundle_fails_on_no_wildcard_matches(tmp_path):
-    """Bundle fails if wildcard pattern matches no genomes."""
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
-
-    # Create one genome
-    genome_dir = data_dir / "Ld1S"
-    genome_dir.mkdir()
-    fasta = genome_dir / "assembly.fa"
-    fasta.write_text(">seq\nACGT\n")
-
-    write_genome(
-        genome_dir,
-        Genome(
-            identifier="Ld1S",
-            source="Local",
-            files={"fasta": fasta.name},
-            checksums={"fasta": md5_file(fasta)},
-        ),
+    output = work_dir / "genomes.tar.gz"
+    result = run(
+        ["bundle", "*.fna", "--local-dir", str(data_dir), "--basedir", str(work_dir), "--output", str(output)],
+        work_dir,
     )
+    assert result.exit_code == 0
+    assert output.exists()
 
-    result = run(["bundle", "Ltrop*", "--local-dir", "data"], tmp_path)
-    assert result.exit_code == 1
-    assert "No genome matches pattern" in result.output
+    # Verify tarball contains actual files, not symlinks
+    with tarfile.open(output, "r:gz") as tar:
+        members = tar.getnames()
+        assert "Ld1S.fna" in members
+        assert "LdBPK.fna" in members
+        # Check files are extracted correctly
+        content = tar.extractfile("Ld1S.fna").read().decode()
+        assert ">seq_Ld1S" in content
