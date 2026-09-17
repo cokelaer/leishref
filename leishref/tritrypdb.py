@@ -1,7 +1,6 @@
 """TriTrypDB release-68 genome download."""
 
 import subprocess
-import tempfile
 from pathlib import Path
 from typing import Optional
 

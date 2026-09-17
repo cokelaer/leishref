@@ -12,7 +12,6 @@ import shutil
 import tempfile
 import textwrap
 from pathlib import Path
-from typing import Optional
 
 import rich_click as click
 from rich.console import Console
@@ -518,7 +517,7 @@ def install(name, alias, local_dir, force, no_link):
                 local_checksums[kind] = md5_file(path)
 
         if all(local_checksums.get(k) == v for k, v in genome.checksums.items() if k in ("fasta", "gff")):
-            click.echo(f"Files already present with correct checksums, skipping install")
+            click.echo("Files already present with correct checksums, skipping install")
             _link(alias, [p for _, p, _ in genome.file_paths() if p and p.exists()], no_link)
             return
 
@@ -684,8 +683,6 @@ def search(terms, local_dir, installed, long_form):
 
     # Load aliases for matching
     aliases = load_aliases()
-    alias_by_accession = {v: k for k, v in aliases.items()}
-
     matches = [g for g in entries if g.matches(terms)]
     # Also match by aliases, as a whole name or as a wildcard pattern
     for term in terms:

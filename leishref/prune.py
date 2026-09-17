@@ -27,7 +27,6 @@ def is_kinetoplast(seq_name: str) -> bool:
 def prune_fasta(fasta_path: Path, mapped_names: Set[str]) -> str:
     """Keep only mapped sequences + kinetoplast. Return pruned FASTA."""
     lines = []
-    current_seq = None
     keep_seq = False
 
     with open(fasta_path) as f:
@@ -36,7 +35,6 @@ def prune_fasta(fasta_path: Path, mapped_names: Set[str]) -> str:
                 # New sequence header
                 header = line[1:].split()[0]  # Get first token after '>'
                 keep_seq = header in mapped_names or is_kinetoplast(header)
-                current_seq = header
                 if keep_seq:
                     lines.append(line)
             elif keep_seq:

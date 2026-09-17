@@ -268,9 +268,9 @@ def find(genomes: list[Genome], key: str, catalog_root: Optional[Path] = None) -
     # Check aliases
     aliases = load_aliases(catalog_root)
     if key in aliases:
-        accession = aliases[key]
+        alias_target = aliases[key]
         for genome in genomes:
-            if accession == genome.accession:
+            if alias_target in (genome.accession, genome.identifier):
                 return genome
     return None
 
