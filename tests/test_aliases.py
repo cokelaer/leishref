@@ -35,10 +35,11 @@ def test_accessions_are_unique(pairs):
 
 
 def test_aliases_match_ncbi_catalog(pairs):
-    in_file = {acc for acc, _ in pairs}
+    # Only check NCBI accessions (GCA_/GCF_), exclude scaffolds and custom genomes
+    ncbi_in_file = {acc for acc, _ in pairs if acc.startswith(("GCA_", "GCF_"))}
     in_catalog = {d.name for d in NCBI_DIR.iterdir() if (d / "metadata.yaml").is_file()}
-    assert in_catalog - in_file == set(), "catalog entries without alias"
-    assert in_file - in_catalog == set(), "aliases without catalog entry"
+    assert in_catalog - ncbi_in_file == set(), "catalog entries without alias"
+    assert ncbi_in_file - in_catalog == set(), "aliases without catalog entry"
 
 
 def test_alias_format(pairs):

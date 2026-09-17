@@ -532,3 +532,38 @@ def test_info_counts_add_up_to_the_catalog_total(installed):
         int(n) for n in re.findall(r"^  (?:NCBI|TriTrypDB|Scaffolds|Custom|Zenodo|Other)\s+(\d+)$", output, re.M)
     )
     assert counted == total
+
+
+def test_rename_sequences_auto_populates_chromosome_map(installed, tmp_path):
+    """Rename-sequences auto-detects sequences and populates chromosome_map.yaml."""
+    base, fasta = installed
+
+    # Run rename-sequences with number flavor
+    result = run(["rename-sequences", "Ltrop.flye", "--flavor", "number", "--local-dir", "data"], base)
+    assert result.exit_code == 0
+    assert "Renaming sequences" in result.output
+
+    # Check that output file was created and renamed
+    output_file = fasta.parent / f"{fasta.stem}.number{fasta.suffix}"
+    assert output_file.exists()
+
+    # Check that sequence was renamed (from >c1 to >1)
+    content = output_file.read_text()
+    assert ">1 " in content
+    assert ">c1" not in content
+
+
+def test_rename_sequences_with_roman_flavor(installed):
+    """Rename-sequences with roman flavor renames to Roman numerals."""
+    base, fasta = installed
+
+    result = run(["rename-sequences", "Ltrop.flye", "--flavor", "roman", "--local-dir", "data"], base)
+    assert result.exit_code == 0
+
+    output_file = fasta.parent / f"{fasta.stem}.roman{fasta.suffix}"
+    assert output_file.exists()
+
+    # Check that sequence was renamed (from >c1 to >I)
+    content = output_file.read_text()
+    assert ">I " in content
+    assert ">c1" not in content

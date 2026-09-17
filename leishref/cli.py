@@ -823,10 +823,6 @@ def rename_sequences_cmd(name, flavor, local_dir):
     """
     genome = _require(local(Path(local_dir)), name, "cached database")
 
-    if not genome.accession:
-        click.echo(f"Genome {name} has no accession; cannot look up chromosome info", err=True)
-        raise SystemExit(1)
-
     fasta_path = None
     for kind, path, _ in genome.file_paths():
         if kind == "fasta" and path.exists():
@@ -839,8 +835,15 @@ def rename_sequences_cmd(name, flavor, local_dir):
 
     from leishref.chromosomes import load_chromosome_map, save_chromosome_map
 
+    # Use accession or identifier as the chromosome map key
+    chrom_key = genome.accession or genome.identifier
+
     click.echo(f"Renaming sequences in {fasta_path.name} ({flavor} flavor)...")
-    renamed, name_map = rename_fasta_sequences(fasta_path, genome.accession, flavor, None)
+    renamed, name_map, error = rename_fasta_sequences(fasta_path, chrom_key, flavor, None)
+
+    if error:
+        click.echo(f"Warning: {error}", err=True)
+        click.echo(f"Auto-detected {len(name_map)} sequences from FASTA file", err=True)
 
     # Write to new file with flavor suffix
     renamed_path = fasta_path.parent / f"{fasta_path.stem}.{flavor}{fasta_path.suffix}"
@@ -857,11 +860,11 @@ def rename_sequences_cmd(name, flavor, local_dir):
     # Update chromosome_map.yaml with the mapping
     if name_map:
         chrom_map = load_chromosome_map()
-        if genome.accession not in chrom_map:
-            chrom_map[genome.accession] = []
+        if chrom_key not in chrom_map:
+            chrom_map[chrom_key] = []
 
         # Build mapping entries from chrom_info
-        chrom_info = chrom_map.get(genome.accession, [])
+        chrom_info = chrom_map.get(chrom_key, [])
         for i, info in enumerate(chrom_info, 1):
             old_name = info.get("accession", f"sequence_{i}")
             if old_name in name_map:

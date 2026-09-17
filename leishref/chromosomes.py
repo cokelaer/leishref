@@ -48,12 +48,33 @@ def get_chromosome_info(accession: str, data_dir: Path = None) -> list[dict]:
     return chrom_map.get(accession, [])
 
 
+def detect_sequences_from_fasta(fasta_path: Path) -> list[dict]:
+    """Extract sequence headers from FASTA file.
+
+    Returns: [{"accession": "NC_007067.7", "name": "NC_007067.7"}, ...]
+    """
+    sequences = []
+    content = fasta_path.read_text()
+
+    for match in re.finditer(r"^>(\S+)", content, re.MULTILINE):
+        seq_id = match.group(1)
+        sequences.append(
+            {
+                "accession": seq_id,
+                "name": seq_id,
+                "index": len(sequences) + 1,
+            }
+        )
+
+    return sequences
+
+
 def rename_fasta_sequences(
     fasta_path: Path,
     accession: str,
     flavor: str = "chr",
     data_dir: Path = None,
-) -> tuple[str, dict]:
+) -> tuple[str, dict, Optional[str]]:
     """Rename sequences in FASTA using local chromosome database.
 
     Flavors:
@@ -62,12 +83,20 @@ def rename_fasta_sequences(
     - 'number': 1, 2, 3, ... (numeric index)
     - 'roman': I, II, III, ... (Roman numerals)
 
-    Returns: (renamed FASTA content as string, mapping dict {old_name: new_name})
+    Returns: (renamed FASTA content, mapping dict {old_name: new_name}, error message or None)
     """
     chrom_info = get_chromosome_info(accession, data_dir)
+
     if not chrom_info:
-        # No mapping, return original with empty map
-        return fasta_path.read_text(), {}
+        # Auto-detect from FASTA and populate map
+        chrom_info = detect_sequences_from_fasta(fasta_path)
+        if not chrom_info:
+            return fasta_path.read_text(), {}, f"No sequences found in {fasta_path.name}"
+
+        # Save to chromosome map for future use
+        chrom_map = load_chromosome_map(data_dir)
+        chrom_map[accession] = chrom_info
+        save_chromosome_map(chrom_map, data_dir)
 
     # Build mapping of sequence order to new names
     name_map = {}
@@ -97,7 +126,7 @@ def rename_fasta_sequences(
             flags=re.MULTILINE,
         )
 
-    return content, name_map
+    return content, name_map, None
 
 
 def _roman_numeral(n: int) -> str:
