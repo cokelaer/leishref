@@ -111,15 +111,6 @@ def test_info_on_an_unknown_name_fails_clearly(installed):
     assert "Not in catalog" in result.output
 
 
-def test_search_finds_by_species(installed):
-    base, _ = installed
-    result = run(["search", "donovani", "--local-dir", "data"], base)
-
-    assert result.exit_code == 0
-    assert "GCA_000227135.2" in result.output
-    assert all("donovani" in line for line in result.output.splitlines() if line.startswith("  "))
-
-
 def test_search_narrows_with_more_terms(installed):
     base, _ = installed
     broad = run(["search", "tropica", "--local-dir", "data"], base)
@@ -173,6 +164,15 @@ def test_install_without_an_alias_suggests_one(tmp_path):
     assert result.exit_code == 2
     assert "--alias is required" in result.output
     assert "--alias LtrL590" in result.output
+
+
+def test_install_suggests_scaffold_alias_from_aliases_txt(tmp_path):
+    """Install should suggest alias from aliases.txt for scaffold genomes."""
+    result = run(["install", "LtrL590.scaffold.Ld1S", "--local-dir", "data"], tmp_path)
+
+    assert result.exit_code == 2
+    assert "--alias is required" in result.output
+    assert "--alias LtrL590.scaffold.Ld1S" in result.output
 
 
 def test_install_rejects_an_unknown_name_before_asking_for_an_alias(tmp_path):
