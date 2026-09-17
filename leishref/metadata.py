@@ -22,8 +22,11 @@ CATALOG_DIR = Path(__file__).parent / "data"
 #: Catalog entries are grouped by where the genome came from, one directory per origin.
 CATALOG_GROUPS = ("ncbi", "scaffolds", "zenodo", "tritrypdb", "custom", "local")
 
-#: Local database, relative to wherever leishref is run (can be overridden with --local-dir).
-LOCAL_DIR = Path("data")
+#: Global cache directory for downloaded genomes, shared across all projects.
+CACHE_DIR = Path.home() / ".config" / "leishref"
+
+#: Local database, defaults to global cache (can be overridden with --local-dir).
+LOCAL_DIR = CACHE_DIR
 
 
 def today_iso() -> str:

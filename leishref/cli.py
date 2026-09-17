@@ -398,17 +398,17 @@ INFO_SECTIONS = {
 
 
 def _record_download(local_root: Path, name: str, alias: str) -> Path:
-    """Append this download to data/accessions.txt so the database can be rebuilt.
+    """Append this download to ./accessions.txt in the current directory.
 
     One line per installed genome, ``<catalog identifier><TAB><alias>``: the two things
-    'leishref download' needs to repeat the install. The catalog identifier is stored
+    'leishref restore' needs to repeat the install. The catalog identifier is stored
     rather than the shorthand that was typed, because an alias can be renamed in
     aliases.txt while the identifier stays valid. An alias is only ever installed once,
-    so re-downloading it rewrites its line rather than adding a second one.
+    so re-installing it rewrites its line rather than adding a second one.
     """
-    path = Path(local_root) / ACCESSIONS_FILE
+    path = Path.cwd() / ACCESSIONS_FILE
     header = [
-        "# Genomes installed with 'leishref download', most recent last.",
+        "# Genomes installed with 'leishref install', most recent last.",
         "# Format: catalog-identifier<TAB>alias    Replay with 'leishref restore'.",
     ]
 
@@ -419,7 +419,6 @@ def _record_download(local_root: Path, name: str, alias: str) -> Path:
     kept = [ln for ln in kept if ln.split("\t")[-1].strip() != alias]
     kept.append(f"{name}\t{alias}")
 
-    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(header + kept) + "\n")
     return path
 
@@ -453,17 +452,24 @@ def _require(genomes, key, what, catalog_root=None):
 
 @cli.command("install")
 @click.argument("name")
-@click.option("--alias", help="Name for this genome in your local database (required)")
-@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
+@click.option("--alias", help="Name for this genome (required)")
+@click.option(
+    "--local-dir",
+    type=click.Path(),
+    default=str(LOCAL_DIR),
+    show_default=True,
+    help="Cache directory for downloaded genomes",
+)
 @click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
 @click.option("--force", is_flag=True, help="Install again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
 def install(name, alias, local_dir, catalog_dir, force, no_link):
-    """Install a catalog genome into the local database under ALIAS.
+    """Download a catalog genome and cache it with ALIAS.
 
     NAME picks the genome out of the catalog by accession or catalog id. ALIAS is the
-    name it takes locally: it becomes the directory under data/ and the symlink name,
-    so it is yours to choose and required.
+    name for the cached copy: becomes the directory under ~/.config/leishref/ and the
+    symlink name, so it is yours to choose and required. Recorded in ./accessions.txt
+    so 'leishref restore' can rebuild this later.
 
     Examples:
 
@@ -476,8 +482,8 @@ def install(name, alias, local_dir, catalog_dir, force, no_link):
     genome = _require(entries, name, "catalog", cat_root)
 
     if not alias:
-        click.echo("--alias is required: it names this genome in your local database,", err=True)
-        click.echo("becoming the directory under data/ and the symlink you will type.\n", err=True)
+        click.echo("--alias is required: it names the cached genome,", err=True)
+        click.echo("becoming the directory under ~/.config/leishref/ and the symlink name.\n", err=True)
         click.echo(f"  leishref install {name} --alias {suggest_alias(genome)}", err=True)
         raise SystemExit(2)
 
@@ -619,7 +625,7 @@ def info(name, local_dir, catalog_dir):
                 f"  [bold cyan]{escape(genome.identifier):<38}[/] {escape(_organism(genome))}{doi}{alias_txt}"
             )
 
-    console.print(f"\n[bold]Local:[/] [bold]{len(installed)}[/] installed  [dim]({Path(local_dir)})[/]")
+    console.print(f"\n[bold]Cached:[/] [bold]{len(installed)}[/] installed  [dim]({Path(local_dir)})[/]")
     for genome in _by_organism(installed):
         source_ref = genome.provenance.get("catalog_id") or genome.accession or ""
         console.print(
@@ -627,7 +633,7 @@ def info(name, local_dir, catalog_dir):
             f" [dim]{escape(source_ref)}[/]"
         )
     if not installed:
-        console.print("  [dim](nothing yet -- 'leishref download <name> --alias <alias>')[/]")
+        console.print("  [dim](nothing yet -- 'leishref install <name> --alias <alias>')[/]")
 
 
 @cli.command()
@@ -918,7 +924,7 @@ def prune_scaffold_cmd(name, local_dir, catalog_dir):
     "--file",
     "accessions",
     type=click.Path(),
-    help=f"Read from here instead of <local-dir>/{ACCESSIONS_FILE}",
+    help=f"Read from here instead of ./{ACCESSIONS_FILE}",
 )
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
@@ -928,12 +934,12 @@ def prune_scaffold_cmd(name, local_dir, catalog_dir):
 @click.option("--from-installed", is_flag=True, help="Write the file from what is already installed, then stop")
 @click.option("--verbose", is_flag=True, help="Show each download in full instead of a progress bar")
 def restore(accessions, local_dir, catalog_dir, force, no_link, dry_run, from_installed, verbose):
-    """Re-download every genome listed in accessions.txt.
+    """Re-download every genome listed in accessions.txt in the current directory.
 
-    'leishref download' records what it installed under which alias, so a local
-    database can be rebuilt from that file alone - on another machine, or after the
-    data directory has been cleared. Genomes already installed are left alone unless
-    --force is given.
+    'leishref install' records what it installed under which alias to accessions.txt,
+    so a database can be rebuilt from that file alone - on another machine, or after
+    cached genomes are cleared. Genomes already installed are left alone unless --force
+    is given.
 
     Examples:
 
@@ -941,28 +947,28 @@ def restore(accessions, local_dir, catalog_dir, force, no_link, dry_run, from_in
       leishref restore
       leishref restore --dry-run
       leishref restore --from-installed
-      leishref restore --file ../TEST2/data/accessions.txt
+      leishref restore --file ../other-project/accessions.txt
       leishref restore --verbose
     """
-    path = Path(accessions) if accessions else Path(local_dir) / ACCESSIONS_FILE
+    path = Path(accessions) if accessions else Path.cwd() / ACCESSIONS_FILE
 
     if from_installed:
         # A database built before this file existed can still describe itself: every
-        # local genome remembers the catalog entry it came from under provenance.
+        # cached genome remembers the catalog entry it came from under provenance.
         written = 0
         for genome in _by_organism(local(Path(local_dir))):
             origin = genome.provenance.get("catalog_id") or genome.accession
             if not origin:
                 click.echo(f"  no catalog origin recorded, skipping: {genome.identifier}", err=True)
                 continue
-            alias = genome.path.name  # Local directory name is the alias
+            alias = genome.path.name  # Cached directory name is the alias
             _record_download(Path(local_dir), origin, alias)
             written += 1
         click.echo(f"Recorded {written} genome{'s' if written != 1 else ''} in {path}")
         return
     if not path.exists():
         click.echo(f"No accessions file at {path}", err=True)
-        click.echo("It is written by 'leishref download'; nothing to restore yet.", err=True)
+        click.echo("It is written by 'leishref install'; nothing to restore yet.", err=True)
         raise SystemExit(1)
 
     pairs = _read_accessions(path)
