@@ -22,7 +22,7 @@ from tqdm import tqdm
 
 from leishref.agp import derive_agp, write_agp
 from leishref.checksums import genome_stats, md5_file
-from leishref.chromosomes import get_chromosome_info, rename_fasta_sequences
+from leishref.chromosomes import get_chromosome_info, populate_chromosome_map_from_fasta, rename_fasta_sequences
 from leishref.links import LinkConflict, link_paths
 from leishref.metadata import (
     CATALOG_DIR,
@@ -113,7 +113,7 @@ click.rich_click.COMMAND_GROUPS = {
         },
         {
             "name": "Publishing and managing",
-            "commands": ["publish", "checksum", "remove"],
+            "commands": ["publish", "checksum", "populate-chromosome-map", "remove"],
         },
     ],
 }
@@ -1899,6 +1899,28 @@ def checksum(catalog_dir, workdir, keep, limit):
                 scratch.cleanup()
 
     click.echo(f"\nRecorded {done} checksums, {failed} failed")
+
+
+@dev.command("populate-chromosome-map")
+@click.option("--catalog-dir", type=click.Path(), help="Scan FASTA files here instead")
+def populate_chromosome_map(catalog_dir):
+    """Scan FASTA files and populate chromosome_map.yaml.
+
+    Parses NCBI FASTA headers to extract sequence accessions and chromosome names,
+    then saves the results to chromosome_map.yaml.
+
+    Examples:
+
+    \b
+      leishref dev populate-chromosome-map
+      leishref dev populate-chromosome-map --catalog-dir /path/to/data
+    """
+    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
+    num_assemblies = populate_chromosome_map_from_fasta(root)
+    if num_assemblies:
+        click.echo(f"Successfully populated chromosome map for {num_assemblies} assemblies")
+    else:
+        click.echo("No FASTA files found to scan")
 
 
 if __name__ == "__main__":
