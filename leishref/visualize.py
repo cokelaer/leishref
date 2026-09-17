@@ -7,6 +7,23 @@ import seaborn as sns
 from leishref.metadata import catalog, CATALOG_DIR
 
 
+def _species_label(name: str) -> str:
+    return name.split()[-1][:3]
+
+
+def _plot_boxplot(ax, series: list, labels: list, ylabel: str, title: str, log_scale: bool = False):
+    if not series:
+        ax.text(0.5, 0.5, "No data", transform=ax.transAxes, ha="center", va="center")
+        ax.set_title(title)
+        return
+    ax.boxplot(series, tick_labels=labels)
+    if log_scale:
+        ax.set_yscale("log")
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    ax.tick_params(axis="x", rotation=45)
+
+
 def plot_genome_sizes(
     catalog_dir: Optional[Path] = None,
     output_path: Optional[Path] = None,
@@ -138,37 +155,39 @@ def plot_genome_stats(
     axes = axes.flatten()
 
     species_names = sorted(by_species.keys())
-    species_short = [s.split()[-1][:3] for s in species_names]  # Last word, first 3 chars
+    species_short = [_species_label(s) for s in species_names]
 
     # Genome size
     sizes = [[g.stats.get("num_bases", 0) / 1e6 for g in by_species[sp]] for sp in species_names]
-    axes[0].boxplot(sizes, tick_labels=species_short)
-    axes[0].set_ylabel("Genome size (Mb)")
-    axes[0].set_title("Genome Size Distribution")
-    axes[0].tick_params(axis="x", rotation=45)
+    _plot_boxplot(axes[0], sizes, species_short, "Genome size (Mb)", "Genome Size Distribution")
 
     # Scaffolds
-    scaffolds = [[max(g.stats.get("num_scaffolds", 0), 1) for g in by_species[sp]] for sp in species_names]
-    axes[1].boxplot(scaffolds, tick_labels=species_short)
-    axes[1].set_yscale("log")
-    axes[1].set_ylabel("Number of scaffolds (log scale)")
-    axes[1].set_title("Scaffold Count Distribution")
-    axes[1].tick_params(axis="x", rotation=45)
+    scaffolds = [[g.stats.get("num_scaffolds", 0) for g in by_species[sp] if g.stats.get("num_scaffolds", 0) > 0] for sp in species_names]
+    scaffold_data = [(label, values) for label, values in zip(species_short, scaffolds) if values]
+    _plot_boxplot(
+        axes[1],
+        [values for _, values in scaffold_data],
+        [label for label, _ in scaffold_data],
+        "Number of scaffolds (log scale)",
+        "Scaffold Count Distribution",
+        log_scale=True,
+    )
 
     # Contigs
-    contigs = [[max(g.stats.get("num_contigs", 0), 1) for g in by_species[sp]] for sp in species_names]
-    axes[2].boxplot(contigs, tick_labels=species_short)
-    axes[2].set_yscale("log")
-    axes[2].set_ylabel("Number of contigs (log scale)")
-    axes[2].set_title("Contig Count Distribution")
-    axes[2].tick_params(axis="x", rotation=45)
+    contigs = [[g.stats.get("num_contigs", 0) for g in by_species[sp] if g.stats.get("num_contigs", 0) > 0] for sp in species_names]
+    contig_data = [(label, values) for label, values in zip(species_short, contigs) if values]
+    _plot_boxplot(
+        axes[2],
+        [values for _, values in contig_data],
+        [label for label, _ in contig_data],
+        "Number of contigs (log scale)",
+        "Contig Count Distribution",
+        log_scale=True,
+    )
 
     # Scaffold N50
     scaffold_n50 = [[g.stats.get("scaffold_n50", 0) / 1e6 for g in by_species[sp]] for sp in species_names]
-    axes[3].boxplot(scaffold_n50, tick_labels=species_short)
-    axes[3].set_ylabel("Scaffold N50 (Mb)")
-    axes[3].set_title("Scaffold N50 Distribution")
-    axes[3].tick_params(axis="x", rotation=45)
+    _plot_boxplot(axes[3], scaffold_n50, species_short, "Scaffold N50 (Mb)", "Scaffold N50 Distribution")
 
     plt.tight_layout()
 
