@@ -22,7 +22,7 @@ CATALOG_DIR = Path(__file__).parent / "data"
 #: Catalog entries are grouped by where the genome came from, one directory per origin.
 CATALOG_GROUPS = ("ncbi", "scaffolds", "zenodo", "tritrypdb", "custom", "local")
 
-#: Local database, relative to wherever leishref is run.
+#: Local database, relative to wherever leishref is run (can be overridden with --local-dir).
 LOCAL_DIR = Path("data")
 
 
