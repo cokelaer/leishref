@@ -529,6 +529,13 @@ def install(name, alias, local_dir, force, no_link):
                 click.echo(f"NCBI has no data for {accession}", err=True)
                 raise SystemExit(1)
             written = [p for p in (fasta, gff) if p]
+        elif genome.path and (genome.path / (genome.fasta or "")).exists():
+            click.echo(f"{name} (from catalog)")
+            written = [genome.path / genome.fasta] if genome.fasta else []
+            if genome.gff:
+                gff_path = genome.path / genome.gff
+                if gff_path.exists():
+                    written.append(gff_path)
         else:
             click.echo(f"{name} records neither a Zenodo DOI nor an NCBI accession", err=True)
             if genome.source == "TriTrypDB":
