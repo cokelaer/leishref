@@ -14,7 +14,7 @@ Search for genomes::
 
 Download a genome locally::
 
-    leishref download --alias Ld1S GCA_000227135.2
+    leishref install --alias Ld1S GCA_000227135.2
 
 Verify checksums::
 
@@ -26,17 +26,35 @@ User commands
 .. code-block:: console
 
     $ leishref --help
+
     Usage: leishref [OPTIONS] COMMAND [ARGS]...
 
-    User Commands:
-      download    Install a catalog genome into the local database under ALIAS
-      info        List the catalog and the local database
-      search      Find catalog genomes matching every term
-      verify      Check the local database against recorded checksums
+    Leishmania reference genome database.
 
-    Developer Commands:
-      dev         Commands for maintaining the shipped catalog
+    ╭─ Using the database ───────────────────────────────────────────────────────────────────────────────────────╮
+    │ search                  Find catalog genomes matching every TERM.                                          │
+    │ info                    List the catalog and the cached database, or show one genome in full.              │
+    │ install                 Download a catalog genome and cache it with ALIAS.                                 │
+    │ install-ncbi            Install all NCBI entries from the catalog.                                         │
+    │ install-ncbi-refseq     Install all RefSeq (GCF) NCBI entries from the catalog.                            │
+    │ restore                 Re-download every genome listed in accessions.txt in the current directory.        │
+    │ verify                  Check the local database against the checksums recorded with each genome.          │
+    │ rename-sequences        Rename sequences in a cached genome using chromosome database.                     │
+    │ prune-scaffold          Remove unmapped contigs, keeping only chromosome sequences and kinetoplast.        │
+    ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+    ╭─ For maintainers and developers ───────────────────────────────────────────────────────────────────────────╮
+    │ dev      Commands for maintaining the shipped catalog.                                                     │
+    │ link     Refresh the alias-named symlinks for everything installed locally.                                │
+    ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+    ╭─ Plotting ─────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ plot-stats                Plot genome statistics: size, contig count, GC%.                                 │
+    │ plot-sizes                Plot genome sizes by species.                                                    │
+    │ plot-histogram            Plot histogram of genome sizes.                                                  │
+    ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+    ╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --help  Show this message and exit.                                                                        │
+    ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-For full command details::
+For the dev part, use::
 
-    leishref <command> --help
+    leishref dev --help
