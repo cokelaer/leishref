@@ -1,0 +1,3 @@
+# Genomes installed with 'leishref install', most recent last.
+# Format: catalog-identifier<TAB>alias    Replay with 'leishref restore'.
+GCA_002243465.1	Ld1S

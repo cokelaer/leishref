@@ -460,10 +460,9 @@ def _require(genomes, key, what, catalog_root=None):
     show_default=True,
     help="Cache directory for downloaded genomes",
 )
-@click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
 @click.option("--force", is_flag=True, help="Install again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
-def install(name, alias, local_dir, catalog_dir, force, no_link):
+def install(name, alias, local_dir, force, no_link):
     """Download a catalog genome and cache it with ALIAS.
 
     NAME picks the genome out of the catalog by accession or catalog id. ALIAS is the
@@ -477,9 +476,8 @@ def install(name, alias, local_dir, catalog_dir, force, no_link):
       leishref install GCA_000410715.1 --alias Ltrop.L590
       leishref install Ltropica.Ld1S.scaffold.flye --alias flye
     """
-    cat_root = Path(catalog_dir) if catalog_dir else None
-    entries = catalog(cat_root)
-    genome = _require(entries, name, "catalog", cat_root)
+    entries = catalog()
+    genome = _require(entries, name, "catalog")
 
     if not alias:
         click.echo("--alias is required: it names the cached genome,", err=True)
@@ -927,13 +925,12 @@ def prune_scaffold_cmd(name, local_dir, catalog_dir):
     help=f"Read from here instead of ./{ACCESSIONS_FILE}",
 )
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
 @click.option("--force", is_flag=True, help="Download again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlinks")
 @click.option("--dry-run", is_flag=True, help="List what would be downloaded and stop")
 @click.option("--from-installed", is_flag=True, help="Write the file from what is already installed, then stop")
 @click.option("--verbose", is_flag=True, help="Show each download in full instead of a progress bar")
-def restore(accessions, local_dir, catalog_dir, force, no_link, dry_run, from_installed, verbose):
+def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verbose):
     """Re-download every genome listed in accessions.txt in the current directory.
 
     'leishref install' records what it installed under which alias to accessions.txt,
@@ -1009,7 +1006,6 @@ def restore(accessions, local_dir, catalog_dir, force, no_link, dry_run, from_in
                     name=name,
                     alias=alias,
                     local_dir=local_dir,
-                    catalog_dir=catalog_dir,
                     force=force,
                     no_link=no_link,
                 )
