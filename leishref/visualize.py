@@ -1,10 +1,12 @@
 """Visualization tools for genome statistics."""
 
 from pathlib import Path
-from typing import Optional, List
+from typing import List, Optional
+
 import matplotlib.pyplot as plt
 import seaborn as sns
-from leishref.metadata import catalog, CATALOG_DIR
+
+from leishref.metadata import CATALOG_DIR, catalog
 
 
 def plot_genome_sizes(
@@ -53,7 +55,9 @@ def plot_genome_sizes(
 
     ax.barh(range(len(ncbi)), sizes, color=bar_colors)
     ax.set_yticks(range(len(ncbi)))
-    ax.set_yticklabels([f"{sp.split()[-1] if ' ' in sp else sp} ({g.accession})" for sp, g in zip(species_labels, ncbi)], fontsize=9)
+    ax.set_yticklabels(
+        [f"{sp.split()[-1] if ' ' in sp else sp} ({g.accession})" for sp, g in zip(species_labels, ncbi)], fontsize=9
+    )
     ax.set_xlabel("Genome size (Mb)", fontsize=11)
     ax.set_title("Leishmania Genome Sizes", fontsize=12, fontweight="bold")
     ax.grid(axis="x", alpha=0.3)
