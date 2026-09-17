@@ -268,7 +268,7 @@ def plot_chromosome_length_histogram(
         fasta_path = genome.path / fasta_name
         if not fasta_path.is_file():
             continue
-        lengths.extend([length / 1e6 for length in _iter_fasta_lengths(fasta_path) if length > 0])
+        lengths.extend([length / 1e6 for length in _iter_fasta_lengths(fasta_path) if length >= 1000])
 
     if not lengths:
         if species_filter:
