@@ -247,8 +247,9 @@ GCA_048773145.2	LtrNUMS_24
 GCA_000441995.1	LtuLEM423
 
 # Leishmania utingensis
-
 GCA_040363505.1	LutITUB_BR_1977_M4964
 
-
+# Scaffolds
 LtrL590.scaffold.Ld1S   LtrL590.scaffold.Ld1S
+
+# Custom
