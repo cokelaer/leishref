@@ -828,18 +828,32 @@ def rename_sequences_cmd(name, flavor, local_dir, catalog_dir):
         click.echo(f"No FASTA file found for {name}", err=True)
         raise SystemExit(1)
 
+    from leishref.chromosomes import load_chromosome_map, save_chromosome_map
+
     cat_root = Path(catalog_dir) if catalog_dir else None
     click.echo(f"Renaming sequences in {fasta_path.name} ({flavor} flavor)...")
-    renamed = rename_fasta_sequences(fasta_path, genome.accession, flavor, cat_root)
-    fasta_path.write_text(renamed)
+    renamed, name_map = rename_fasta_sequences(fasta_path, genome.accession, flavor, cat_root)
 
-    # Recompute checksum
-    new_checksum = md5_file(fasta_path)
-    genome.checksums["fasta"] = new_checksum
-    write_genome(genome.path, genome)
+    # Write to new file with flavor suffix
+    renamed_path = fasta_path.parent / f"{fasta_path.stem}.{flavor}{fasta_path.suffix}"
+    renamed_path.write_text(renamed)
+    click.echo(f"Wrote renamed sequences to {renamed_path.name}")
 
-    click.echo(f"Renamed {fasta_path.name}")
-    click.echo(f"Updated checksum: {new_checksum}")
+    # Update chromosome_map.yaml with the mapping
+    if name_map and cat_root:
+        chrom_map = load_chromosome_map(cat_root)
+        if genome.accession not in chrom_map:
+            chrom_map[genome.accession] = []
+
+        # Build mapping entries from chrom_info
+        chrom_info = chrom_map.get(genome.accession, [])
+        for i, info in enumerate(chrom_info, 1):
+            old_name = info.get("accession", f"sequence_{i}")
+            if old_name in name_map:
+                info["new_name"] = name_map[old_name]
+
+        save_chromosome_map(chrom_map, cat_root)
+        click.echo(f"Updated chromosome mapping in {cat_root.name}/chromosome_map.yaml")
 
 
 @cli.command("prune-scaffold")
