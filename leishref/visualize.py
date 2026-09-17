@@ -1,5 +1,6 @@
 """Visualization tools for genome statistics."""
 
+import gzip
 from pathlib import Path
 from typing import Optional, List
 import matplotlib.pyplot as plt
@@ -214,7 +215,8 @@ def _iter_fasta_lengths(fasta_path: Path):
     current = 0
     started = False
 
-    with open(fasta_path, "r") as handle:
+    opener = gzip.open if fasta_path.suffix == ".gz" else open
+    with opener(fasta_path, "rt") as handle:
         for line in handle:
             if line.startswith(">"):
                 if started:

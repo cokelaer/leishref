@@ -1,3 +1,4 @@
+import gzip
 from pathlib import Path
 
 import pytest
@@ -12,15 +13,17 @@ def _write_genome_with_optional_fasta(
     species: str,
     stats: dict,
     records: dict | None = None,
+    fasta_name: str | None = None,
 ):
     directory = root / "ncbi" / identifier
     directory.mkdir(parents=True, exist_ok=True)
 
     files = {}
     if records:
-        fasta_name = f"{identifier}.fna"
+        fasta_name = fasta_name or f"{identifier}.fna"
         fasta = directory / fasta_name
-        with open(fasta, "w") as fh:
+        writer = gzip.open if fasta.suffix == ".gz" else open
+        with writer(fasta, "wt") as fh:
             for name, seq in records.items():
                 fh.write(f">{name}\n{seq}\n")
         files["fasta"] = fasta_name
@@ -73,6 +76,7 @@ def test_plot_chromosome_length_histogram_creates_file(tmp_path):
         "Leishmania major",
         {"num_bases": 100},
         records={"chr1": "A" * 1000, "chr2": "A" * 2000, "chr3": "A" * 1500},
+        fasta_name="GCA_10.fasta",
     )
     _write_genome_with_optional_fasta(
         tmp_path,
@@ -80,6 +84,7 @@ def test_plot_chromosome_length_histogram_creates_file(tmp_path):
         "Leishmania donovani",
         {"num_bases": 100},
         records={"chr1": "A" * 1200, "chr2": "A" * 2500},
+        fasta_name="GCA_11.fa.gz",
     )
 
     output = tmp_path / "chromosome_hist.png"
