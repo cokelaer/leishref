@@ -121,3 +121,16 @@ def test_plot_chromosome_length_histogram_applies_species_filter(tmp_path):
 
     with pytest.raises(ValueError, match="No local FASTA files found"):
         plot_chromosome_length_histogram(tmp_path, tmp_path / "filtered.png", species_filter=["major"])
+
+
+def test_plot_chromosome_length_histogram_species_filter_is_token_based(tmp_path):
+    _write_genome_with_optional_fasta(
+        tmp_path,
+        "GCA_40",
+        "Leishmania majori",
+        {"num_bases": 100},
+        records={"chr1": "A" * 1000},
+    )
+
+    with pytest.raises(ValueError, match="No local FASTA files found"):
+        plot_chromosome_length_histogram(tmp_path, tmp_path / "filtered2.png", species_filter=["major"])
