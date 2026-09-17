@@ -2,151 +2,152 @@ GCA_002243465.1:
 - accession: CP022616.1
   index: 1
   name: CP022616.1
-  new_name: chromosome I
+  new_name: '1'
 - accession: CP022617.1
   index: 2
   name: CP022617.1
-  new_name: chromosome II
+  new_name: '2'
 - accession: CP022618.1
   index: 3
   name: CP022618.1
-  new_name: chromosome III
+  new_name: '3'
 - accession: CP022619.1
   index: 4
   name: CP022619.1
-  new_name: chromosome IV
+  new_name: '4'
 - accession: CP022620.1
   index: 5
   name: CP022620.1
-  new_name: chromosome V
+  new_name: '5'
 - accession: CP022621.1
   index: 6
   name: CP022621.1
-  new_name: chromosome VI
+  new_name: '6'
 - accession: CP022622.1
   index: 7
   name: CP022622.1
-  new_name: chromosome VII
+  new_name: '7'
 - accession: CP022623.1
   index: 8
   name: CP022623.1
-  new_name: chromosome VIII
+  new_name: '8'
 - accession: CP022624.1
   index: 9
   name: CP022624.1
-  new_name: chromosome IX
+  new_name: '9'
 - accession: CP022625.1
   index: 10
   name: CP022625.1
-  new_name: chromosome X
+  new_name: '10'
 - accession: CP022626.1
   index: 11
   name: CP022626.1
-  new_name: chromosome XI
+  new_name: '11'
 - accession: CP022627.1
   index: 12
   name: CP022627.1
-  new_name: chromosome XII
+  new_name: '12'
 - accession: CP022628.1
   index: 13
   name: CP022628.1
-  new_name: chromosome XIII
+  new_name: '13'
 - accession: CP022629.1
   index: 14
   name: CP022629.1
-  new_name: chromosome XIV
+  new_name: '14'
 - accession: CP022630.1
   index: 15
   name: CP022630.1
-  new_name: chromosome XV
+  new_name: '15'
 - accession: CP022631.1
   index: 16
   name: CP022631.1
-  new_name: chromosome XVI
+  new_name: '16'
 - accession: CP022632.1
   index: 17
   name: CP022632.1
-  new_name: chromosome XVII
+  new_name: '17'
 - accession: CP022633.1
   index: 18
   name: CP022633.1
-  new_name: chromosome XVIII
+  new_name: '18'
 - accession: CP022634.1
   index: 19
   name: CP022634.1
-  new_name: chromosome XIX
+  new_name: '19'
 - accession: CP022635.1
   index: 20
   name: CP022635.1
-  new_name: chromosome XX
+  new_name: '20'
 - accession: CP022636.1
   index: 21
   name: CP022636.1
-  new_name: chromosome XXI
+  new_name: '21'
 - accession: CP022637.1
   index: 22
   name: CP022637.1
-  new_name: chromosome XXII
+  new_name: '22'
 - accession: CP022638.1
   index: 23
   name: CP022638.1
-  new_name: chromosome XXIII
+  new_name: '23'
 - accession: CP022639.1
   index: 24
   name: CP022639.1
-  new_name: chromosome XXIV
+  new_name: '24'
 - accession: CP022640.1
   index: 25
   name: CP022640.1
-  new_name: chromosome XXV
+  new_name: '25'
 - accession: CP022641.1
   index: 26
   name: CP022641.1
-  new_name: chromosome XXVI
+  new_name: '26'
 - accession: CP022642.1
   index: 27
   name: CP022642.1
-  new_name: chromosome XXVII
+  new_name: '27'
 - accession: CP022643.1
   index: 28
   name: CP022643.1
-  new_name: chromosome XXVIII
+  new_name: '28'
 - accession: CP022644.1
   index: 29
   name: CP022644.1
-  new_name: chromosome XXIX
+  new_name: '29'
 - accession: CP022645.1
   index: 30
   name: CP022645.1
-  new_name: chromosome XXX
+  new_name: '30'
 - accession: CP022646.1
   index: 31
   name: CP022646.1
-  new_name: chromosome XXXI
+  new_name: '31'
 - accession: CP022647.1
   index: 32
   name: CP022647.1
-  new_name: chromosome XXXII
+  new_name: '32'
 - accession: CP022648.1
   index: 33
   name: CP022648.1
-  new_name: chromosome XXXIII
+  new_name: '33'
 - accession: CP022649.1
   index: 34
   name: CP022649.1
-  new_name: chromosome XXXIV
+  new_name: '34'
 - accession: CP022650.1
   index: 35
   name: CP022650.1
-  new_name: chromosome XXXV
+  new_name: '35'
 - accession: CP022651.1
   index: 36
   name: CP022651.1
-  new_name: chromosome XXXVI
+  new_name: '36'
 - accession: CP022652.1
   index: 37
   name: CP022652.1
-  new_name: chromosome XXXVII
+  new_name: '37'
+  type: maxicircle
 Ltrop.flye:
 - accession: c1
   index: 1
