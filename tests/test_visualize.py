@@ -1,6 +1,7 @@
 import gzip
 from pathlib import Path
 
+import matplotlib.axes
 import pytest
 
 from leishref.metadata import Genome, write_genome
@@ -152,6 +153,32 @@ def test_plot_chromosome_length_histogram_species_filter_supports_genus_species_
 
     output = tmp_path / "prefix.png"
     out = plot_chromosome_length_histogram(tmp_path, output, species_filter=["Leishmania major"])
+
+    assert out == output
+    assert output.exists()
+    assert output.stat().st_size > 0
+
+
+def test_plot_chromosome_length_histogram_falls_back_to_vert_boxplot(tmp_path, monkeypatch):
+    _write_genome_with_optional_fasta(
+        tmp_path,
+        "GCA_60",
+        "Leishmania major",
+        {"num_bases": 100},
+        records={"chr1": "A" * 1000},
+    )
+
+    original_boxplot = matplotlib.axes.Axes.boxplot
+
+    def patched_boxplot(self, *args, **kwargs):
+        if "orientation" in kwargs:
+            raise TypeError("unexpected keyword argument 'orientation'")
+        return original_boxplot(self, *args, **kwargs)
+
+    monkeypatch.setattr(matplotlib.axes.Axes, "boxplot", patched_boxplot)
+
+    output = tmp_path / "fallback.png"
+    out = plot_chromosome_length_histogram(tmp_path, output)
 
     assert out == output
     assert output.exists()
