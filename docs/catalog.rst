@@ -4,15 +4,33 @@ Catalog
 Structure
 ---------
 
-The leishref catalog ships inside the package under ``leishref/data/``.
-Each genome has its own directory named by NCBI accession::
+The leishref catalog ships inside the package under ``leishref/data/``. Entries are
+grouped by where the genome came from, and each genome then has its own directory,
+named by accession for NCBI genomes and by alias for everything else::
 
     leishref/data/
-    ├── GCA_000227135.2/
-    │   └── metadata.yaml
-    ├── GCA_000410715.1/
-    │   └── metadata.yaml
-    └── ...
+    ├── aliases.txt
+    ├── ncbi/
+    │   ├── GCA_000227135.2/
+    │   │   └── metadata.yaml
+    │   └── GCA_000410715.1/
+    │       └── metadata.yaml
+    ├── scaffold/
+    │   └── Ltropica.Ld1S.scaffold.flye/
+    │       └── metadata.yaml
+    ├── tritrypdb/
+    │   └── TriTrypDB-68_LamazonensisPH8/
+    │       └── metadata.yaml
+    └── zenodo/
+
+``leishref dev fetch`` and ``leishref dev import`` write into ``ncbi/``,
+``leishref dev scaffold`` into ``scaffold/``, and a TriTrypDB or Zenodo genome into the
+directory of the same name. Grouping follows how a genome was *made*, not where its
+files currently live: ``leishref dev publish`` deposits a scaffold on Zenodo and records
+the DOI, but the entry stays under ``scaffold/`` rather than moving.
+
+A flat layout is still read, so a local database (``data/<alias>/``) and any catalog
+written before the grouping are both loaded without change.
 
 Metadata schema
 ---------------
@@ -53,6 +71,14 @@ Common reference strains have shorthand aliases in ``leishref/data/aliases.txt``
 
 Use aliases in search, download, and info commands.
 
+**Aliases are not frozen.** They may change to fix typos, adopt better naming conventions,
+or reflect biology more clearly. When you download a genome with a catalog alias (e.g.,
+``leishref download --alias Ld1S Ld1S``), the actual accession (e.g., ``GCA_000227135.2``)
+is recorded in ``accessions.txt``. Restoring from ``accessions.txt`` retrieves the same
+genome by accession, which is stable—but a re-download might assign it a different alias
+if ``aliases.txt`` changed. For reproducible scripts, refer to genomes by accession, not
+by alias.
+
 Updating the catalog
 ---------------------
 
@@ -62,5 +88,5 @@ Add a new genome::
 
 The catalog is version-controlled in git. Commit metadata changes::
 
-    git add leishref/data/<accession>/metadata.yaml
+    git add leishref/data/ncbi/<accession>/metadata.yaml
     git commit -m "Add genome <accession>"
