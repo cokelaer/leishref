@@ -1,7 +1,0 @@
-# Genomes installed with 'leishref download', most recent last.
-# Format: catalog-identifier<TAB>alias    Replay with 'leishref restore'.
-GCA_002243465.1	Ld1S
-GCF_000002875.2	Linf.ncbi.JPCM5
-GCA_000410715.1	Ltrop.ncbi.L590
-GCA_014139745.1	Ltrop.ncbi.CDC
-Ltropica.Ld1S.scaffold.flye.filtered	Ltropica.scaffold.flye.filtered
