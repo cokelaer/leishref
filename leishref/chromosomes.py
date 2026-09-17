@@ -14,6 +14,7 @@ def load_chromosome_map(data_dir: Path = None) -> dict:
     """
     if data_dir is None:
         from leishref.metadata import CATALOG_DIR
+
         data_dir = CATALOG_DIR
 
     map_file = data_dir / "chromosome_map.yaml"
@@ -28,6 +29,7 @@ def save_chromosome_map(mapping: dict, data_dir: Path = None):
     """Save chromosome name mapping to local database."""
     if data_dir is None:
         from leishref.metadata import CATALOG_DIR
+
         data_dir = CATALOG_DIR
 
     map_file = data_dir / "chromosome_map.yaml"
@@ -51,7 +53,7 @@ def rename_fasta_sequences(
     accession: str,
     flavor: str = "chr",
     data_dir: Path = None,
-) -> str:
+) -> tuple[str, dict]:
     """Rename sequences in FASTA using local chromosome database.
 
     Flavors:
@@ -60,12 +62,12 @@ def rename_fasta_sequences(
     - 'number': 1, 2, 3, ... (numeric index)
     - 'roman': I, II, III, ... (Roman numerals)
 
-    Returns: renamed FASTA content as string
+    Returns: (renamed FASTA content as string, mapping dict {old_name: new_name})
     """
     chrom_info = get_chromosome_info(accession, data_dir)
     if not chrom_info:
-        # No mapping, return original
-        return fasta_path.read_text()
+        # No mapping, return original with empty map
+        return fasta_path.read_text(), {}
 
     # Build mapping of sequence order to new names
     name_map = {}
@@ -95,7 +97,7 @@ def rename_fasta_sequences(
             flags=re.MULTILINE,
         )
 
-    return content
+    return content, name_map
 
 
 def _roman_numeral(n: int) -> str:
