@@ -170,7 +170,7 @@ def test_every_catalog_genome_has_statistics():
 
 def test_catalog_sources_come_from_a_known_vocabulary():
     """source says where `download` fetches a genome from, not who assembled it."""
-    allowed = {"NCBI", "Zenodo", "TriTrypDB", "Local", "Scaffold"}
+    allowed = {"NCBI", "Zenodo", "TriTrypDB", "Local", "Scaffold", "Custom"}
     for entry in catalog():
         assert entry.source in allowed, f"{entry.identifier} has source {entry.source!r}"
 
