@@ -13,3 +13,4 @@ GCF_017916335.1	LorLSCM4
 GCF_017918215.1	LspGhana
 GCF_017918225.1	LspNamibia
 LtrL590.scaffold.Ld1S	LtrL590.scaffold.Ld1S
+Ltropica.Ld1S.scaffold.flye	LtrCDC.scaffold.Ld1S
