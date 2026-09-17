@@ -170,7 +170,7 @@ def test_every_catalog_genome_has_statistics():
 
 def test_catalog_sources_come_from_a_known_vocabulary():
     """source says where `download` fetches a genome from, not who assembled it."""
-    allowed = {"NCBI", "Zenodo", "TriTrypDB", "Local", "Leishref"}
+    allowed = {"NCBI", "Zenodo", "TriTrypDB", "Local", "Scaffold", "Custom"}
     for entry in catalog():
         assert entry.source in allowed, f"{entry.identifier} has source {entry.source!r}"
 
@@ -243,9 +243,9 @@ def test_grouping_follows_how_a_genome_was_made(genome):
     from leishref.metadata import catalog_group
 
     genome.scaffold = {"reference": {"name": "GCA_1.1"}}
-    genome.source = "Leishref"
+    genome.source = "Zenodo"
     genome.provenance = {"zenodo_doi": "10.5281/zenodo.1"}
-    assert catalog_group(genome) == "leishref"
+    assert catalog_group(genome) == "scaffolds"
 
 
 def test_an_accession_decides_the_ncbi_group(genome):
