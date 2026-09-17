@@ -45,7 +45,15 @@ def get_chromosome_info(accession: str, data_dir: Path = None) -> list[dict]:
     Returns: [{"name": "chromosome I", "index": 1}, ...]
     """
     chrom_map = load_chromosome_map(data_dir)
-    return chrom_map.get(accession, [])
+    info = chrom_map.get(accession)
+    if info:
+        return info
+
+    if accession.startswith("GCA_"):
+        return chrom_map.get("GCF_" + accession[4:], [])
+    if accession.startswith("GCF_"):
+        return chrom_map.get("GCA_" + accession[4:], [])
+    return []
 
 
 def detect_sequences_from_fasta(fasta_path: Path) -> list[dict]:
