@@ -362,6 +362,15 @@ def _parse_sequence_correspondence(sequence_summary: list, assembly_accession: s
 
             entries.append(entry)
 
+    entries.sort(
+        key=lambda item: (
+            item["index"] is None,
+            item["index"] if item["index"] is not None else 10**9,
+            item.get("name", ""),
+            item["accession"],
+        )
+    )
+
     used_indexes = set()
     for entry in entries:
         index = entry["index"]
@@ -380,7 +389,7 @@ def _parse_sequence_correspondence(sequence_summary: list, assembly_accession: s
         used_indexes.add(next_fallback_index)
         next_fallback_index += 1
 
-    return sorted(entries, key=lambda item: item["index"])
+    return sorted(entries, key=lambda item: (item["index"], item["accession"]))
 
 
 def fetch_chromosome_correspondence(accession: str) -> list[dict]:
