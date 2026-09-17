@@ -1035,8 +1035,8 @@ def install_ncbi(local_dir, catalog_dir, force, no_link, verbose):
     Examples:
 
     \b
-      leishref download-ncbi
-      leishref download-ncbi --force
+      leishref install-ncbi
+      leishref install-ncbi --force
     """
     entries = catalog(Path(catalog_dir) if catalog_dir else None)
     ncbi_genomes = [g for g in entries if g.source == "NCBI" and g.accession]
@@ -1045,7 +1045,7 @@ def install_ncbi(local_dir, catalog_dir, force, no_link, verbose):
         click.echo("No NCBI genomes found in catalog")
         return
 
-    click.echo(f"Downloading {len(ncbi_genomes)} NCBI genomes...")
+    click.echo(f"Installing {len(ncbi_genomes)} NCBI genomes...")
     bar = tqdm(ncbi_genomes, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
     failed = []
 
@@ -1100,8 +1100,8 @@ def install_ncbi_refseq(local_dir, catalog_dir, force, no_link, verbose):
     Examples:
 
     \b
-      leishref download-ncbi-refseq
-      leishref download-ncbi-refseq --force
+      leishref install-ncbi-refseq
+      leishref install-ncbi-refseq --force
     """
     entries = catalog(Path(catalog_dir) if catalog_dir else None)
     ncbi_genomes = [g for g in entries if g.source == "NCBI" and g.accession and g.accession.startswith("GCF_")]
@@ -1110,7 +1110,7 @@ def install_ncbi_refseq(local_dir, catalog_dir, force, no_link, verbose):
         click.echo("No RefSeq (GCF) genomes found in catalog")
         return
 
-    click.echo(f"Downloading {len(ncbi_genomes)} RefSeq genomes...")
+    click.echo(f"Installing {len(ncbi_genomes)} RefSeq genomes...")
     bar = tqdm(ncbi_genomes, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
     failed = []
 
