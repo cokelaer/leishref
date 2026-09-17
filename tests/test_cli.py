@@ -629,3 +629,104 @@ def test_bundle_multiple_genomes(tmp_path):
         assert "Ld1S/assembly.fa" in members
         assert "Ltrop.L590/assembly.fa" in members
         assert len(members) == 2
+
+
+def test_bundle_with_wildcard_pattern(tmp_path):
+    """Bundle accepts wildcard patterns for genome names."""
+    import tarfile
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+
+    # Create genomes with similar names
+    for name in ("Ld1S", "LdBPK", "Ltrop.L590"):
+        genome_dir = data_dir / name
+        genome_dir.mkdir()
+        fasta = genome_dir / "assembly.fa"
+        fasta.write_text(f">seq_{name}\nACGT\n")
+
+        write_genome(
+            genome_dir,
+            Genome(
+                identifier=name,
+                source="Local",
+                files={"fasta": fasta.name},
+                checksums={"fasta": md5_file(fasta)},
+            ),
+        )
+
+    output = tmp_path / "Ld.tar.gz"
+    result = run(["bundle", "Ld*", "--local-dir", "data", "--output", str(output)], tmp_path)
+    assert result.exit_code == 0
+    assert output.exists()
+
+    with tarfile.open(output, "r:gz") as tar:
+        members = tar.getnames()
+        assert "Ld1S/assembly.fa" in members
+        assert "LdBPK/assembly.fa" in members
+        assert "Ltrop.L590/assembly.fa" not in members
+        assert len(members) == 2
+
+
+def test_bundle_with_mixed_names_and_wildcards(tmp_path):
+    """Bundle handles mix of exact names and wildcard patterns."""
+    import tarfile
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+
+    # Create genomes
+    for name in ("Ld1S", "LdBPK", "Ltrop.L590", "Ltrop.DC"):
+        genome_dir = data_dir / name
+        genome_dir.mkdir()
+        fasta = genome_dir / "assembly.fa"
+        fasta.write_text(f">seq_{name}\nACGT\n")
+
+        write_genome(
+            genome_dir,
+            Genome(
+                identifier=name,
+                source="Local",
+                files={"fasta": fasta.name},
+                checksums={"fasta": md5_file(fasta)},
+            ),
+        )
+
+    output = tmp_path / "mixed.tar.gz"
+    result = run(["bundle", "Ld*", "Ltrop.L590", "--local-dir", "data", "--output", str(output)], tmp_path)
+    assert result.exit_code == 0
+    assert output.exists()
+
+    with tarfile.open(output, "r:gz") as tar:
+        members = tar.getnames()
+        assert "Ld1S/assembly.fa" in members
+        assert "LdBPK/assembly.fa" in members
+        assert "Ltrop.L590/assembly.fa" in members
+        assert "Ltrop.DC/assembly.fa" not in members
+        assert len(members) == 3
+
+
+def test_bundle_fails_on_no_wildcard_matches(tmp_path):
+    """Bundle fails if wildcard pattern matches no genomes."""
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+
+    # Create one genome
+    genome_dir = data_dir / "Ld1S"
+    genome_dir.mkdir()
+    fasta = genome_dir / "assembly.fa"
+    fasta.write_text(">seq\nACGT\n")
+
+    write_genome(
+        genome_dir,
+        Genome(
+            identifier="Ld1S",
+            source="Local",
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+        ),
+    )
+
+    result = run(["bundle", "Ltrop*", "--local-dir", "data"], tmp_path)
+    assert result.exit_code == 1
+    assert "No genome matches pattern" in result.output
