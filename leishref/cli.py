@@ -484,7 +484,8 @@ def install(name, alias, local_dir, force, no_link):
     if not alias:
         click.echo("--alias is required: it names the cached genome,", err=True)
         click.echo("becoming the directory under ~/.config/leishref/ and the symlink name.\n", err=True)
-        click.echo(f"  leishref install {name} --alias {suggest_alias(genome)}", err=True)
+        suggested = get_catalog_alias(genome.accession or "") or suggest_alias(genome)
+        click.echo(f"  leishref install {name} --alias {suggested}", err=True)
         raise SystemExit(2)
 
     target = Path(local_dir) / alias

@@ -172,7 +172,7 @@ def test_install_without_an_alias_suggests_one(tmp_path):
 
     assert result.exit_code == 2
     assert "--alias is required" in result.output
-    assert "--alias Ltrop.ncbi.L590" in result.output
+    assert "--alias LtrL590" in result.output
 
 
 def test_install_rejects_an_unknown_name_before_asking_for_an_alias(tmp_path):
