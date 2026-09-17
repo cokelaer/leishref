@@ -24,6 +24,16 @@ def _plot_boxplot(ax, series: list, labels: list, ylabel: str, title: str, symlo
     ax.tick_params(axis="x", rotation=45)
 
 
+def _species_matches_filter(species_name: str, species_filter: List[str]) -> bool:
+    normalized = " ".join((species_name or "").lower().split())
+    tokens = set(normalized.split())
+    for term in species_filter:
+        candidate = " ".join(term.lower().split())
+        if candidate == normalized or candidate in tokens:
+            return True
+    return False
+
+
 def plot_genome_sizes(
     catalog_dir: Optional[Path] = None,
     output_path: Optional[Path] = None,
@@ -227,7 +237,7 @@ def plot_chromosome_length_histogram(
     lengths = []
 
     for genome in entries:
-        if species_filter and not any(s.lower() in (genome.species or "").lower() for s in species_filter):
+        if species_filter and not _species_matches_filter(genome.species or "", species_filter):
             continue
         fasta_name = genome.fasta
         if not fasta_name or genome.path is None:
