@@ -71,7 +71,7 @@ click.rich_click.COMMAND_GROUPS = {
     "leishref": [
         {
             "name": "Using the database",
-            "commands": ["search", "info", "download", "download-ncbi", "restore", "verify", "rename-sequences", "prune-scaffold"],
+            "commands": ["search", "info", "install", "install-ncbi", "restore", "verify", "rename-sequences", "prune-scaffold"],
         },
         {
             "name": "For maintainers and developers",
@@ -101,7 +101,7 @@ click.rich_click.OPTION_GROUPS = {
     command: [{"name": "Options", "options": options}, _LOCATION_OPTIONS]
     for command, options in {
         "leishref search": ["--installed", "--long", "--help"],
-        "leishref download": ["--alias", "--force", "--no-link", "--help"],
+        "leishref install": ["--alias", "--force", "--no-link", "--help"],
         "leishref verify": ["--quick", "--help"],
         "leishref restore": [
             "--file",
@@ -422,14 +422,14 @@ def _require(genomes, key, what, catalog_root=None):
 # ----------------------------------------------------------------------- user commands
 
 
-@cli.command()
+@cli.command("install")
 @click.argument("name")
 @click.option("--alias", help="Name for this genome in your local database (required)")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
-@click.option("--force", is_flag=True, help="Download again even if already installed")
+@click.option("--force", is_flag=True, help="Install again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
-def download(name, alias, local_dir, catalog_dir, force, no_link):
+def install(name, alias, local_dir, catalog_dir, force, no_link):
     """Install a catalog genome into the local database under ALIAS.
 
     NAME picks the genome out of the catalog by accession or catalog id. ALIAS is the
@@ -975,14 +975,14 @@ def restore(accessions, local_dir, catalog_dir, force, no_link, dry_run, from_in
         raise SystemExit(1)
 
 
-@cli.command("download-ncbi")
+@cli.command("install-ncbi")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
-@click.option("--force", is_flag=True, help="Download again even if already installed")
+@click.option("--force", is_flag=True, help="Install again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlinks")
-@click.option("--verbose", is_flag=True, help="Show each download details instead of progress bar")
-def download_ncbi(local_dir, catalog_dir, force, no_link, verbose):
-    """Download all NCBI entries from the catalog.
+@click.option("--verbose", is_flag=True, help="Show each install details instead of progress bar")
+def install_ncbi(local_dir, catalog_dir, force, no_link, verbose):
+    """Install all NCBI entries from the catalog.
 
     Examples:
 
@@ -1040,14 +1040,14 @@ def download_ncbi(local_dir, catalog_dir, force, no_link, verbose):
         click.echo(f"\nDownloaded {len(ncbi_genomes)} NCBI genomes")
 
 
-@cli.command("download-ncbi-refseq")
+@cli.command("install-ncbi-refseq")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
-@click.option("--force", is_flag=True, help="Download again even if already installed")
+@click.option("--force", is_flag=True, help="Install again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlinks")
-@click.option("--verbose", is_flag=True, help="Show each download details instead of progress bar")
-def download_ncbi_refseq(local_dir, catalog_dir, force, no_link, verbose):
-    """Download all RefSeq (GCF) NCBI entries from the catalog.
+@click.option("--verbose", is_flag=True, help="Show each install details instead of progress bar")
+def install_ncbi_refseq(local_dir, catalog_dir, force, no_link, verbose):
+    """Install all RefSeq (GCF) NCBI entries from the catalog.
 
     Examples:
 

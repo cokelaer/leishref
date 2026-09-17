@@ -1,0 +1,32 @@
+identifier: L590.scaffold.assembled.CDC
+source: Scaffold
+species: Leishmania tropica
+assembly_level: Scaffold
+files:
+  fasta: L590.scaffold.assembled.CDC.fa
+checksums:
+  fasta: 16cb113266b0c1879bea0418c57a29d1
+stats:
+  num_bases: 33019714
+  num_ungapped: 31323415
+  num_scaffolds: 141
+  num_contigs: 1938
+  gc_percent: 59.9
+  scaffold_n50: 1190456
+  scaffold_l50: 10
+  contig_n50: 32739
+  contig_l50: 275
+  num_ambiguous: 1696649
+  num_gaps: 1797
+provenance:
+  agp_filename: L590.scaffold.assembled.CDC.agp
+scaffold:
+  query:
+    file: Ltrop.ncbi.L590.fna
+    md5: e9dd43a43334a002bc957a786ec902a5
+  reference:
+    file: Ltropica.scaffold.flye.filtered.fasta
+    md5: b387ce1f3ec3021e00fea777623789ff
+  tool: RagTag
+  tool_version: 2.1.0
+date_added: '2026-09-15'

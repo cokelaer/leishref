@@ -4,50 +4,50 @@ Command Reference
 Using the database
 ------------------
 
-leishref download
+leishref install
 ~~~~~~~~~~~~~~~~~
 
 Install a genome from the catalog::
 
-    leishref download --alias ALIAS ACCESSION
-    leishref download GCA_002243465.1 --alias Ld1S
+    leishref install --alias ALIAS ACCESSION
+    leishref install GCA_002243465.1 --alias Ld1S
 
 Options:
 - ``--alias ALIAS`` — Local directory name (required)
 - ``--no-link`` — Don't create symlinks
 
-leishref download-ncbi
-~~~~~~~~~~~~~~~~~~~~~~
+leishref install-ncbi
+~~~~~~~~~~~~~~~~~~~~~
 
-Download all NCBI genomes from the catalog::
+Install all NCBI genomes from the catalog::
 
-    leishref download-ncbi
-    leishref download-ncbi --force
-    leishref download-ncbi --verbose
+    leishref install-ncbi
+    leishref install-ncbi --force
+    leishref install-ncbi --verbose
 
 Uses accession as local alias for each genome. Quiet by default (progress bar only).
-Reports failed downloads without stopping the batch.
+Reports failed installs without stopping the batch.
 
 Options:
-- ``--force`` — Download again even if already installed
+- ``--force`` — Install again even if already installed
 - ``--no-link`` — Skip alias-named symlinks
-- ``--verbose`` — Show each download details (MD5, etc) instead of progress bar
+- ``--verbose`` — Show each install details (MD5, etc) instead of progress bar
 
-leishref download-ncbi-refseq
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+leishref install-ncbi-refseq
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Download RefSeq (GCF) genomes only from NCBI::
+Install RefSeq (GCF) genomes only from NCBI::
 
-    leishref download-ncbi-refseq
-    leishref download-ncbi-refseq --force
+    leishref install-ncbi-refseq
+    leishref install-ncbi-refseq --force
 
-Filters out GenBank (GCA) duplicates, downloading only the RefSeq-annotated genomes.
-Uses accession as local alias. Same options and behavior as ``download-ncbi``.
+Filters out GenBank (GCA) duplicates, installing only the RefSeq-annotated genomes.
+Uses accession as local alias. Same options and behavior as ``install-ncbi``.
 
 Options:
-- ``--force`` — Download again even if already installed
+- ``--force`` — Install again even if already installed
 - ``--no-link`` — Skip alias-named symlinks
-- ``--verbose`` — Show each download details (MD5, etc) instead of progress bar
+- ``--verbose`` — Show each install details (MD5, etc) instead of progress bar
 
 leishref info
 ~~~~~~~~~~~~~

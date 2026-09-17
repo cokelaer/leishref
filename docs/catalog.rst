@@ -76,13 +76,13 @@ Alias format: species code (L + 1-2 letters: Ld, Lm, Li, Ltr, etc.) plus strain 
 ``MCAN`` = canine; ``MCEB`` = other mammal; ``MDAS`` = rodent. The full format
 ``HOST/COUNTRY/YEAR/ID`` encodes epidemiology and is retained in aliases for traceability.
 
-Use aliases in search, download, and info commands.
+Use aliases in search, install, and info commands.
 
 **Aliases are not frozen.** They may change to fix typos, adopt better naming conventions,
-or reflect biology more clearly. When you download a genome with a catalog alias (e.g.,
-``leishref download --alias Ld1S Ld1S``), the actual accession (e.g., ``GCA_000227135.2``)
+or reflect biology more clearly. When you install a genome with a catalog alias (e.g.,
+``leishref install --alias Ld1S Ld1S``), the actual accession (e.g., ``GCA_000227135.2``)
 is recorded in ``accessions.txt``. Restoring from ``accessions.txt`` retrieves the same
-genome by accession, which is stable—but a re-download might assign it a different alias
+genome by accession, which is stable—but a re-install might assign it a different alias
 if ``aliases.txt`` changed. For reproducible scripts, refer to genomes by accession, not
 by alias.
 

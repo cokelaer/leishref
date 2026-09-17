@@ -96,18 +96,36 @@ def species_from_organism(organism_name) -> str:
     return " ".join(tokens[:2])
 
 
+def strain_from_organism(organism_name) -> str:
+    """Whatever follows the species in an NCBI organism name, or "".
+
+    NCBI names an infraspecific taxon after its strain ("Leishmania infantum JPCM5"),
+    and for those assemblies infraspecific_names is often empty, so the organism name
+    is the only place the strain appears.
+    """
+    organism_name = organism_name or ""
+    species = species_from_organism(organism_name)
+    return organism_name[len(species) :].strip()
+
+
 def _parse_summary(data: dict) -> dict:
     """Pull the fields we keep out of one `datasets summary` record."""
     info = data.get("assembly_info", {})
     organism = data.get("organism", {})
     # NCBI records the strain under infraspecific_names, not in organism_name. Where a
-    # submitter registered a WHO designation as an isolate, strain is empty instead.
+    # submitter registered a WHO designation as an isolate, strain is empty instead, and
+    # for an infraspecific taxon both are empty and only organism_name carries it.
     infraspecific = organism.get("infraspecific_names") or {}
     return {
         "accession": data.get("accession"),
         "taxon_id": organism.get("tax_id"),
         "organism_name": organism.get("organism_name"),
-        "strain": infraspecific.get("strain") or infraspecific.get("isolate"),
+        "strain": (
+            infraspecific.get("strain")
+            or infraspecific.get("isolate")
+            or strain_from_organism(organism.get("organism_name"))
+            or None
+        ),
         "assembly_name": info.get("assembly_name"),
         "assembly_level": info.get("assembly_level"),
         "release_date": info.get("release_date"),
