@@ -29,7 +29,11 @@ All installs are verified against recorded MD5 checksums::
 Local database
 --------------
 
-Genomes are stored under ``data/<alias>/`` relative to where you run leishref.
+Genomes are stored under ``data/<alias>/`` relative to where you run leishref (default).
+Customize the location with ``--local-dir``::
+
+    leishref install --local-dir /mnt/genomes/data --alias Ld1S GCA_002243465.1
+
 Each genome has:
 
 - ``*.fna`` — FASTA sequence
