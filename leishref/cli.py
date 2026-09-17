@@ -20,7 +20,6 @@ from rich.markup import escape
 from rich.syntax import Syntax
 from tqdm import tqdm
 
-from leishref.agp import derive_agp, write_agp
 from leishref.checksums import genome_stats, md5_file
 from leishref.chromosomes import get_chromosome_info, rename_fasta_sequences
 from leishref.links import LinkConflict, link_paths
@@ -1641,56 +1640,6 @@ def remove(identifier, catalog_dir, force):
 
     shutil.rmtree(entry_path, ignore_errors=False)
     click.echo(f"Removed {entry_path}")
-
-
-@dev.command("derive-agp")
-@click.argument("parent", type=click.Path(exists=True))
-@click.argument("child", type=click.Path(exists=True))
-@click.option("--out", type=click.Path(), help="AGP output path (default AGP/<child stem>.agp)")
-@click.option("--record", help="Record the derivation on this local genome")
-@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option("--probe-len", default=60, show_default=True, help="Anchor length used to locate blocks")
-def derive_agp_cmd(parent, child, out, record, local_dir, probe_len):
-    """Derive an AGP showing how CHILD was laid out from PARENT sequences.
-
-    Reconstructs order, orientation and gaps of a re-scaffolded assembly relative to its
-    source, so a third-party layout can be stored as coordinates rather than sequence.
-
-    Examples:
-
-    \b
-      leishref dev derive-agp parent.fna child.fasta
-      leishref dev derive-agp parent.fna child.fasta --record Ltrop.tritryp68
-    """
-    parent, child = Path(parent), Path(child)
-    click.echo("Deriving layout (this scans both assemblies)...")
-    lines, stats = derive_agp(parent, child, probe_len=probe_len)
-
-    out_path = Path(out) if out else Path("AGP") / f"{child.stem}.agp"
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    write_agp(out_path, lines)
-
-    click.echo("")
-    click.echo(f"  parent sequences:  {stats['parent_sequences']} ({stats['parent_sequences_placed']} placed)")
-    click.echo(f"  child sequences:   {stats['child_sequences']} ({stats['child_sequences_used']} used)")
-    click.echo(f"  blocks placed:     {stats['blocks_placed']}/{stats['blocks_total']}")
-    click.echo(f"  orientation:       {stats['forward']} forward, {stats['reverse']} reverse")
-    click.echo(f"  coverage:          {stats['coverage_of_non_n_parent']}% of non-N parent bases")
-    if stats["blocks_unplaced"]:
-        click.echo(f"  unplaced:          {stats['blocks_unplaced']} blocks, {stats['unplaced_bases']:,} bases")
-    click.echo(f"\nWrote {out_path} ({len(lines)} lines)")
-
-    if stats["coverage_of_non_n_parent"] >= 95:
-        click.echo("Same sequence, different layout: child is a re-scaffolding of parent.")
-    else:
-        click.echo("Low coverage: these are likely genuinely different assemblies.")
-
-    if record:
-        genome = _require(local(Path(local_dir)), record, "local database")
-        genome.provenance["derived_from"] = parent.name
-        genome.provenance["agp_filename"] = out_path.name
-        write_genome(genome.path, genome)
-        click.echo(f"Recorded derivation on {genome.identifier}")
 
 
 def _genome_from_ncbi(accession: str, meta: dict) -> Genome:
