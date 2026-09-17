@@ -847,8 +847,8 @@ def rename_sequences_cmd(name, flavor, local_dir):
     renamed_path.write_text(renamed)
     click.echo(f"Wrote renamed sequences to {renamed_path.name}")
 
-    # Create symlink in current directory
-    link_name = Path.cwd() / renamed_path.name
+    # Create symlink in current directory with genome alias name
+    link_name = Path.cwd() / f"{name}.{flavor}{fasta_path.suffix}"
     if link_name.exists() or link_name.is_symlink():
         link_name.unlink()
     link_name.symlink_to(renamed_path)
