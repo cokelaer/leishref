@@ -121,7 +121,7 @@ click.rich_click.COMMAND_GROUPS = {
 # to the options that change what a command does, so they get their own panel.
 _LOCATION_OPTIONS = {
     "name": "Where to read and write",
-    "options": ["--local-dir", "--catalog-dir", "--basedir", "--workdir", "--out"],
+    "options": ["--local-dir", "--basedir", "--workdir", "--out"],
 }
 
 click.rich_click.OPTION_GROUPS = {
@@ -567,9 +567,8 @@ def install(name, alias, local_dir, force, no_link):
 @cli.command()
 @click.argument("name", required=False)
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
-def info(name, local_dir, catalog_dir):
-    """List the catalog and the local database, or show one genome in full.
+def info(name, local_dir):
+    """List the catalog and the cached database, or show one genome in full.
 
     Examples:
 
@@ -577,12 +576,11 @@ def info(name, local_dir, catalog_dir):
       leishref info
       leishref info GCA_000410715.1
     """
-    cat_root = Path(catalog_dir) if catalog_dir else None
-    entries = catalog(cat_root)
+    entries = catalog()
     installed = local(Path(local_dir))
 
     if name:
-        genome = find(installed, name, cat_root) or _require(entries, name, "catalog", cat_root)
+        genome = find(installed, name) or _require(entries, name, "catalog")
         import yaml
 
         console = _console()
@@ -596,7 +594,7 @@ def info(name, local_dir, catalog_dir):
         )
         if genome.path:
             console.print(f"\npath: [cyan]{escape(str(genome.path))}[/]")
-        if find(installed, name, cat_root) is None:
+        if find(installed, name) is None:
             console.print(f"suggested alias: [bold cyan]{escape(suggest_alias(genome))}[/]")
         return
 
@@ -617,7 +615,7 @@ def info(name, local_dir, catalog_dir):
         console.print(f"\n[bold]{label}[/] [dim]({len(sections[group])})[/]")
         for genome in _by_organism(sections[group]):
             doi = "[green]  zenodo[/]" if genome.zenodo_doi else ""
-            alias = _genome_alias(genome, cat_root)
+            alias = _genome_alias(genome)
             alias_txt = f"[dim] (alias: {escape(alias)})[/]" if alias != genome.identifier else ""
             console.print(
                 f"  [bold cyan]{escape(genome.identifier):<38}[/] {escape(_organism(genome))}{doi}{alias_txt}"
@@ -637,10 +635,9 @@ def info(name, local_dir, catalog_dir):
 @cli.command()
 @click.argument("terms", nargs=-1, required=True)
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
-@click.option("--installed", is_flag=True, help="Only genomes already in the local database")
+@click.option("--installed", is_flag=True, help="Only genomes already in the cached database")
 @click.option("--long", "long_form", is_flag=True, help="Show the full record for each match")
-def search(terms, local_dir, catalog_dir, installed, long_form):
+def search(terms, local_dir, installed, long_form):
     """Find catalog genomes matching every TERM.
 
     Terms are matched case-insensitively against the whole record: species, strain,
@@ -660,18 +657,17 @@ def search(terms, local_dir, catalog_dir, installed, long_form):
       leishref search '*'
       leishref search 'GCF_*' infantum
     """
-    cat_root_search = Path(catalog_dir) if catalog_dir else None
-    entries = catalog(cat_root_search)
+    entries = catalog()
     here = local(Path(local_dir))
 
-    # A local install records where it came from, so matches can be flagged as present.
+    # A cached install records where it came from, so matches can be flagged as present.
     by_origin = {}
     for genome in here:
         origin = genome.provenance.get("catalog_id") or genome.identifier
         by_origin[origin] = genome.identifier
 
     # Load aliases for matching
-    aliases = load_aliases(cat_root_search)
+    aliases = load_aliases()
     alias_by_accession = {v: k for k, v in aliases.items()}
 
     matches = [g for g in entries if g.matches(terms)]
@@ -709,7 +705,6 @@ def search(terms, local_dir, catalog_dir, installed, long_form):
     # species should not be padded out to the width of the longest name in the catalog.
     id_width = min(max(len(g.identifier) for g in ordered), 38)
     organism_width = min(max(len(_organism(g)) for g in ordered), 44)
-    cat_root = Path(catalog_dir) if catalog_dir else None
 
     for genome in ordered:
         organism = _organism(genome)
@@ -726,7 +721,7 @@ def search(terms, local_dir, catalog_dir, installed, long_form):
         contiguity = f"N50 {n50 / 1e6:.1f}M" if n50 and n50 >= 1e6 else (f"N50 {n50 / 1e3:.0f}k" if n50 else "")
 
         suffixes = []
-        alias = get_catalog_alias(genome.accession or genome.identifier, cat_root)
+        alias = get_catalog_alias(genome.accession or genome.identifier)
         if alias:
             suffixes.append(f"alias: {alias}")
         if genome.identifier in by_origin:
@@ -797,9 +792,8 @@ def verify(local_dir, quick):
     help="Naming scheme for renamed sequences",
 )
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option("--catalog-dir", type=click.Path(), help="Path to chromosome database")
-def rename_sequences_cmd(name, flavor, local_dir, catalog_dir):
-    """Rename sequences in an installed genome using chromosome database.
+def rename_sequences_cmd(name, flavor, local_dir):
+    """Rename sequences in a cached genome using chromosome database.
 
     NAME is the local alias of the genome to transform.
 
@@ -816,7 +810,7 @@ def rename_sequences_cmd(name, flavor, local_dir, catalog_dir):
       leishref rename-sequences Ld1S --flavor number
       leishref rename-sequences Ld1S --flavor roman
     """
-    genome = _require(local(Path(local_dir)), name, "local database")
+    genome = _require(local(Path(local_dir)), name, "cached database")
 
     if not genome.accession:
         click.echo(f"Genome {name} has no accession; cannot look up chromosome info", err=True)
@@ -834,9 +828,8 @@ def rename_sequences_cmd(name, flavor, local_dir, catalog_dir):
 
     from leishref.chromosomes import load_chromosome_map, save_chromosome_map
 
-    cat_root = Path(catalog_dir) if catalog_dir else None
     click.echo(f"Renaming sequences in {fasta_path.name} ({flavor} flavor)...")
-    renamed, name_map = rename_fasta_sequences(fasta_path, genome.accession, flavor, cat_root)
+    renamed, name_map = rename_fasta_sequences(fasta_path, genome.accession, flavor, None)
 
     # Write to new file with flavor suffix
     renamed_path = fasta_path.parent / f"{fasta_path.stem}.{flavor}{fasta_path.suffix}"
@@ -844,8 +837,8 @@ def rename_sequences_cmd(name, flavor, local_dir, catalog_dir):
     click.echo(f"Wrote renamed sequences to {renamed_path.name}")
 
     # Update chromosome_map.yaml with the mapping
-    if name_map and cat_root:
-        chrom_map = load_chromosome_map(cat_root)
+    if name_map:
+        chrom_map = load_chromosome_map()
         if genome.accession not in chrom_map:
             chrom_map[genome.accession] = []
 
@@ -856,20 +849,19 @@ def rename_sequences_cmd(name, flavor, local_dir, catalog_dir):
             if old_name in name_map:
                 info["new_name"] = name_map[old_name]
 
-        save_chromosome_map(chrom_map, cat_root)
-        click.echo(f"Updated chromosome mapping in {cat_root.name}/chromosome_map.yaml")
+        save_chromosome_map(chrom_map)
+        click.echo("Updated chromosome mapping in catalog/chromosome_map.yaml")
 
 
 @cli.command("prune-scaffold")
 @click.argument("name")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option("--catalog-dir", type=click.Path(), help="Path to chromosome database")
-def prune_scaffold_cmd(name, local_dir, catalog_dir):
+def prune_scaffold_cmd(name, local_dir):
     """Remove unmapped contigs, keeping only chromosome sequences and kinetoplast.
 
     NAME is the local alias of the genome to prune.
 
-    Requires genome accession and chromosome info in local database.
+    Requires genome accession and chromosome info in cached database.
     Kinetoplast sequences are preserved automatically.
 
     Examples:
@@ -877,14 +869,13 @@ def prune_scaffold_cmd(name, local_dir, catalog_dir):
     \b
       leishref prune-scaffold Ld1S
     """
-    genome = _require(local(Path(local_dir)), name, "local database")
+    genome = _require(local(Path(local_dir)), name, "cached database")
 
     if not genome.accession:
         click.echo(f"Genome {name} has no accession; cannot look up chromosome info", err=True)
         raise SystemExit(1)
 
-    cat_root = Path(catalog_dir) if catalog_dir else None
-    chrom_info = get_chromosome_info(genome.accession, cat_root)
+    chrom_info = get_chromosome_info(genome.accession)
 
     if not chrom_info:
         click.echo(f"No chromosome info found for {genome.accession}", err=True)
@@ -1131,7 +1122,7 @@ def install_ncbi_refseq(local_dir, catalog_dir, force, no_link, verbose):
                     stack.enter_context(contextlib.redirect_stdout(captured))
                     stack.enter_context(contextlib.redirect_stderr(captured))
                 click.get_current_context().invoke(
-                    download,
+                    install,
                     name=genome.accession,
                     alias=alias,
                     local_dir=local_dir,
