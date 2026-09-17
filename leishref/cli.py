@@ -1310,29 +1310,45 @@ def plot_histogram(catalog_dir, output, include_kinetoplast):
 def bundle(names, local_dir, output):
     """Pack installed genomes into a tarball with FASTA and GFF files.
 
-    NAMES are the local aliases of genomes to bundle. Creates a .tar.gz with all files
-    from the selected genomes, preserving directory structure. Useful for offline sharing
-    or backup.
+    NAMES are the local aliases of genomes to bundle (wildcards supported: * ? [...]).
+    Creates a .tar.gz with all files from the selected genomes, preserving directory
+    structure. Useful for offline sharing or backup.
 
     Examples:
 
     \b
       leishref bundle Ld1S LdBPK
+      leishref bundle 'Ld*'
+      leishref bundle 'Ltrop*' 'Ld1S'
       leishref bundle Ld1S LdBPK --output my-genomes.tar.gz
       leishref bundle Ltrop.L590 -o backup.tar.gz
     """
     installed = local(Path(local_dir))
 
     genomes = []
+    seen = set()
+
     for name in names:
-        genome = find(installed, name)
-        if genome is None:
-            click.echo(f"Not installed: {name}", err=True)
-            raise SystemExit(1)
-        genomes.append(genome)
+        if is_glob(name):
+            matches = [g for g in installed if fnmatch.fnmatch(g.identifier.lower(), name.lower())]
+            if not matches:
+                click.echo(f"No genome matches pattern: {name}", err=True)
+                raise SystemExit(1)
+            for g in matches:
+                if g.identifier not in seen:
+                    genomes.append(g)
+                    seen.add(g.identifier)
+        else:
+            genome = find(installed, name)
+            if genome is None:
+                click.echo(f"Not installed: {name}", err=True)
+                raise SystemExit(1)
+            if genome.identifier not in seen:
+                genomes.append(genome)
+                seen.add(genome.identifier)
 
     if not output:
-        output = f"{names[0]}.tar.gz"
+        output = f"{genomes[0].identifier}.tar.gz"
 
     output_path = Path(output)
     click.echo(f"Bundling {len(genomes)} genome{'s' if len(genomes) != 1 else ''} into {output_path}")
