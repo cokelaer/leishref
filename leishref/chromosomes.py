@@ -7,6 +7,81 @@ from typing import Optional
 import yaml
 
 
+def scan_fasta_headers(data_dir: Path = None) -> dict:
+    """Scan FASTA files in data directories and extract chromosome information.
+
+    Parses NCBI FASTA headers to extract sequence accessions and chromosome names.
+    Typical NCBI header format: >NC_007067.7 Leishmania major chromosome I complete sequence
+
+    Returns: {assembly_accession: [{"accession": "NC_...", "name": "chromosome I", "index": 1}, ...]}
+    """
+    if data_dir is None:
+        from leishref.metadata import CATALOG_DIR
+
+        data_dir = CATALOG_DIR
+
+    chromosome_map = {}
+
+    # Walk through data directories to find FASTA files
+    for fasta_file in data_dir.glob("*/*/*fna"):
+        parent = fasta_file.parent  # e.g., data/ncbi/GCA_000002725.2
+        assembly_accession = parent.name
+
+        # Parse FASTA headers
+        sequences = []
+        index = 0
+        with open(fasta_file) as f:
+            for line in f:
+                if line.startswith(">"):
+                    index += 1
+                    header = line[1:].strip()  # Remove '>'
+                    parts = header.split()
+
+                    # Extract accession (first part, usually NC_... or similar)
+                    seq_accession = parts[0] if parts else f"sequence_{index}"
+
+                    # Try to extract chromosome name from header
+                    # Look for "chromosome X" or similar patterns
+                    chrom_name = _extract_chromosome_name(header, index)
+
+                    sequences.append(
+                        {
+                            "accession": seq_accession,
+                            "name": chrom_name,
+                            "index": index,
+                        }
+                    )
+
+        if sequences:
+            chromosome_map[assembly_accession] = sequences
+
+    return chromosome_map
+
+
+def _extract_chromosome_name(header: str, default_index: int) -> str:
+    """Extract chromosome name from NCBI FASTA header.
+
+    Examples:
+    - 'NC_007067.7 Leishmania major chromosome I' -> 'chromosome I'
+    - 'NC_007067.7 Leishmania major mitochondrion' -> 'mitochondrion'
+    - 'NC_007067.7 Leishmania major replicon 1' -> 'replicon 1'
+    """
+    # Pattern to capture chromosome/replicon names while preserving case
+    patterns = [
+        r"(?i)(chromosome\s+[IVXiv0-9]+)",
+        r"(?i)(mitochondrion|chloroplast|plasmid)",
+        r"(?i)(replicon\s+\d+)",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, header)
+        if match:
+            return match.group(1).lower()
+
+    # Fallback: return generic name
+    return f"sequence {default_index}"
+
+
 def load_chromosome_map(data_dir: Path = None) -> dict:
     """Load chromosome name mapping from local database.
 
@@ -14,6 +89,7 @@ def load_chromosome_map(data_dir: Path = None) -> dict:
     """
     if data_dir is None:
         from leishref.metadata import CATALOG_DIR
+
         data_dir = CATALOG_DIR
 
     map_file = data_dir / "chromosome_map.yaml"
@@ -28,6 +104,7 @@ def save_chromosome_map(mapping: dict, data_dir: Path = None):
     """Save chromosome name mapping to local database."""
     if data_dir is None:
         from leishref.metadata import CATALOG_DIR
+
         data_dir = CATALOG_DIR
 
     map_file = data_dir / "chromosome_map.yaml"
@@ -35,6 +112,22 @@ def save_chromosome_map(mapping: dict, data_dir: Path = None):
 
     with open(map_file, "w") as f:
         yaml.dump(mapping, f, default_flow_style=False, sort_keys=True)
+
+
+def populate_chromosome_map_from_fasta(data_dir: Path = None) -> int:
+    """Scan FASTA files and populate chromosome_map.yaml.
+
+    Returns: number of assemblies with new chromosome information
+    """
+    if data_dir is None:
+        from leishref.metadata import CATALOG_DIR
+
+        data_dir = CATALOG_DIR
+
+    mapping = scan_fasta_headers(data_dir)
+    if mapping:
+        save_chromosome_map(mapping, data_dir)
+    return len(mapping)
 
 
 def get_chromosome_info(accession: str, data_dir: Path = None) -> list[dict]:
