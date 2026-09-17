@@ -237,7 +237,7 @@ _ALIASES_CACHE = None
 
 
 def load_aliases(root: Optional[Path] = None) -> dict[str, str]:
-    """Load common aliases from aliases.txt (alias -> accession mapping)."""
+    """Load common aliases from aliases.txt (accession -> alias mapping)."""
     global _ALIASES_CACHE
     if _ALIASES_CACHE is not None:
         return _ALIASES_CACHE
@@ -250,10 +250,10 @@ def load_aliases(root: Optional[Path] = None) -> dict[str, str]:
                 line = line.strip()
                 if not line or line.startswith("#"):
                     continue
-                parts = line.split("\t")
+                parts = line.split()
                 if len(parts) == 2:
                     accession, alias = parts
-                    aliases[alias.strip()] = accession.strip()
+                    aliases[alias] = accession
     _ALIASES_CACHE = aliases
     return aliases
 
