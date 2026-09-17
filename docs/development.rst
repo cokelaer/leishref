@@ -28,35 +28,31 @@ With coverage::
 
     pytest --cov=leishref --cov-report=term-missing
 
-Linting
--------
-
-Code style checks::
-
-    black --check leishref tests
-    isort --check-only leishref tests
-    flake8 leishref tests
-
-Auto-format::
-
-    black leishref tests
-    isort leishref tests
+Code style is enforced by pre-commit hooks; see ``.pre-commit-config.yaml``.
 
 Maintainer commands
 -------------------
 
-Fetch genomes from NCBI::
+Add NCBI genome to catalog::
 
     leishref dev fetch --accession GCA_000227135.2
 
-Add local assemblies::
+Downloads metadata and FASTA/GFF from NCBI, creates ``leishref/data/ncbi/GCA_000227135.2/metadata.yaml``.
+
+Add local assembly to catalog::
 
     leishref dev add ~/my_assembly.fasta --technology pacbio
 
-Scaffold against a reference::
+Adds local FASTA to catalog as a new genome entry with metadata.
+
+Scaffold assembly against reference::
 
     leishref dev scaffold --query query.fasta --reference Ld1S
 
-Publish to Zenodo::
+Creates scaffolded assembly by aligning query to reference, adds to ``leishref/data/scaffold/``.
+
+Publish scaffold to Zenodo::
 
     leishref dev publish scaffold.fasta
+
+Uploads scaffold files to Zenodo, records DOI in catalog metadata.
