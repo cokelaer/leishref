@@ -36,9 +36,9 @@ Customize the location with ``--local-dir``::
 
 Each genome has:
 
-- ``*.fna`` — FASTA sequence
-- ``*.gff`` — Genome features
-- ``metadata.yaml`` — Provenance and statistics
+- ``*.fna`` — FASTA sequence (always)
+- ``*.gff`` — Genome features (RefSeq and some assemblies only)
+- ``metadata.yaml`` — Provenance and statistics (always)
 
 Recording what was installed
 ----------------------------
