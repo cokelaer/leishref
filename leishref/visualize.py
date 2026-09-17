@@ -33,6 +33,8 @@ def _species_matches_filter(species_name: str, species_filter: List[str]) -> boo
         candidate = " ".join(term.lower().split())
         if candidate == normalized or candidate in tokens:
             return True
+        if " " in candidate and (normalized.startswith(candidate + " ") or normalized == candidate):
+            return True
     return False
 
 
