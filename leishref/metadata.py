@@ -20,7 +20,7 @@ METADATA_FILE = "metadata.yaml"
 CATALOG_DIR = Path(__file__).parent / "data"
 
 #: Catalog entries are grouped by where the genome came from, one directory per origin.
-CATALOG_GROUPS = ("ncbi", "scaffolds", "zenodo", "tritrypdb", "local")
+CATALOG_GROUPS = ("ncbi", "scaffolds", "zenodo", "tritrypdb", "custom", "local")
 
 #: Local database, relative to wherever leishref is run.
 LOCAL_DIR = Path("data")
@@ -192,7 +192,7 @@ def catalog_group(genome) -> str:
     if accession.startswith(("GCA_", "GCF_")):
         return "ncbi"
     source = (genome.source or "").lower()
-    if source in ("tritrypdb", "zenodo", "ncbi"):
+    if source in ("tritrypdb", "zenodo", "ncbi", "custom"):
         return source
     if genome.zenodo_doi:
         return "zenodo"
