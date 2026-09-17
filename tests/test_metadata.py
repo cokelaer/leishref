@@ -140,6 +140,29 @@ def test_matches_finds_taxon_id_given_as_text(genome):
     assert genome.matches(["5666"])
 
 
+def test_a_lone_star_matches_every_genome(genome):
+    assert genome.matches(["*"])
+
+
+def test_wildcards_match_within_a_term(genome):
+    assert genome.matches(["GCA_1*"])
+    assert genome.matches(["L*tropica"])
+    assert genome.matches(["gca_?.1"])
+    assert not genome.matches(["GCF_*"])
+
+
+def test_wildcard_terms_narrow_like_plain_terms(genome):
+    genome.provenance = {"zenodo_doi": "10.5281/zenodo.1"}
+    assert genome.matches(["*tropica", "zenodo"])
+    assert not genome.matches(["*tropica", "donov*"])
+
+
+def test_a_term_without_wildcards_stays_a_substring_match(genome):
+    """'[' and friends only switch on globbing when the user actually types them."""
+    assert genome.matches(["tropic"])
+    assert not genome.matches(["tropicaX"])
+
+
 def test_every_catalog_genome_has_statistics():
     for entry in catalog():
         assert entry.stats.get("num_bases"), f"{entry.identifier} has no num_bases"
@@ -193,3 +216,62 @@ def test_most_genomes_name_their_strain():
     entries = catalog()
     named = [g for g in entries if g.strain]
     assert len(named) >= 0.7 * len(entries)
+
+
+def test_strain_is_taken_from_the_organism_name_when_ncbi_leaves_it_empty():
+    """An infraspecific taxon carries its strain in organism_name and nowhere else."""
+    from leishref.ncbi import strain_from_organism
+
+    assert strain_from_organism("Leishmania infantum JPCM5") == "JPCM5"
+    assert strain_from_organism("Leishmania braziliensis MHOM/BR/75/M2904") == "MHOM/BR/75/M2904"
+    assert strain_from_organism("Leishmania infantum") == ""
+    assert strain_from_organism("Leishmania sp. Ghana") == ""
+    assert strain_from_organism(None) == ""
+
+
+def test_catalog_entries_are_grouped_by_origin():
+    """Every shipped entry sits in the subdirectory its origin calls for."""
+    from leishref.metadata import CATALOG_DIR, catalog_group
+
+    for entry in catalog():
+        assert entry.path.parent.name == catalog_group(entry), entry.identifier
+        assert entry.path.parent.parent == CATALOG_DIR, entry.identifier
+
+
+def test_grouping_follows_how_a_genome_was_made(genome):
+    """Publishing a scaffold on Zenodo must not move it out of scaffold/."""
+    from leishref.metadata import catalog_group
+
+    genome.scaffold = {"reference": {"name": "GCA_1.1"}}
+    genome.source = "Zenodo"
+    genome.provenance = {"zenodo_doi": "10.5281/zenodo.1"}
+    assert catalog_group(genome) == "scaffold"
+
+
+def test_an_accession_decides_the_ncbi_group(genome):
+    from leishref.metadata import catalog_group
+
+    genome.accession = "GCF_000002875.2"
+    assert catalog_group(genome) == "ncbi"
+    genome.accession = "GCA_000002875.2"
+    assert catalog_group(genome) == "ncbi"
+
+
+def test_a_genome_with_no_origin_at_all_is_local(genome):
+    from leishref.metadata import catalog_group
+
+    genome.accession = None
+    genome.source = "Local"
+    genome.provenance = {}
+    assert catalog_group(genome) == "local"
+
+
+def test_a_flat_directory_is_still_read(tmp_path):
+    """Local databases are flat, and a catalog written before grouping stays readable."""
+    from leishref.metadata import catalog as read_catalog
+
+    write_genome(tmp_path / "flat", Genome(identifier="flat", species="Leishmania donovani"))
+    write_genome(tmp_path / "ncbi" / "GCA_1.1", Genome(identifier="GCA_1.1", accession="GCA_1.1"))
+
+    found = {entry.identifier for entry in read_catalog(tmp_path)}
+    assert found == {"flat", "GCA_1.1"}
