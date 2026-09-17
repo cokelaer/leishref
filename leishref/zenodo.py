@@ -1,6 +1,5 @@
 """Zenodo deposition management for scaffold publications."""
 
-import json
 import os
 from pathlib import Path
 from typing import Optional

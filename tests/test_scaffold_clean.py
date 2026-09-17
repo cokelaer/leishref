@@ -3,8 +3,6 @@
 import tempfile
 from pathlib import Path
 
-import pytest
-
 from leishref.scaffold import clean_scaffolded_fasta, parse_agp
 
 

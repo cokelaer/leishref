@@ -3,7 +3,7 @@
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional
 
 
 class RagtagError(Exception):
@@ -12,7 +12,6 @@ class RagtagError(Exception):
 
 def find_ragtag_bin() -> str:
     """Find ragtag.py in PATH or known conda envs."""
-    import os
     import shutil
 
     if shutil.which("ragtag.py"):

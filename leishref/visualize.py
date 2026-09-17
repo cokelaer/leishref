@@ -2,10 +2,9 @@
 
 import gzip
 from pathlib import Path
-from typing import Optional, List
-import matplotlib.pyplot as plt
-import seaborn as sns
-from leishref.metadata import catalog, CATALOG_DIR
+from typing import List, Optional
+
+from leishref.metadata import catalog
 
 
 def _species_label(name: str) -> str:
@@ -63,6 +62,9 @@ def plot_genome_sizes(
     Returns:
         Path to saved plot
     """
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
     entries = catalog(catalog_dir)
     ncbi = [g for g in entries if g.source == "NCBI" and g.accession and g.stats and g.stats.get("num_bases")]
 
@@ -92,7 +94,9 @@ def plot_genome_sizes(
 
     ax.barh(range(len(ncbi)), sizes, color=bar_colors)
     ax.set_yticks(range(len(ncbi)))
-    ax.set_yticklabels([f"{sp.split()[-1] if ' ' in sp else sp} ({g.accession})" for sp, g in zip(species_labels, ncbi)], fontsize=9)
+    ax.set_yticklabels(
+        [f"{sp.split()[-1] if ' ' in sp else sp} ({g.accession})" for sp, g in zip(species_labels, ncbi)], fontsize=9
+    )
     ax.set_xlabel("Genome size (Mb)", fontsize=11)
     ax.set_title("Leishmania Genome Sizes", fontsize=12, fontweight="bold")
     ax.grid(axis="x", alpha=0.3)
@@ -122,6 +126,8 @@ def plot_genome_size_histogram(
     Returns:
         Path to saved plot
     """
+    import matplotlib.pyplot as plt
+
     entries = catalog(catalog_dir)
     ncbi = [g for g in entries if g.source == "NCBI" and g.accession and g.stats and g.stats.get("num_bases")]
 
@@ -159,6 +165,8 @@ def plot_genome_stats(
     Returns:
         Path to saved plot
     """
+    import matplotlib.pyplot as plt
+
     entries = catalog(catalog_dir)
     ncbi = [g for g in entries if g.source == "NCBI" and g.accession and g.stats]
 
