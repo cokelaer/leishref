@@ -847,6 +847,13 @@ def rename_sequences_cmd(name, flavor, local_dir):
     renamed_path.write_text(renamed)
     click.echo(f"Wrote renamed sequences to {renamed_path.name}")
 
+    # Create symlink in current directory
+    link_name = Path.cwd() / renamed_path.name
+    if link_name.exists() or link_name.is_symlink():
+        link_name.unlink()
+    link_name.symlink_to(renamed_path)
+    click.echo(f"  {link_name.name} -> {renamed_path}")
+
     # Update chromosome_map.yaml with the mapping
     if name_map:
         chrom_map = load_chromosome_map()
