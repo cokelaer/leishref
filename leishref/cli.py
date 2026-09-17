@@ -986,7 +986,7 @@ def restore(accessions, local_dir, catalog_dir, force, no_link, dry_run, from_in
                     stack.enter_context(contextlib.redirect_stdout(captured))
                     stack.enter_context(contextlib.redirect_stderr(captured))
                 click.get_current_context().invoke(
-                    download,
+                    install,
                     name=name,
                     alias=alias,
                     local_dir=local_dir,
