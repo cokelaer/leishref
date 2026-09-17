@@ -275,6 +275,66 @@ def _pick_primary_sequence_accession(record: dict, assembly_accession: str) -> O
     return _coalesce(raw, genbank, refseq)
 
 
+def _parse_roman_numeral(value: str) -> Optional[int]:
+    values = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
+    token = (value or "").strip().upper()
+    if not token or any(ch not in values for ch in token):
+        return None
+    total = 0
+    previous = 0
+    for char in reversed(token):
+        current = values[char]
+        if current < previous:
+            total -= current
+        else:
+            total += current
+            previous = current
+    if total <= 0:
+        return None
+    return total if _to_roman(total) == token else None
+
+
+def _to_roman(value: int) -> str:
+    numerals = [
+        (1000, "M"),
+        (900, "CM"),
+        (500, "D"),
+        (400, "CD"),
+        (100, "C"),
+        (90, "XC"),
+        (50, "L"),
+        (40, "XL"),
+        (10, "X"),
+        (9, "IX"),
+        (5, "V"),
+        (4, "IV"),
+        (1, "I"),
+    ]
+    out = []
+    n = value
+    for number, symbol in numerals:
+        while n >= number:
+            out.append(symbol)
+            n -= number
+    return "".join(out)
+
+
+def _sequence_index(record: dict, label: str) -> Optional[int]:
+    assigned = str(
+        _coalesce(
+            record.get("assigned_molecule"),
+            record.get("chr_name"),
+            record.get("chromosome"),
+            "",
+        )
+    ).strip()
+    token = assigned or label.replace("chromosome", "", 1).strip()
+
+    if token.isdigit():
+        return int(token)
+    return _parse_roman_numeral(token)
+
+
 def _parse_sequence_correspondence(sequence_summary: list, assembly_accession: str) -> list[dict]:
     """Build chromosome correspondence entries from datasets sequence report records."""
     entries = []
@@ -286,11 +346,10 @@ def _parse_sequence_correspondence(sequence_summary: list, assembly_accession: s
                 continue
 
             seen.add(accession)
-            entry = {
-                "accession": accession,
-                "index": len(entries) + 1,
-            }
-            entry["name"] = "maxicircle" if _looks_like_maxicircle(sequence) else _chromosome_label(sequence, accession)
+            name = "maxicircle" if _looks_like_maxicircle(sequence) else _chromosome_label(sequence, accession)
+            index = _sequence_index(sequence, name)
+
+            entry = {"accession": accession, "index": index, "name": name}
 
             genbank = sequence.get("genbank_accession")
             refseq = sequence.get("refseq_accession")
@@ -298,11 +357,30 @@ def _parse_sequence_correspondence(sequence_summary: list, assembly_accession: s
                 entry["genbank_accession"] = genbank
             if refseq:
                 entry["refseq_accession"] = refseq
-            if entry["name"] == "maxicircle":
+            if name == "maxicircle":
                 entry["type"] = "maxicircle"
 
             entries.append(entry)
-    return entries
+
+    used_indexes = set()
+    for entry in entries:
+        index = entry["index"]
+        if index is None or index in used_indexes:
+            entry["index"] = None
+            continue
+        used_indexes.add(index)
+
+    next_fallback_index = 1
+    for entry in entries:
+        if entry["index"] is not None:
+            continue
+        while next_fallback_index in used_indexes:
+            next_fallback_index += 1
+        entry["index"] = next_fallback_index
+        used_indexes.add(next_fallback_index)
+        next_fallback_index += 1
+
+    return sorted(entries, key=lambda item: item["index"])
 
 
 def fetch_chromosome_correspondence(accession: str) -> list[dict]:
