@@ -254,6 +254,8 @@ def plot_chromosome_length_histogram(
     species_filter: Optional[List[str]] = None,
 ) -> Path:
     """Plot histogram + boxplot of chromosome/sequence lengths from local FASTA files."""
+    import matplotlib.pyplot as plt
+
     entries = catalog(catalog_dir)
     lengths = []
 
