@@ -67,7 +67,14 @@ Common reference strains have shorthand aliases in ``leishref/data/aliases.txt``
 
     LdHU3	GCA_900635355.2
     Ld1S	GCA_000227135.2
-    LtL590	GCA_000410715.1
+    LtrL590	GCA_000410715.1
+    LdMHOM_BR_75_M2904	GCA_000002845.2
+
+Alias format: species code (L + 1-2 letters: Ld, Lm, Li, Ltr, etc.) plus strain discriminator
+(e.g., ``1S``, ``BPK``, ``L590``). WHO strain nomenclature is preserved when available:
+``MHOM`` = mammalian human origin (e.g., ``MHOM/BR/75/M2904``: Brazil, 1975, human isolate);
+``MCAN`` = canine; ``MCEB`` = other mammal; ``MDAS`` = rodent. The full format
+``HOST/COUNTRY/YEAR/ID`` encodes epidemiology and is retained in aliases for traceability.
 
 Use aliases in search, download, and info commands.
 

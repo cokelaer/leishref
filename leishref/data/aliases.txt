@@ -16,7 +16,12 @@
 #   * Ambiguous a-species (2 letters): Lad (adleri), Lae (aethiopica), Lam (amazonensis), Lar (arabica)
 #   * Other species: L + 2 letters (e.g., Lb=braziliensis, Le=enriettii, Lg=guyanensis)
 # - Strain discriminator: appended to species code (e.g., Ld1S, LdBPK, LtrL590)
-# - MHOM strains: Ld.MHOM_BR_75_M2904 format
+# - WHO strain nomenclature (MHOM/MCAN/MCEB/MDAS/etc.): kept as-is for tracking provenance
+#   * MHOM = Mammalian Human origin (e.g., MHOM/BR/75/M2904: Brazil, 1975, human isolate M2904)
+#   * MCAN = Mammalian CANine (dog)
+#   * MCEB = Mammalian CEB (other mammal, e.g., Cerdocyon)
+#   * MDAS = Mammalian DASyprocta (rodent)
+#   * Full format: XXXX/COUNTRY/YEAR/ID; aliases preserve it: LdMHOM_BR_75_M2904
 # - RefSeq/GenBank: GCF has no suffix; GCA with same assembly gets _GCA suffix
 # - Same strain, several assemblies: suffix with release year (e.g., LpaMHOM_PA_94_PSC-1_2014,
 #   LpaMHOM_PA_94_PSC-1_2025) or submitter tag (_USP); same year -> append b, c (…_2017, …_2017b)
