@@ -106,8 +106,11 @@ def rename_fasta_sequences(
     for i, info in enumerate(chrom_info, 1):
         old_name = info.get("accession", f"sequence_{i}")
 
+        # Contigs (NW_*) keep original ID, no renaming
+        if old_name.startswith("NW_"):
+            new_name = old_name
         # Special handling for maxicircle (kinetoplast DNA)
-        if info.get("type") == "maxicircle":
+        elif info.get("type") == "maxicircle":
             new_name = "maxicircle"
         elif flavor == "chr":
             new_name = f"chromosome {_roman_numeral(i)}"
