@@ -1,7 +1,5 @@
 """Genome statistics computed in a single pass."""
 
-import pytest
-
 from leishref.checksums import genome_stats, md5_file
 
 
