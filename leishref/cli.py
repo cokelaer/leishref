@@ -1452,7 +1452,7 @@ def scaffold(query, reference, alias, clean, catalog_dir, local_dir, no_link):
         tmp = Path(tmp)
         scaffold_fasta, scaffold_agp = run_scaffold(ref_fasta, query, tmp)
 
-        result = tmp / f"{alias}.fa"
+        result = tmp / f"{alias}.fna"
         if clean:
             result.write_text(clean_scaffolded_fasta(scaffold_fasta, scaffold_agp))
         else:
