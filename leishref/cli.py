@@ -725,16 +725,17 @@ def verify(local_dir, quick):
     installed = local(Path(local_dir))
     ok, missing, mismatch = 0, [], []
 
-    for genome in installed:
-        for kind, path, recorded in genome.file_paths():
-            if not path.exists():
-                missing.append((genome.identifier, path))
-            elif quick or not recorded:
-                ok += 1
-            elif md5_file(path) != recorded:
-                mismatch.append((genome.identifier, path))
-            else:
-                ok += 1
+    with click.progressbar(installed, label="Verifying", show_eta=True, show_pos=True) as bar:
+        for genome in bar:
+            for kind, path, recorded in genome.file_paths():
+                if not path.exists():
+                    missing.append((genome.identifier, path))
+                elif quick or not recorded:
+                    ok += 1
+                elif md5_file(path) != recorded:
+                    mismatch.append((genome.identifier, path))
+                else:
+                    ok += 1
 
     console = _console()
     console.print(f"Checked [bold]{len(installed)}[/] installed genomes")
