@@ -58,13 +58,16 @@ def detect_sequences_from_fasta(fasta_path: Path) -> list[dict]:
 
     for match in re.finditer(r"^>(\S+)", content, re.MULTILINE):
         seq_id = match.group(1)
-        sequences.append(
-            {
-                "accession": seq_id,
-                "name": seq_id,
-                "index": len(sequences) + 1,
-            }
-        )
+        index = len(sequences) + 1
+        entry = {
+            "accession": seq_id,
+            "name": seq_id,
+            "index": index,
+        }
+        # Mark sequence 37 as maxicircle (kinetoplast DNA)
+        if index == 37:
+            entry["type"] = "maxicircle"
+        sequences.append(entry)
 
     return sequences
 
