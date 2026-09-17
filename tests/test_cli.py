@@ -549,7 +549,7 @@ def test_rename_sequences_auto_populates_chromosome_map(installed, tmp_path):
 
     # Check that sequence was renamed (from >c1 to >1)
     content = output_file.read_text()
-    assert ">1 " in content
+    assert ">1\n" in content
     assert ">c1" not in content
 
 
@@ -565,5 +565,5 @@ def test_rename_sequences_with_roman_flavor(installed):
 
     # Check that sequence was renamed (from >c1 to >I)
     content = output_file.read_text()
-    assert ">I " in content
+    assert ">I\n" in content
     assert ">c1" not in content

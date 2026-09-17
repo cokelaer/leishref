@@ -126,8 +126,8 @@ def rename_fasta_sequences(
 
     for old, new in name_map.items():
         content = re.sub(
-            rf"^>({re.escape(old)})(?:\s|$)",
-            f">{new} ",
+            rf"^>{re.escape(old)}(?:\s.*)?$",
+            f">{new}",
             content,
             flags=re.MULTILINE,
         )
