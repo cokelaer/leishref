@@ -89,6 +89,17 @@ def suggest_alias(genome) -> str:
     """A readable name for this genome, for the user to accept or ignore."""
     if genome.source == "Leishref scaffold" and genome.identifier:
         return genome.identifier
+
+    # For scaffolds, format as <query_abbrev>.scaffold.<reference>
+    if genome.source == "Scaffold" and genome.identifier and "scaffold" in genome.identifier:
+        parts = genome.identifier.split(".")
+        if len(parts) >= 3 and "scaffold" in parts:
+            idx = parts.index("scaffold")
+            if idx >= 1:
+                query = parts[0]  # e.g., "Ltropica"
+                reference = parts[idx - 1]  # e.g., "Ld1S"
+                return f"{species_abbrev(query)}.scaffold.{reference}"
+
     return ".".join(
         (
             species_abbrev(genome.species),
