@@ -177,9 +177,12 @@ def stats_from_summary(raw: dict) -> dict:
     return {k: v for k, v in stats.items() if v is not None}
 
 
-def _summary(accessions: list) -> list:
+def _summary(accessions: list, report: Optional[str] = None) -> list:
     """Run `datasets summary` for one batch of accessions."""
-    cmd = ["datasets", "summary", "genome", "accession", *accessions, "--as-json-lines"]
+    cmd = ["datasets", "summary", "genome", "accession", *accessions]
+    if report:
+        cmd.extend(["--report", report])
+    cmd.append("--as-json-lines")
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
         return []
@@ -197,6 +200,117 @@ def fetch_metadata(accession: str) -> dict:
     """Metadata for one assembly. Empty dict when NCBI has nothing."""
     records = _summary([accession])
     return _parse_summary(records[0]) if records else {}
+
+
+def _iter_sequence_records(node):
+    """Yield sequence report records from nested datasets JSON structures."""
+    if isinstance(node, list):
+        for item in node:
+            yield from _iter_sequence_records(item)
+        return
+
+    if not isinstance(node, dict):
+        return
+
+    record_keys = {
+        "genbank_accession",
+        "refseq_accession",
+        "assigned_molecule",
+        "assigned_molecule_location_type",
+        "chromosome",
+        "chr_name",
+        "sequence_name",
+    }
+    if record_keys.intersection(node.keys()):
+        yield node
+
+    for value in node.values():
+        yield from _iter_sequence_records(value)
+
+
+def _coalesce(*values):
+    for value in values:
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _looks_like_maxicircle(record: dict) -> bool:
+    text = str(
+        _coalesce(record.get("role"), record.get("sequence_role"), record.get("sequence_name"), record.get("name"), "")
+    ).lower()
+    return any(token in text for token in ("maxicircle", "kinetoplast", "mitochond"))
+
+
+def _chromosome_label(record: dict, fallback: str) -> str:
+    assigned = _coalesce(
+        record.get("chr_name"),
+        record.get("chromosome"),
+        record.get("assigned_molecule"),
+        record.get("assigned_molecule_name"),
+    )
+    if assigned in (None, ""):
+        return fallback
+
+    assigned_text = str(assigned).strip()
+    if assigned_text.lower().startswith("chromosome"):
+        return assigned_text
+
+    location = str(record.get("assigned_molecule_location_type") or "").lower()
+    role = str(_coalesce(record.get("role"), record.get("sequence_role"), "")).lower()
+    if "chromosome" in location or "chromosome" in role:
+        return f"chromosome {assigned_text}"
+    return assigned_text
+
+
+def _pick_primary_sequence_accession(record: dict, assembly_accession: str) -> Optional[str]:
+    genbank = record.get("genbank_accession")
+    refseq = record.get("refseq_accession")
+    raw = record.get("accession")
+
+    if assembly_accession.startswith("GCF_"):
+        return _coalesce(refseq, genbank, raw)
+    if assembly_accession.startswith("GCA_"):
+        return _coalesce(genbank, refseq, raw)
+    return _coalesce(raw, genbank, refseq)
+
+
+def _parse_sequence_correspondence(sequence_summary: list, assembly_accession: str) -> list[dict]:
+    """Build chromosome correspondence entries from datasets sequence report records."""
+    entries = []
+    seen = set()
+    for record in sequence_summary:
+        for sequence in _iter_sequence_records(record):
+            accession = _pick_primary_sequence_accession(sequence, assembly_accession)
+            if not accession or accession in seen:
+                continue
+
+            seen.add(accession)
+            entry = {
+                "accession": accession,
+                "index": len(entries) + 1,
+            }
+            entry["name"] = "maxicircle" if _looks_like_maxicircle(sequence) else _chromosome_label(sequence, accession)
+
+            genbank = sequence.get("genbank_accession")
+            refseq = sequence.get("refseq_accession")
+            if genbank:
+                entry["genbank_accession"] = genbank
+            if refseq:
+                entry["refseq_accession"] = refseq
+            if entry["name"] == "maxicircle":
+                entry["type"] = "maxicircle"
+
+            entries.append(entry)
+    return entries
+
+
+def fetch_chromosome_correspondence(accession: str) -> list[dict]:
+    """Fetch GenBank/RefSeq-to-chromosome correspondence for one assembly accession."""
+    records = _summary([accession], report="sequence")
+    if not records:
+        return []
+    return _parse_sequence_correspondence(records, accession)
 
 
 def fetch_metadata_many(accessions, batch_size: int = 50):

@@ -109,7 +109,8 @@ Flavors:
 - ``roman`` — Rename to 'I', 'II', 'III', etc. (Roman numerals)
 - ``name`` — Use names from local chromosome database
 
-Requires chromosome info in local database (populated during ``leishref dev fetch`` from NCBI).
+Requires chromosome info in local database (populated during ``leishref dev fetch`` or
+``leishref dev fetch-chromosomes`` from NCBI sequence reports).
 Rewrites FASTA file in-place and updates stored checksum.
 
 leishref prune-scaffold
@@ -148,6 +149,19 @@ leishref dev fetch
 Add a genome from NCBI::
 
     leishref dev fetch --accession GCA_000227135.2
+
+Also updates ``chromosome_map.yaml`` with chromosome correspondence returned by NCBI.
+
+leishref dev fetch-chromosomes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Fetch sequence-level correspondence for one assembly accession::
+
+    leishref dev fetch-chromosomes GCA_002243465.1
+    leishref dev fetch-chromosomes GCF_000002875.2 --no-save
+
+Prints sequence accession to chromosome-name mappings plus GenBank/RefSeq counterparts,
+and saves the results into ``chromosome_map.yaml`` by default.
 
 leishref dev add
 ~~~~~~~~~~~~~~~~

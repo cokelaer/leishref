@@ -40,7 +40,13 @@ from leishref.metadata import (
     write_genome,
 )
 from leishref.naming import suggest_alias
-from leishref.ncbi import fetch_fasta_gff, fetch_metadata, fetch_metadata_many, species_from_organism
+from leishref.ncbi import (
+    fetch_chromosome_correspondence,
+    fetch_fasta_gff,
+    fetch_metadata,
+    fetch_metadata_many,
+    species_from_organism,
+)
 from leishref.prune import prune_fasta
 from leishref.scaffold import clean_scaffolded_fasta, ragtag_version, run_scaffold
 from leishref.visualize import plot_genome_size_histogram, plot_genome_sizes, plot_genome_stats
@@ -108,7 +114,7 @@ click.rich_click.COMMAND_GROUPS = {
     "leishref dev": [
         {
             "name": "Adding genomes",
-            "commands": ["fetch", "add", "import", "scaffold", "derive-agp"],
+            "commands": ["fetch", "fetch-chromosomes", "add", "import", "scaffold", "derive-agp"],
         },
         {
             "name": "Publishing and managing",
@@ -1342,10 +1348,50 @@ def fetch(accession, alias, species, strain, catalog_dir, local_dir, force, no_l
         write_genome(entry, genome)
         click.echo(f"Catalog entry: {entry}")
 
+        from leishref.chromosomes import load_chromosome_map, save_chromosome_map
+
+        correspondence = fetch_chromosome_correspondence(accession)
+        if correspondence:
+            chrom_map = load_chromosome_map(root)
+            chrom_map[accession] = correspondence
+            save_chromosome_map(chrom_map, root)
+            click.echo(f"Updated chromosome mapping for {accession}")
+        else:
+            click.echo(f"Warning: no chromosome mapping returned for {accession}", err=True)
+
         if alias:
             installed = _install(genome, alias, [fasta, gff], Path(local_dir))
             click.echo(f"Installed into {installed}")
             _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
+
+
+@dev.command("fetch-chromosomes")
+@click.argument("accession")
+@click.option("--catalog-dir", type=click.Path(), help="Catalog directory holding chromosome_map.yaml")
+@click.option("--save/--no-save", default=True, show_default=True, help="Persist mapping into chromosome_map.yaml")
+def fetch_chromosomes(accession, catalog_dir, save):
+    """Fetch official chromosome names for an accession from NCBI sequence report."""
+    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
+    correspondence = fetch_chromosome_correspondence(accession)
+    if not correspondence:
+        click.echo(f"No chromosome mapping found for {accession}", err=True)
+        raise SystemExit(1)
+
+    click.echo(f"{accession}: {len(correspondence)} sequences")
+    for record in correspondence:
+        click.echo(
+            "  "
+            f"{record['accession']} -> {record.get('name', record['accession'])}"
+            f" (GenBank={record.get('genbank_accession', '-')}, RefSeq={record.get('refseq_accession', '-')})"
+        )
+
+    if save:
+        from leishref.chromosomes import load_chromosome_map, save_chromosome_map
+
+        chrom_map = load_chromosome_map(root)
+        chrom_map[accession] = correspondence
+        save_chromosome_map(chrom_map, root)
+        click.echo(f"Updated {root / 'chromosome_map.yaml'}")
 
 
 @dev.command()
