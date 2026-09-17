@@ -4,6 +4,11 @@
 # ⚠️  MANUALLY MAINTAINED — Do not auto-regenerate
 # Edit this file directly to add/modify aliases and add comments/decisions.
 #
+# ⚠️  ALIASES ARE NOT STABLE — They may change to fix typos, adopt better conventions,
+# or reflect biology more clearly. Accessions (GCA_/GCF_) are stable. Users who need
+# reproducibility should record and refer to genomes by accession, not alias.
+# See download.rst for details on accessions.txt and 'leishref restore'.
+#
 # NAMING RULES:
 # - Species code: L + 1-2 letter abbreviation
 #   * Unambiguous (1 letter): Ld (donovani), Lm (major), Li (infantum)
