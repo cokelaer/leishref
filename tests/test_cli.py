@@ -113,7 +113,7 @@ def test_info_on_an_unknown_name_fails_clearly(installed):
 def test_search_narrows_with_more_terms(installed):
     base, _ = installed
     broad = run(["search", "tropica", "--local-dir", "data"], base)
-    narrow = run(["search", "tropica", "zenodo", "--local-dir", "data"], base)
+    narrow = run(["search", "tropica", "L590", "--local-dir", "data"], base)
 
     assert broad.exit_code == narrow.exit_code == 0
     assert int(narrow.output.split()[0]) < int(broad.output.split()[0])
@@ -165,13 +165,13 @@ def test_install_without_an_alias_suggests_one(tmp_path):
     assert "--alias LtrL590" in result.output
 
 
-def test_install_suggests_scaffold_alias_from_aliases_txt(tmp_path):
-    """Install should suggest alias from aliases.txt for scaffold genomes."""
-    result = run(["install", "LtrL590.scaffold.Ld1S", "--local-dir", "data"], tmp_path)
+def test_install_by_catalog_alias_uses_aliases_txt(tmp_path):
+    """Install should resolve catalog aliases through aliases.txt."""
+    result = run(["install", "LtrL590", "--local-dir", "data"], tmp_path)
 
     assert result.exit_code == 2
     assert "--alias is required" in result.output
-    assert "--alias LtrL590.scaffold.Ld1S" in result.output
+    assert "--alias LtrL590" in result.output
 
 
 def test_install_rejects_an_unknown_name_before_asking_for_an_alias(tmp_path):

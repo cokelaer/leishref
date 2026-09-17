@@ -1442,6 +1442,27 @@ files = [
 markers = {main = "extra == \"dev\" and python_full_version <= \"3.11.0a6\"", dev = "python_full_version <= \"3.11.0a6\""}
 
 [[package]]
+name = "tqdm"
+version = "4.70.1"
+description = "Fast, Extensible Progress Meter"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "tqdm-4.70.1-py3-none-any.whl", hash = "sha256:c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73"},
+    {file = "tqdm-4.70.1.tar.gz", hash = "sha256:cefd0eca11b2a37a3aee776544d4f4ae913f02688135b5556b8788dfa474afc4"},
+]
+
+[package.dependencies]
+colorama = {version = "*", markers = "platform_system == \"Windows\""}
+
+[package.extras]
+discord = ["envwrap", "requests"]
+notebook = ["ipywidgets (>=6)"]
+slack = ["envwrap", "slack-sdk"]
+telegram = ["envwrap", "requests"]
+
+[[package]]
 name = "typing-extensions"
 version = "4.16.0"
 description = "Backported and Experimental Type Hints for Python 3.9+"
@@ -1553,4 +1574,4 @@ dev = ["black", "flake8", "isort", "pre-commit", "pytest", "pytest-cov"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9"
-content-hash = "62109aae9dea8bf7f47bcd09042369dda4a272dde7f9db4b5d5bee65a586ae6e"
+content-hash = "a8858bb0046b76206223be691cb4cb09fe6194ec61fa5d6d62fc6612a6f3975d"
