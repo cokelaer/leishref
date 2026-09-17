@@ -592,7 +592,7 @@ def test_bundle_fails_on_missing_genome(installed):
 
     result = run(["bundle", "NonExistent", "--local-dir", "data"], base)
     assert result.exit_code == 1
-    assert "Not installed" in result.output
+    assert "Not found" in result.output
 
 
 def test_bundle_multiple_genomes(tmp_path):
@@ -629,3 +629,50 @@ def test_bundle_multiple_genomes(tmp_path):
         assert "Ld1S/assembly.fa" in members
         assert "Ltrop.L590/assembly.fa" in members
         assert len(members) == 2
+
+
+def test_bundle_from_symlinks(tmp_path):
+    """Bundle can resolve and pack files from symlinks in current directory."""
+    import tarfile
+
+    # Setup local database
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    for name in ("Ld1S", "LdBPK"):
+        genome_dir = data_dir / name
+        genome_dir.mkdir()
+        fasta = genome_dir / "assembly.fa"
+        fasta.write_text(f">seq_{name}\nACGT\n")
+
+        write_genome(
+            genome_dir,
+            Genome(
+                identifier=name,
+                source="Local",
+                files={"fasta": fasta.name},
+                checksums={"fasta": md5_file(fasta)},
+            ),
+        )
+
+    # Create symlinks in work directory
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    (work_dir / "Ld1S.fna").symlink_to(data_dir / "Ld1S" / "assembly.fa")
+    (work_dir / "LdBPK.fna").symlink_to(data_dir / "LdBPK" / "assembly.fa")
+
+    output = work_dir / "genomes.tar.gz"
+    result = run(
+        ["bundle", "*.fna", "--local-dir", str(data_dir), "--basedir", str(work_dir), "--output", str(output)],
+        work_dir,
+    )
+    assert result.exit_code == 0
+    assert output.exists()
+
+    # Verify tarball contains actual files, not symlinks
+    with tarfile.open(output, "r:gz") as tar:
+        members = tar.getnames()
+        assert "Ld1S.fna" in members
+        assert "LdBPK.fna" in members
+        # Check files are extracted correctly
+        content = tar.extractfile("Ld1S.fna").read().decode()
+        assert ">seq_Ld1S" in content
