@@ -43,7 +43,12 @@ from leishref.naming import suggest_alias
 from leishref.ncbi import fetch_fasta_gff, fetch_metadata, fetch_metadata_many, species_from_organism
 from leishref.prune import prune_fasta
 from leishref.scaffold import clean_scaffolded_fasta, ragtag_version, run_scaffold
-from leishref.visualize import plot_genome_size_histogram, plot_genome_sizes, plot_genome_stats
+from leishref.visualize import (
+    plot_chromosome_length_histogram,
+    plot_genome_size_histogram,
+    plot_genome_sizes,
+    plot_genome_stats,
+)
 from leishref.zenodo import (
     ZenodoError,
     create_deposition,
@@ -102,7 +107,7 @@ click.rich_click.COMMAND_GROUPS = {
         },
         {
             "name": "Plotting",
-            "commands": ["plot-stats", "plot-sizes", "plot-histogram"],
+            "commands": ["plot-stats", "plot-sizes", "plot-histogram", "plot-chromosome-histogram"],
         },
     ],
     "leishref dev": [
@@ -1225,7 +1230,7 @@ def plot_sizes(catalog_dir, output, species, include_kinetoplast):
 @click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
 @click.option("--output", type=click.Path(), help="Save plot to this file")
 def plot_stats(catalog_dir, output):
-    """Plot genome statistics: size, contig count, GC%.
+    """Plot genome statistics: genome size, scaffold count, contig count, scaffold N50.
 
     Examples:
 
@@ -1237,6 +1242,32 @@ def plot_stats(catalog_dir, output):
         out = plot_genome_stats(
             Path(catalog_dir) if catalog_dir else None,
             Path(output) if output else None,
+        )
+        click.echo(f"Saved plot to {out}")
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+
+@cli.command("plot-chromosome-histogram")
+@click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
+@click.option("--output", type=click.Path(), help="Save plot to this file")
+@click.option("--species", multiple=True, help="Filter by species (can repeat)")
+def plot_chromosome_histogram(catalog_dir, output, species):
+    """Plot chromosome/sequence length histogram from available local FASTA files.
+
+    Examples:
+
+    \b
+      leishref plot-chromosome-histogram
+      leishref plot-chromosome-histogram --output chromosome_lengths.png
+      leishref plot-chromosome-histogram --species tropica
+    """
+    try:
+        out = plot_chromosome_length_histogram(
+            Path(catalog_dir) if catalog_dir else None,
+            Path(output) if output else None,
+            list(species) if species else None,
         )
         click.echo(f"Saved plot to {out}")
     except ValueError as e:
