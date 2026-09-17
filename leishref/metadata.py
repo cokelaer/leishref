@@ -185,19 +185,21 @@ def write_genome(directory: Path, genome: Genome) -> Path:
 def catalog_group(genome) -> str:
     """The catalog subdirectory a genome belongs in.
 
-    Grouping follows how the genome was *made*, not where it currently lives: a
-    scaffold stays under scaffolds/ after it is deposited on Zenodo, so publishing an
-    entry never moves it.
+    Grouping follows the source: custom entries stay in custom/ (even if on Zenodo),
+    scaffolds go to scaffolds/, NCBI accessions to ncbi/, TriTrypDB to tritrypdb/,
+    and Zenodo-published genomes to zenodo/.
     """
+    source = (genome.source or "").lower()
+    if source == "custom":
+        return "custom"
     if genome.scaffold:
         return "scaffolds"
+    if source in ("tritrypdb", "ncbi"):
+        return source
     accession = genome.accession or ""
     if accession.startswith(("GCA_", "GCF_")):
         return "ncbi"
-    source = (genome.source or "").lower()
-    if source in ("tritrypdb", "zenodo", "ncbi", "custom"):
-        return source
-    if genome.zenodo_doi:
+    if source == "zenodo" or genome.zenodo_doi:
         return "zenodo"
     return "local"
 
