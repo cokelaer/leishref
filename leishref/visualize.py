@@ -3,10 +3,7 @@
 from pathlib import Path
 from typing import List, Optional
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-from leishref.metadata import CATALOG_DIR, catalog
+from leishref.metadata import catalog
 
 
 def plot_genome_sizes(
@@ -26,6 +23,9 @@ def plot_genome_sizes(
     Returns:
         Path to saved plot
     """
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
     entries = catalog(catalog_dir)
     ncbi = [g for g in entries if g.source == "NCBI" and g.accession and g.stats and g.stats.get("num_bases")]
 
@@ -87,6 +87,8 @@ def plot_genome_size_histogram(
     Returns:
         Path to saved plot
     """
+    import matplotlib.pyplot as plt
+
     entries = catalog(catalog_dir)
     ncbi = [g for g in entries if g.source == "NCBI" and g.accession and g.stats and g.stats.get("num_bases")]
 
@@ -124,6 +126,8 @@ def plot_genome_stats(
     Returns:
         Path to saved plot
     """
+    import matplotlib.pyplot as plt
+
     entries = catalog(catalog_dir)
     ncbi = [g for g in entries if g.source == "NCBI" and g.accession and g.stats]
 
