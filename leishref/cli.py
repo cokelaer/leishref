@@ -387,13 +387,15 @@ def _install(genome: Genome, alias: str, sources, local_root: Path, move: bool =
 ACCESSIONS_FILE = "accessions.txt"
 
 #: Catalog sections in 'info', in reading order: the upstream archives first, then what
-#: was derived here. Scaffolds and anything under "other" are the entries that live on
-#: Zenodo rather than in an archive of their own.
+#: was derived here. Scaffolds are locally-derived. Custom genomes are user-added.
+#: Zenodo and local entries are everything else.
 INFO_SECTIONS = {
     "ncbi": "NCBI",
     "tritrypdb": "TriTrypDB",
-    "scaffold": "Scaffold",
-    "other": "Other",
+    "scaffolds": "Scaffolds",
+    "custom": "Custom",
+    "zenodo": "Zenodo",
+    "local": "Other",
 }
 
 

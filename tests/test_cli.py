@@ -508,7 +508,7 @@ def test_info_counts_each_catalog_section(installed):
     result = run(["info", "--local-dir", "data"], base)
 
     assert result.exit_code == 0
-    for label in ("NCBI", "TriTrypDB", "Scaffold"):
+    for label in ("NCBI", "TriTrypDB", "Scaffolds"):
         assert label in result.output
 
 
@@ -517,7 +517,7 @@ def test_info_sections_are_in_reading_order(installed):
     base, _ = installed
     output = run(["info", "--local-dir", "data"], base).output
 
-    order = [output.index(f"\n{label} (") for label in ("NCBI", "TriTrypDB", "Scaffold") if f"\n{label} (" in output]
+    order = [output.index(f"\n{label} (") for label in ("NCBI", "TriTrypDB", "Scaffolds") if f"\n{label} (" in output]
     assert order == sorted(order)
 
 
@@ -528,5 +528,7 @@ def test_info_counts_add_up_to_the_catalog_total(installed):
     output = run(["info", "--local-dir", "data"], base).output
 
     total = int(re.search(r"Catalog: (\d+) genomes", output).group(1))
-    counted = sum(int(n) for n in re.findall(r"^  (?:NCBI|TriTrypDB|Scaffold|Other)\s+(\d+)$", output, re.M))
+    counted = sum(
+        int(n) for n in re.findall(r"^  (?:NCBI|TriTrypDB|Scaffolds|Custom|Zenodo|Other)\s+(\d+)$", output, re.M)
+    )
     assert counted == total
