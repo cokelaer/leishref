@@ -22,6 +22,14 @@ leishref/data/**/*.gff
 leishref/data/**/*.fai
 !leishref/data/**/metadata.yaml
 
+# Test installs should go to /data/, not the package catalog.
+# Only version-control the structured catalog groups.
+leishref/data/*/
+!leishref/data/ncbi/
+!leishref/data/scaffold/
+!leishref/data/tritrypdb/
+!leishref/data/zenodo/
+
 # Legacy working directories, kept out of the way.
 NCBI/
 TriTryDB68/
