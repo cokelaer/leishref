@@ -1,8 +1,8 @@
 Command Reference
 ==================
 
-User commands
--------------
+Using the database
+------------------
 
 leishref download
 ~~~~~~~~~~~~~~~~~
@@ -27,6 +27,22 @@ Download all NCBI genomes from the catalog::
 
 Uses accession as local alias for each genome. Quiet by default (progress bar only).
 Reports failed downloads without stopping the batch.
+
+Options:
+- ``--force`` — Download again even if already installed
+- ``--no-link`` — Skip alias-named symlinks
+- ``--verbose`` — Show each download details (MD5, etc) instead of progress bar
+
+leishref download-ncbi-refseq
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Download RefSeq (GCF) genomes only from NCBI::
+
+    leishref download-ncbi-refseq
+    leishref download-ncbi-refseq --force
+
+Filters out GenBank (GCA) duplicates, downloading only the RefSeq-annotated genomes.
+Uses accession as local alias. Same options and behavior as ``download-ncbi``.
 
 Options:
 - ``--force`` — Download again even if already installed
