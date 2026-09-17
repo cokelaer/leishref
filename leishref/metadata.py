@@ -20,7 +20,7 @@ METADATA_FILE = "metadata.yaml"
 CATALOG_DIR = Path(__file__).parent / "data"
 
 #: Catalog entries are grouped by where the genome came from, one directory per origin.
-CATALOG_GROUPS = ("ncbi", "scaffolds", "zenodo", "tritrypdb", "custom", "local")
+CATALOG_GROUPS = ("ncbi", "zenodo", "tritrypdb", "leishref", "local")
 
 #: Local database, relative to wherever leishref is run.
 LOCAL_DIR = Path("data")
@@ -183,16 +183,16 @@ def catalog_group(genome) -> str:
     """The catalog subdirectory a genome belongs in.
 
     Grouping follows how the genome was *made*, not where it currently lives: a
-    scaffold stays under scaffolds/ after it is deposited on Zenodo, so publishing an
+    scaffold stays under leishref/ after it is deposited on Zenodo, so publishing an
     entry never moves it.
     """
     if genome.scaffold:
-        return "scaffolds"
+        return "leishref"
     accession = genome.accession or ""
     if accession.startswith(("GCA_", "GCF_")):
         return "ncbi"
     source = (genome.source or "").lower()
-    if source in ("tritrypdb", "zenodo", "ncbi", "custom"):
+    if source in ("tritrypdb", "zenodo", "ncbi", "leishref"):
         return source
     if genome.zenodo_doi:
         return "zenodo"
