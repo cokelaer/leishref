@@ -45,9 +45,8 @@ def get_chromosome_info(accession: str, data_dir: Path = None) -> list[dict]:
     Returns: [{"name": "chromosome I", "index": 1}, ...]
     """
     chrom_map = load_chromosome_map(data_dir)
-    info = chrom_map.get(accession)
-    if info:
-        return info
+    if accession in chrom_map:
+        return chrom_map[accession]
 
     if accession.startswith("GCA_"):
         return chrom_map.get("GCF_" + accession[4:], [])
