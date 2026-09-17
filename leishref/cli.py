@@ -1018,11 +1018,10 @@ def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verb
 
 @cli.command("install-ncbi")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
 @click.option("--force", is_flag=True, help="Install again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlinks")
 @click.option("--verbose", is_flag=True, help="Show each install details instead of progress bar")
-def install_ncbi(local_dir, catalog_dir, force, no_link, verbose):
+def install_ncbi(local_dir, force, no_link, verbose):
     """Install all NCBI entries from the catalog.
 
     Examples:
@@ -1031,7 +1030,7 @@ def install_ncbi(local_dir, catalog_dir, force, no_link, verbose):
       leishref install-ncbi
       leishref install-ncbi --force
     """
-    entries = catalog(Path(catalog_dir) if catalog_dir else None)
+    entries = catalog()
     ncbi_genomes = [g for g in entries if g.source == "NCBI" and g.accession]
 
     if not ncbi_genomes:
@@ -1044,8 +1043,7 @@ def install_ncbi(local_dir, catalog_dir, force, no_link, verbose):
 
     for genome in bar:
         # Prefer catalog alias (Ld1S, LdBPK), fall back to suggest_alias
-        catalog_root = Path(catalog_dir) if catalog_dir else None
-        alias = get_catalog_alias(genome.accession, catalog_root) if genome.accession else None
+        alias = get_catalog_alias(genome.accession) if genome.accession else None
         if not alias:
             alias = suggest_alias(genome)
             alias = alias.replace("/", "_")  # Sanitize path separators
@@ -1058,11 +1056,10 @@ def install_ncbi(local_dir, catalog_dir, force, no_link, verbose):
                     stack.enter_context(contextlib.redirect_stdout(captured))
                     stack.enter_context(contextlib.redirect_stderr(captured))
                 click.get_current_context().invoke(
-                    download,
+                    install,
                     name=genome.accession,
                     alias=alias,
                     local_dir=local_dir,
-                    catalog_dir=catalog_dir,
                     force=force,
                     no_link=no_link,
                 )
@@ -1083,11 +1080,10 @@ def install_ncbi(local_dir, catalog_dir, force, no_link, verbose):
 
 @cli.command("install-ncbi-refseq")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option("--catalog-dir", type=click.Path(), help="Read the catalog from here instead")
 @click.option("--force", is_flag=True, help="Install again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlinks")
 @click.option("--verbose", is_flag=True, help="Show each install details instead of progress bar")
-def install_ncbi_refseq(local_dir, catalog_dir, force, no_link, verbose):
+def install_ncbi_refseq(local_dir, force, no_link, verbose):
     """Install all RefSeq (GCF) NCBI entries from the catalog.
 
     Examples:
@@ -1096,7 +1092,7 @@ def install_ncbi_refseq(local_dir, catalog_dir, force, no_link, verbose):
       leishref install-ncbi-refseq
       leishref install-ncbi-refseq --force
     """
-    entries = catalog(Path(catalog_dir) if catalog_dir else None)
+    entries = catalog()
     ncbi_genomes = [g for g in entries if g.source == "NCBI" and g.accession and g.accession.startswith("GCF_")]
 
     if not ncbi_genomes:
@@ -1108,8 +1104,7 @@ def install_ncbi_refseq(local_dir, catalog_dir, force, no_link, verbose):
     failed = []
 
     for genome in bar:
-        catalog_root = Path(catalog_dir) if catalog_dir else None
-        alias = get_catalog_alias(genome.accession, catalog_root) if genome.accession else None
+        alias = get_catalog_alias(genome.accession) if genome.accession else None
         if not alias:
             alias = suggest_alias(genome)
             alias = alias.replace("/", "_")
@@ -1126,7 +1121,6 @@ def install_ncbi_refseq(local_dir, catalog_dir, force, no_link, verbose):
                     name=genome.accession,
                     alias=alias,
                     local_dir=local_dir,
-                    catalog_dir=catalog_dir,
                     force=force,
                     no_link=no_link,
                 )
