@@ -1303,74 +1303,111 @@ def plot_histogram(catalog_dir, output, include_kinetoplast):
         raise SystemExit(1)
 
 
-@cli.command()
-@click.argument("names", nargs=-1, required=True)
-@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option("--output", "-o", type=click.Path(), help="Output tarball path (default: <first-name>.tar.gz)")
-def bundle(names, local_dir, output):
-    """Pack installed genomes into a tarball with FASTA and GFF files.
+def _resolve_symlink_targets(pattern: str, basedir: Path = Path(".")) -> list[tuple[str, Path]]:
+    """Match files by pattern, resolve symlinks to actual files.
 
-    NAMES are the local aliases of genomes to bundle (wildcards supported: * ? [...]).
-    Creates a .tar.gz with all files from the selected genomes, preserving directory
-    structure. Useful for offline sharing or backup.
+    Returns list of (arcname, resolved_path) tuples.
+    arcname is just the symlink name (for flat archive from current dir).
+    """
+    from glob import glob
+
+    basedir = Path(basedir)
+    results = []
+    matches = glob(pattern, root_dir=basedir)
+
+    if not matches:
+        return []
+
+    for filename in sorted(matches):
+        filepath = basedir / filename
+        if filepath.is_symlink():
+            target = filepath.resolve()
+            results.append((filepath.name, target))
+        elif filepath.is_file():
+            results.append((filepath.name, filepath))
+
+    return results
+
+
+@cli.command()
+@click.argument("patterns", nargs=-1, required=True)
+@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
+@click.option("--basedir", type=click.Path(), default=".", help="Directory to search for symlinks")
+@click.option("--output", "-o", type=click.Path(), help="Output tarball path (default: bundle.tar.gz)")
+def bundle(patterns, local_dir, basedir, output):
+    """Pack genomes into a tarball: from symlinks or by genome name.
+
+    Supports two modes:
+
+    1. FILE PATTERNS (symlinks in current dir):
+       leishref bundle '*.fna'
+       leishref bundle 'Ld*.fna' 'Ltrop*.gff'
+       Resolves symlinks to actual files in ~/.config/leishref
+
+    2. GENOME NAMES (from database):
+       leishref bundle Ld1S LdBPK
+       leishref bundle 'Ld*'
+       Uses genome identifiers with wildcard support
+
+    Creates a .tar.gz with all files, preserving relative paths. Useful for
+    offline sharing or backup.
 
     Examples:
 
     \b
+      leishref bundle '*.fna'
+      leishref bundle 'Ld*.fna' -o ld-genomes.tar.gz
       leishref bundle Ld1S LdBPK
-      leishref bundle 'Ld*'
-      leishref bundle 'Ltrop*' 'Ld1S'
-      leishref bundle Ld1S LdBPK --output my-genomes.tar.gz
-      leishref bundle Ltrop.L590 -o backup.tar.gz
+      leishref bundle 'Ld*' -o ld-all.tar.gz
     """
+    basedir = Path(basedir)
     installed = local(Path(local_dir))
 
-    genomes = []
-    seen = set()
+    files_to_bundle = []
 
-    for name in names:
-        if is_glob(name):
-            matches = [g for g in installed if fnmatch.fnmatch(g.identifier.lower(), name.lower())]
-            if not matches:
-                click.echo(f"No genome matches pattern: {name}", err=True)
-                raise SystemExit(1)
-            for g in matches:
-                if g.identifier not in seen:
-                    genomes.append(g)
-                    seen.add(g.identifier)
+    for pattern in patterns:
+        symlink_matches = _resolve_symlink_targets(pattern, basedir)
+
+        if symlink_matches:
+            for linkname, target in symlink_matches:
+                files_to_bundle.append((linkname, target))
         else:
-            genome = find(installed, name)
-            if genome is None:
-                click.echo(f"Not installed: {name}", err=True)
-                raise SystemExit(1)
-            if genome.identifier not in seen:
-                genomes.append(genome)
-                seen.add(genome.identifier)
+            if is_glob(pattern):
+                matches = [g for g in installed if fnmatch.fnmatch(g.identifier.lower(), pattern.lower())]
+                if not matches:
+                    click.echo(f"No match for '{pattern}' (tried symlinks and genomes)", err=True)
+                    raise SystemExit(1)
+                for genome in matches:
+                    for kind, path, _ in genome.file_paths():
+                        if path.exists():
+                            arcname = f"{genome.identifier}/{path.name}"
+                            files_to_bundle.append((arcname, path))
+            else:
+                genome = find(installed, pattern)
+                if genome is None:
+                    click.echo(f"Not found: {pattern} (symlink or genome name)", err=True)
+                    raise SystemExit(1)
+                for kind, path, _ in genome.file_paths():
+                    if path.exists():
+                        arcname = f"{genome.identifier}/{path.name}"
+                        files_to_bundle.append((arcname, path))
+
+    if not files_to_bundle:
+        click.echo("No files to bundle", err=True)
+        raise SystemExit(1)
 
     if not output:
-        output = f"{genomes[0].identifier}.tar.gz"
+        output = "bundle.tar.gz"
 
     output_path = Path(output)
-    click.echo(f"Bundling {len(genomes)} genome{'s' if len(genomes) != 1 else ''} into {output_path}")
+    click.echo(f"Bundling {len(files_to_bundle)} file{'s' if len(files_to_bundle) != 1 else ''} into {output_path}")
 
-    missing = []
     with tarfile.open(output_path, "w:gz") as tar:
-        for genome in genomes:
-            for kind, path, _ in genome.file_paths():
-                if not path.exists():
-                    missing.append((genome.identifier, path))
-                    continue
-                arcname = f"{genome.identifier}/{path.name}"
-                click.echo(f"  {arcname}")
-                tar.add(path, arcname=arcname)
+        for arcname, filepath in files_to_bundle:
+            click.echo(f"  {arcname}")
+            tar.add(filepath, arcname=arcname)
 
     click.echo(f"\nBundled to {output_path} ({output_path.stat().st_size / 1e6:.1f} MB)")
-
-    if missing:
-        click.echo("\nMissing files (not bundled):", err=True)
-        for identifier, path in missing:
-            click.echo(f"  {identifier}: {path}", err=True)
-        raise SystemExit(1)
 
 
 # ------------------------------------------------------------------------ dev commands
