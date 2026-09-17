@@ -26,6 +26,14 @@ def _plot_boxplot(ax, series: list, labels: list, ylabel: str, title: str, symlo
     ax.tick_params(axis="x", rotation=45)
 
 
+def _horizontal_boxplot(ax, values: list):
+    kwargs = {"patch_artist": True, "boxprops": {"facecolor": "lavender"}}
+    try:
+        return ax.boxplot(values, orientation="horizontal", **kwargs)
+    except TypeError:
+        return ax.boxplot(values, vert=False, **kwargs)
+
+
 def _species_matches_filter(species_name: str, species_filter: List[str]) -> bool:
     normalized = " ".join((species_name or "").lower().split())
     tokens = set(normalized.split())
@@ -265,7 +273,7 @@ def plot_chromosome_length_histogram(
     axes[0].set_title(f"Chromosome Length Distribution (n={len(lengths)})", fontsize=12, fontweight="bold")
     axes[0].grid(axis="y", alpha=0.3)
 
-    axes[1].boxplot(lengths, orientation="horizontal", patch_artist=True, boxprops={"facecolor": "lavender"})
+    _horizontal_boxplot(axes[1], lengths)
     axes[1].set_xlabel("Chromosome length (Mb)", fontsize=11)
     axes[1].set_yticks([])
     axes[1].grid(axis="x", alpha=0.3)
