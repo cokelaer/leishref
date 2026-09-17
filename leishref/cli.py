@@ -529,9 +529,9 @@ def install(name, alias, local_dir, force, no_link):
                 click.echo(f"NCBI has no data for {accession}", err=True)
                 raise SystemExit(1)
             written = [p for p in (fasta, gff) if p]
-        elif genome.path and (genome.path / (genome.fasta or "")).exists():
+        elif genome.fasta and genome.path and (genome.path / genome.fasta).exists():
             click.echo(f"{name} (from catalog)")
-            written = [genome.path / genome.fasta] if genome.fasta else []
+            written = [genome.path / genome.fasta]
             if genome.gff:
                 gff_path = genome.path / genome.gff
                 if gff_path.exists():
