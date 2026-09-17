@@ -47,9 +47,10 @@ User commands
     │ link     Refresh the alias-named symlinks for everything installed locally.                                │
     ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
     ╭─ Plotting ─────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ plot-stats                Plot genome statistics: size, contig count, GC%.                                 │
+    │ plot-stats                Plot genome statistics: genome size, scaffold count, contig count, scaffold N50. │
     │ plot-sizes                Plot genome sizes by species.                                                    │
     │ plot-histogram            Plot histogram of genome sizes.                                                  │
+    │ plot-chromosome-histogram Plot chromosome/sequence length histogram from available local FASTA files.      │
     ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
     ╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────╮
     │ --help  Show this message and exit.                                                                        │
