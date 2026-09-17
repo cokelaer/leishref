@@ -24,12 +24,27 @@ from leishref.agp import derive_agp, write_agp
 from leishref.checksums import genome_stats, md5_file
 from leishref.chromosomes import get_chromosome_info, rename_fasta_sequences
 from leishref.links import LinkConflict, link_paths
-from leishref.metadata import CATALOG_DIR, LOCAL_DIR, Genome, catalog, catalog_entry_dir, catalog_group, find, get_catalog_alias, is_glob, load_aliases, local, read_genome, today_iso, write_genome
+from leishref.metadata import (
+    CATALOG_DIR,
+    LOCAL_DIR,
+    Genome,
+    catalog,
+    catalog_entry_dir,
+    catalog_group,
+    find,
+    get_catalog_alias,
+    is_glob,
+    load_aliases,
+    local,
+    read_genome,
+    today_iso,
+    write_genome,
+)
 from leishref.naming import suggest_alias
 from leishref.ncbi import fetch_fasta_gff, fetch_metadata, fetch_metadata_many, species_from_organism
 from leishref.prune import prune_fasta
-from leishref.visualize import plot_genome_sizes, plot_genome_stats, plot_genome_size_histogram
 from leishref.scaffold import clean_scaffolded_fasta, ragtag_version, run_scaffold
+from leishref.visualize import plot_genome_size_histogram, plot_genome_sizes, plot_genome_stats
 from leishref.zenodo import (
     ZenodoError,
     create_deposition,
@@ -40,7 +55,6 @@ from leishref.zenodo import (
     update_metadata,
     upload_file,
 )
-
 
 # --------------------------------------------------------------------------- help style
 
@@ -71,11 +85,25 @@ click.rich_click.COMMAND_GROUPS = {
     "leishref": [
         {
             "name": "Using the database",
-            "commands": ["search", "info", "install", "install-ncbi", "restore", "verify", "rename-sequences", "prune-scaffold"],
+            "commands": [
+                "search",
+                "info",
+                "install",
+                "install-ncbi",
+                "install-ncbi-refseq",
+                "restore",
+                "verify",
+                "rename-sequences",
+                "prune-scaffold",
+            ],
         },
         {
             "name": "For maintainers and developers",
             "commands": ["dev", "link"],
+        },
+        {
+            "name": "Plotting",
+            "commands": ["plot-stats", "plot-sizes", "plot-histogram"],
         },
     ],
     "leishref dev": [
@@ -252,6 +280,7 @@ def _resolve_assembly(value, local_root: Path, cat_root, what: str):
         raise SystemExit(1)
 
     import tempfile
+
     tmp_dir = Path(tempfile.gettempdir()) / "leishref_scaffold" / cat_genome.identifier
     tmp_dir.mkdir(parents=True, exist_ok=True)
     fasta_path = tmp_dir / cat_genome.fasta
@@ -260,6 +289,7 @@ def _resolve_assembly(value, local_root: Path, cat_root, what: str):
         click.echo(f"Downloading {cat_genome.identifier} to temporary directory...")
         try:
             from leishref.ncbi import fetch_fasta_gff
+
             fetch_fasta_gff(cat_genome.accession, str(tmp_dir))
         except Exception as e:
             click.echo(f"Failed to download {cat_genome.identifier}: {e}", err=True)
@@ -1344,7 +1374,9 @@ def add(fasta, gff, alias, species, strain, technology, assembler, catalog_dir, 
 @dev.command()
 @click.option("--query", required=True, help="Assembly to scaffold: a FASTA file, catalog id or local alias")
 @click.option("--reference", required=True, help="Reference genome: catalog id or local alias")
-@click.option("--alias", help="Name for the resulting scaffold (auto-generated as <query>.scaffold.<reference> if omitted)")
+@click.option(
+    "--alias", help="Name for the resulting scaffold (auto-generated as <query>.scaffold.<reference> if omitted)"
+)
 @click.option("--clean", is_flag=True, help="Keep only chr-anchored contigs plus kinetoplast")
 @click.option("--catalog-dir", type=click.Path(), help="Write the entry here instead")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
@@ -1442,7 +1474,7 @@ def _zenodo_description(genome) -> str:
     """Build rich description for Zenodo deposit with HTML formatting."""
     lines = [
         "<p>Leishmania genome assembly from the leishref initiative.</p>",
-        "<p>Repository: <a href=\"https://github.com/cokelaer/leishref\">https://github.com/cokelaer/leishref</a></p>",
+        '<p>Repository: <a href="https://github.com/cokelaer/leishref">https://github.com/cokelaer/leishref</a></p>',
     ]
 
     if genome.source == "Leishref scaffold":
@@ -1473,7 +1505,7 @@ def _zenodo_description(genome) -> str:
 
     lines.append(
         "<p><strong>Citation:</strong> If using this assembly, please cite the leishref project:<br/>"
-        "<a href=\"https://github.com/cokelaer/leishref\">https://github.com/cokelaer/leishref</a></p>"
+        '<a href="https://github.com/cokelaer/leishref">https://github.com/cokelaer/leishref</a></p>'
     )
 
     return "\n".join(lines)
@@ -1606,6 +1638,7 @@ def remove(identifier, catalog_dir, force):
     entry_path = genome.path
     click.echo(f"Removing {entry_path}...")
     import shutil
+
     shutil.rmtree(entry_path, ignore_errors=False)
     click.echo(f"Removed {entry_path}")
 
@@ -1790,9 +1823,9 @@ def check_aliases(catalog_dir):
     aliases_file = CATALOG_DIR / "aliases.txt"
     if aliases_file.exists():
         aliases = defaultdict(list)
-        for line in aliases_file.read_text().split('\n'):
-            if line and not line.startswith('#'):
-                parts = line.split('\t')
+        for line in aliases_file.read_text().split("\n"):
+            if line and not line.startswith("#"):
+                parts = line.split("\t")
                 if len(parts) == 2:
                     accession, alias = parts
                     aliases[alias].append(accession)

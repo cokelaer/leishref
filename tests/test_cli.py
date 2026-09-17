@@ -42,15 +42,15 @@ def run(args, cwd):
         os.chdir(previous)
 
 
-def test_download_requires_an_alias(tmp_path):
-    result = run(["download", "GCA_000410715.1"], tmp_path)
+def test_install_requires_an_alias(tmp_path):
+    result = run(["install", "GCA_000410715.1"], tmp_path)
     assert result.exit_code != 0
     assert "--alias" in result.output
 
 
 def test_user_and_dev_commands_are_separated():
     result = CliRunner().invoke(cli, ["--help"])
-    assert "download" in result.output
+    assert "install" in result.output
     assert "dev" in result.output
     assert "publish" not in result.output, "maintainer commands belong under dev"
 
@@ -167,16 +167,16 @@ def test_search_flags_installed_genomes(tmp_path):
     assert "installed as mine" in result.output
 
 
-def test_download_without_an_alias_suggests_one(tmp_path):
-    result = run(["download", "GCA_000410715.1"], tmp_path)
+def test_install_without_an_alias_suggests_one(tmp_path):
+    result = run(["install", "GCA_000410715.1"], tmp_path)
 
     assert result.exit_code == 2
     assert "--alias is required" in result.output
     assert "--alias Ltrop.ncbi.L590" in result.output
 
 
-def test_download_rejects_an_unknown_name_before_asking_for_an_alias(tmp_path):
-    result = run(["download", "nonexistent"], tmp_path)
+def test_install_rejects_an_unknown_name_before_asking_for_an_alias(tmp_path):
+    result = run(["install", "nonexistent"], tmp_path)
     assert result.exit_code == 1
     assert "Not in catalog" in result.output
 
@@ -289,10 +289,10 @@ def recorded(tmp_path):
     return tmp_path, origin.identifier
 
 
-def test_download_of_an_installed_genome_records_it(recorded):
+def test_install_of_an_installed_genome_records_it(recorded):
     """Re-running download on something already present still writes the recipe line."""
     base, name = recorded
-    result = run(["download", name, "--alias", "mine", "--no-link"], base)
+    result = run(["install", name, "--alias", "mine", "--no-link"], base)
 
     assert result.exit_code == 0
     assert f"{name}\tmine" in (base / "data" / "accessions.txt").read_text()
@@ -301,7 +301,7 @@ def test_download_of_an_installed_genome_records_it(recorded):
 def test_an_alias_is_recorded_once(recorded):
     base, name = recorded
     for _ in range(3):
-        run(["download", name, "--alias", "mine", "--no-link"], base)
+        run(["install", name, "--alias", "mine", "--no-link"], base)
 
     lines = [ln for ln in (base / "data" / "accessions.txt").read_text().splitlines() if not ln.startswith("#")]
     assert lines == [f"{name}\tmine"]
@@ -309,7 +309,7 @@ def test_an_alias_is_recorded_once(recorded):
 
 def test_restore_lists_what_it_would_do(recorded):
     base, name = recorded
-    run(["download", name, "--alias", "mine", "--no-link"], base)
+    run(["install", name, "--alias", "mine", "--no-link"], base)
 
     result = run(["restore", "--dry-run"], base)
     assert result.exit_code == 0
@@ -320,7 +320,7 @@ def test_restore_lists_what_it_would_do(recorded):
 def test_restore_reports_a_genome_that_is_no_longer_there(recorded):
     """A recorded alias whose directory was deleted shows up as missing."""
     base, name = recorded
-    run(["download", name, "--alias", "mine", "--no-link"], base)
+    run(["install", name, "--alias", "mine", "--no-link"], base)
     (base / "data" / "mine" / "metadata.yaml").unlink()
 
     result = run(["restore", "--dry-run"], base)
