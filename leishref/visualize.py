@@ -142,14 +142,14 @@ def plot_genome_stats(
 
     # Genome size
     sizes = [[g.stats.get("num_bases", 0) / 1e6 for g in by_species[sp]] for sp in species_names]
-    axes[0].boxplot(sizes, labels=species_short)
+    axes[0].boxplot(sizes, tick_labels=species_short)
     axes[0].set_ylabel("Genome size (Mb)")
     axes[0].set_title("Genome Size Distribution")
     axes[0].tick_params(axis="x", rotation=45)
 
     # Scaffolds
     scaffolds = [[max(g.stats.get("num_scaffolds", 0), 1) for g in by_species[sp]] for sp in species_names]
-    axes[1].boxplot(scaffolds, labels=species_short)
+    axes[1].boxplot(scaffolds, tick_labels=species_short)
     axes[1].set_yscale("log")
     axes[1].set_ylabel("Number of scaffolds (log scale)")
     axes[1].set_title("Scaffold Count Distribution")
@@ -157,7 +157,7 @@ def plot_genome_stats(
 
     # Contigs
     contigs = [[max(g.stats.get("num_contigs", 0), 1) for g in by_species[sp]] for sp in species_names]
-    axes[2].boxplot(contigs, labels=species_short)
+    axes[2].boxplot(contigs, tick_labels=species_short)
     axes[2].set_yscale("log")
     axes[2].set_ylabel("Number of contigs (log scale)")
     axes[2].set_title("Contig Count Distribution")
@@ -165,7 +165,7 @@ def plot_genome_stats(
 
     # Scaffold N50
     scaffold_n50 = [[g.stats.get("scaffold_n50", 0) / 1e6 for g in by_species[sp]] for sp in species_names]
-    axes[3].boxplot(scaffold_n50, labels=species_short)
+    axes[3].boxplot(scaffold_n50, tick_labels=species_short)
     axes[3].set_ylabel("Scaffold N50 (Mb)")
     axes[3].set_title("Scaffold N50 Distribution")
     axes[3].tick_params(axis="x", rotation=45)
@@ -230,7 +230,7 @@ def plot_chromosome_length_histogram(
     axes[0].set_title(f"Chromosome Length Distribution (n={len(lengths)})", fontsize=12, fontweight="bold")
     axes[0].grid(axis="y", alpha=0.3)
 
-    axes[1].boxplot(lengths, vert=False, patch_artist=True, boxprops={"facecolor": "lavender"})
+    axes[1].boxplot(lengths, orientation="horizontal", patch_artist=True, boxprops={"facecolor": "lavender"})
     axes[1].set_xlabel("Chromosome length (Mb)", fontsize=11)
     axes[1].set_yticks([])
     axes[1].grid(axis="x", alpha=0.3)
