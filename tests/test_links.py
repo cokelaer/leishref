@@ -18,9 +18,10 @@ def tree(tmp_path):
     return tmp_path, fasta, gff
 
 
-def test_link_name_keeps_extension():
+def test_link_name_standardizes_fasta_extension():
     assert link_name("Ltrop.ncbi.L590", Path("x/y.fna")) == "Ltrop.ncbi.L590.fna"
-    assert link_name("Ltrop.ncbi.L590", Path("x/y.fasta")) == "Ltrop.ncbi.L590.fasta"
+    assert link_name("Ltrop.ncbi.L590", Path("x/y.fasta")) == "Ltrop.ncbi.L590.fna"
+    assert link_name("Ltrop.ncbi.L590", Path("x/y.fa")) == "Ltrop.ncbi.L590.fna"
 
 
 def test_link_is_relative_so_the_tree_stays_movable(tree):
