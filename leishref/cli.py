@@ -9,6 +9,7 @@ import fnmatch
 import io
 import os
 import shutil
+import tarfile
 import tempfile
 import textwrap
 from pathlib import Path
@@ -98,6 +99,7 @@ click.rich_click.COMMAND_GROUPS = {
                 "verify",
                 "rename-sequences",
                 "prune-scaffold",
+                "bundle",
             ],
         },
         {
@@ -1298,6 +1300,60 @@ def plot_histogram(catalog_dir, output, include_kinetoplast):
         click.echo(f"Saved plot to {out}")
     except ValueError as e:
         click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+
+@cli.command()
+@click.argument("names", nargs=-1, required=True)
+@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
+@click.option("--output", "-o", type=click.Path(), help="Output tarball path (default: <first-name>.tar.gz)")
+def bundle(names, local_dir, output):
+    """Pack installed genomes into a tarball with FASTA and GFF files.
+
+    NAMES are the local aliases of genomes to bundle. Creates a .tar.gz with all files
+    from the selected genomes, preserving directory structure. Useful for offline sharing
+    or backup.
+
+    Examples:
+
+    \b
+      leishref bundle Ld1S LdBPK
+      leishref bundle Ld1S LdBPK --output my-genomes.tar.gz
+      leishref bundle Ltrop.L590 -o backup.tar.gz
+    """
+    installed = local(Path(local_dir))
+
+    genomes = []
+    for name in names:
+        genome = find(installed, name)
+        if genome is None:
+            click.echo(f"Not installed: {name}", err=True)
+            raise SystemExit(1)
+        genomes.append(genome)
+
+    if not output:
+        output = f"{names[0]}.tar.gz"
+
+    output_path = Path(output)
+    click.echo(f"Bundling {len(genomes)} genome{'s' if len(genomes) != 1 else ''} into {output_path}")
+
+    missing = []
+    with tarfile.open(output_path, "w:gz") as tar:
+        for genome in genomes:
+            for kind, path, _ in genome.file_paths():
+                if not path.exists():
+                    missing.append((genome.identifier, path))
+                    continue
+                arcname = f"{genome.identifier}/{path.name}"
+                click.echo(f"  {arcname}")
+                tar.add(path, arcname=arcname)
+
+    click.echo(f"\nBundled to {output_path} ({output_path.stat().st_size / 1e6:.1f} MB)")
+
+    if missing:
+        click.echo("\nMissing files (not bundled):", err=True)
+        for identifier, path in missing:
+            click.echo(f"  {identifier}: {path}", err=True)
         raise SystemExit(1)
 
 

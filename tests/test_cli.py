@@ -566,3 +566,66 @@ def test_rename_sequences_with_roman_flavor(installed):
     content = output_file.read_text()
     assert ">I\n" in content
     assert ">c1" not in content
+
+
+def test_bundle_creates_tarball_with_fasta_files(installed):
+    """Bundle command creates tarball with FASTA files from installed genomes."""
+    import tarfile
+
+    base, _ = installed
+    output = base / "bundle.tar.gz"
+
+    result = run(["bundle", "Ltrop.flye", "--local-dir", "data", "--output", str(output)], base)
+    assert result.exit_code == 0
+    assert output.exists()
+    assert "Bundled to" in result.output
+
+    with tarfile.open(output, "r:gz") as tar:
+        members = tar.getnames()
+        assert "Ltrop.flye/assembly.fa" in members
+        assert len(members) == 1
+
+
+def test_bundle_fails_on_missing_genome(installed):
+    """Bundle fails if genome is not installed."""
+    base, _ = installed
+
+    result = run(["bundle", "NonExistent", "--local-dir", "data"], base)
+    assert result.exit_code == 1
+    assert "Not installed" in result.output
+
+
+def test_bundle_multiple_genomes(tmp_path):
+    """Bundle can pack multiple genomes into one tarball."""
+    import tarfile
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+
+    # Create two genomes
+    for name in ("Ld1S", "Ltrop.L590"):
+        genome_dir = data_dir / name
+        genome_dir.mkdir()
+        fasta = genome_dir / "assembly.fa"
+        fasta.write_text(f">seq_{name}\nACGT\n")
+
+        write_genome(
+            genome_dir,
+            Genome(
+                identifier=name,
+                source="Local",
+                files={"fasta": fasta.name},
+                checksums={"fasta": md5_file(fasta)},
+            ),
+        )
+
+    output = tmp_path / "multi.tar.gz"
+    result = run(["bundle", "Ld1S", "Ltrop.L590", "--local-dir", "data", "--output", str(output)], tmp_path)
+    assert result.exit_code == 0
+    assert output.exists()
+
+    with tarfile.open(output, "r:gz") as tar:
+        members = tar.getnames()
+        assert "Ld1S/assembly.fa" in members
+        assert "Ltrop.L590/assembly.fa" in members
+        assert len(members) == 2
