@@ -17,7 +17,7 @@ SOURCE_TAGS = {
     "TriTrypDB": "tritryp",
     "Zenodo": "zenodo",
     "Local": "local",
-    "Scaffold": "scaf",
+    "Scaffold": "scaffold",
 }
 
 
