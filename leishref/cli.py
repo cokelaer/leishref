@@ -439,8 +439,8 @@ def install(name, alias, local_dir, catalog_dir, force, no_link):
     Examples:
 
     \b
-      leishref download GCA_000410715.1 --alias Ltrop.L590
-      leishref download Ltropica.Ld1S.scaffold.flye --alias flye
+      leishref install GCA_000410715.1 --alias Ltrop.L590
+      leishref install Ltropica.Ld1S.scaffold.flye --alias flye
     """
     cat_root = Path(catalog_dir) if catalog_dir else None
     entries = catalog(cat_root)
@@ -449,7 +449,7 @@ def install(name, alias, local_dir, catalog_dir, force, no_link):
     if not alias:
         click.echo("--alias is required: it names this genome in your local database,", err=True)
         click.echo("becoming the directory under data/ and the symlink you will type.\n", err=True)
-        click.echo(f"  leishref download {name} --alias {suggest_alias(genome)}", err=True)
+        click.echo(f"  leishref install {name} --alias {suggest_alias(genome)}", err=True)
         raise SystemExit(2)
 
     target = Path(local_dir) / alias
@@ -457,11 +457,15 @@ def install(name, alias, local_dir, catalog_dir, force, no_link):
         click.echo(f"Already installed: {target}")
         _link(alias, [p for _, p, _ in read_genome(target).file_paths() if p.exists()], no_link)
         _record_download(Path(local_dir), genome.identifier or name, alias)
-        click.echo("Use --force to download again")
+        click.echo("Use --force to install again")
         return
 
     doi = genome.zenodo_doi
     accession = genome.accession
+
+    # Show what we're about to install
+    source_name = genome.accession or doi or name
+    click.echo(f"Installing {source_name} → {target}")
 
     # Check if files already exist locally with correct checksums
     target = Path(local_dir) / alias
@@ -472,7 +476,7 @@ def install(name, alias, local_dir, catalog_dir, force, no_link):
                 local_checksums[kind] = md5_file(path)
 
         if all(local_checksums.get(k) == v for k, v in genome.checksums.items() if k in ("fasta", "gff")):
-            click.echo(f"Files already present with correct checksums, skipping download")
+            click.echo(f"Files already present with correct checksums, skipping install")
             _link(alias, [p for _, p, _ in genome.file_paths() if p and p.exists()], no_link)
             return
 
@@ -491,7 +495,7 @@ def install(name, alias, local_dir, catalog_dir, force, no_link):
         else:
             click.echo(f"{name} records neither a Zenodo DOI nor an NCBI accession", err=True)
             if genome.source == "TriTrypDB":
-                click.echo("TriTrypDB needs a login; download by hand, then 'leishref dev add'", err=True)
+                click.echo("TriTrypDB needs a login; get the file manually, then 'leishref dev add'", err=True)
             raise SystemExit(1)
 
         installed = _install(genome, alias, written, Path(local_dir))
