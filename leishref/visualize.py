@@ -8,7 +8,8 @@ from leishref.metadata import catalog, CATALOG_DIR
 
 
 def _species_label(name: str) -> str:
-    return name.split()[-1][:3]
+    parts = (name or "").split()
+    return parts[-1][:3] if parts else "unk"
 
 
 def _plot_boxplot(ax, series: list, labels: list, ylabel: str, title: str, symlog_scale: bool = False):
