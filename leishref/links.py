@@ -15,8 +15,15 @@ class LinkConflict(Exception):
 
 
 def link_name(alias: str, target: Path) -> str:
-    """Alias plus the target's extension, so file-type sniffing still works."""
-    return f"{alias}{Path(target).suffix}"
+    """Alias plus .fna for FASTA files, .gff for GFF, else target's extension.
+
+    Standardizes fasta extensions (.fna, .fa, .fasta) to .fna for consistency.
+    """
+    target = Path(target)
+    suffix = target.suffix.lower()
+    if suffix in (".fna", ".fa", ".fasta"):
+        return f"{alias}.fna"
+    return f"{alias}{suffix}"
 
 
 def make_link(alias: str, target: Path, basedir: Path = Path(".")) -> Optional[Path]:

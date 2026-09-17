@@ -88,7 +88,7 @@ def test_link_creates_alias_named_symlinks(installed):
     base, _ = installed
     result = run(["link", "--local-dir", "data"], base)
 
-    link = base / "Ltrop.flye.fa"
+    link = base / "Ltrop.flye.fna"
     assert result.exit_code == 0
     assert link.is_symlink()
     assert link.read_text() == ">c1\nACGTACGT\n"
