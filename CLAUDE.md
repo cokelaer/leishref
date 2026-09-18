@@ -31,6 +31,37 @@ All FASTA symlinks use `.fna` extension regardless of source:
 
 This ensures consistent naming for downstream tools. See `leishref/links.py:link_name()`.
 
+## Bundle Command Behavior
+
+`leishref bundle` supports two modes for creating tarballs:
+
+### Mode 1: Symlink Resolution (file patterns in current directory)
+```bash
+leishref bundle '*.fna'                    # All .fna symlinks in current dir
+leishref bundle 'Ld*.fna' 'Ltrop*.gff'    # Multiple patterns
+```
+- Finds symlinks matching pattern in current directory (or `--basedir`)
+- Resolves symlinks to actual files in `~/.config/leishref`
+- Archives with flat structure (just filename, no directory prefix)
+- User sees only symlinks locally; bundle unpacks with actual files
+
+### Mode 2: Genome Names (from leishref database)
+```bash
+leishref bundle Ld1S LdBPK                 # Exact genome IDs
+leishref bundle 'Ld*'                      # Wildcard patterns
+leishref bundle 'Ld*.fna' Ld1S            # Mix symlinks and IDs
+```
+- Looks up genome identifiers in local database
+- Supports wildcard patterns with `fnmatch` (case-insensitive)
+- Archives with directory structure: `genome-id/filename`
+- Preserves provenance of where each file came from
+
+### Implementation Notes
+- Symlinks always checked first; fallback to genome lookup if no matches
+- Deduplication: if both modes match same genome, included only once
+- Default output: `bundle.tar.gz` (or use `-o/--output`)
+- Uses `tarfile` with gzip compression
+
 ## Default code style & workflow
 
 See `/home/cokelaer/CLAUDE.md` for global preferences (poetry, pytest, etc.).
