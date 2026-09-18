@@ -1,6 +1,7 @@
 """Command-line behaviour that does not need the network."""
 
 import os
+from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
@@ -738,3 +739,94 @@ def test_export_writes_to_file(installed):
 
     records = json.loads(output.read_text())
     assert records[0]["identifier"] == "Ltrop.flye"
+
+
+def test_install_many_parallel_installs_all_genomes(tmp_path, monkeypatch):
+    """_install_many_parallel fetches concurrently and installs each genome."""
+    import leishref.cli as cli_module
+
+    def fake_fetch(accession, outdir):
+        fasta = Path(outdir) / f"{accession}.fna"
+        fasta.write_text(f">seq_{accession}\nACGT\n")
+        return fasta, None
+
+    monkeypatch.setattr(cli_module, "fetch_fasta_gff", fake_fetch)
+
+    genomes = [Genome(identifier=f"GCA_{i}", source="NCBI", accession=f"GCA_{i}") for i in range(1, 4)]
+    pairs = [(g, f"alias{i}") for i, g in enumerate(genomes, start=1)]
+
+    local_dir = tmp_path / "data"
+    messages = []
+    failed = cli_module._install_many_parallel(
+        pairs, local_dir, force=False, no_link=True, workers=3, echo=messages.append
+    )
+
+    assert failed == []
+    for i in range(1, 4):
+        genome_dir = local_dir / f"alias{i}"
+        assert (genome_dir / "metadata.yaml").exists()
+        assert (genome_dir / f"GCA_{i}.fna").exists()
+
+
+def test_install_many_parallel_reports_failures(tmp_path, monkeypatch):
+    """_install_many_parallel collects failures without aborting the whole batch."""
+    import leishref.cli as cli_module
+
+    def fake_fetch(accession, outdir):
+        if accession == "GCA_bad":
+            return None, None
+        fasta = Path(outdir) / f"{accession}.fna"
+        fasta.write_text(f">seq_{accession}\nACGT\n")
+        return fasta, None
+
+    monkeypatch.setattr(cli_module, "fetch_fasta_gff", fake_fetch)
+
+    genomes = [
+        Genome(identifier="GCA_good", source="NCBI", accession="GCA_good"),
+        Genome(identifier="GCA_bad", source="NCBI", accession="GCA_bad"),
+    ]
+    pairs = [(genomes[0], "good"), (genomes[1], "bad")]
+
+    local_dir = tmp_path / "data"
+    failed = cli_module._install_many_parallel(
+        pairs, local_dir, force=False, no_link=True, workers=2, echo=lambda m: None
+    )
+
+    assert failed == ["bad"]
+    assert (local_dir / "good" / "metadata.yaml").exists()
+    assert not (local_dir / "bad").exists()
+
+
+def test_install_many_parallel_skips_already_installed(tmp_path, monkeypatch):
+    """_install_many_parallel does not re-fetch a genome already on disk."""
+    import leishref.cli as cli_module
+
+    calls = []
+
+    def fake_fetch(accession, outdir):
+        calls.append(accession)
+        fasta = Path(outdir) / f"{accession}.fna"
+        fasta.write_text(f">seq_{accession}\nACGT\n")
+        return fasta, None
+
+    monkeypatch.setattr(cli_module, "fetch_fasta_gff", fake_fetch)
+
+    local_dir = tmp_path / "data"
+    genome_dir = local_dir / "already"
+    genome_dir.mkdir(parents=True)
+    fasta = genome_dir / "assembly.fna"
+    fasta.write_text(">seq\nACGT\n")
+    write_genome(
+        genome_dir,
+        Genome(
+            identifier="already", source="NCBI", files={"fasta": "assembly.fna"}, checksums={"fasta": md5_file(fasta)}
+        ),
+    )
+
+    genome = Genome(identifier="GCA_x", source="NCBI", accession="GCA_x")
+    failed = cli_module._install_many_parallel(
+        [(genome, "already")], local_dir, force=False, no_link=True, workers=1, echo=lambda m: None
+    )
+
+    assert failed == []
+    assert calls == []
