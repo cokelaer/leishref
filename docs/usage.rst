@@ -41,6 +41,8 @@ User commands
     │ verify                  Check the local database against the checksums recorded with each genome.          │
     │ rename-sequences        Rename sequences in a cached genome using chromosome database.                     │
     │ prune-scaffold          Remove unmapped contigs, keeping only chromosome sequences and kinetoplast.        │
+    │ bundle                  Pack genomes into a tarball: from symlinks or by genome name.                      │
+    │ export                  Export genome metadata as JSON, YAML, or TSV.                                      │
     ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
     ╭─ For maintainers and developers ───────────────────────────────────────────────────────────────────────────╮
     │ dev      Commands for maintaining the shipped catalog.                                                     │
