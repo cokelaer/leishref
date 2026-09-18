@@ -4,6 +4,7 @@ Top-level commands are for using the database. Maintaining the shipped catalog i
 different job with different risks, so those commands live under ``leishref dev``.
 """
 
+import concurrent.futures
 import contextlib
 import fnmatch
 import io
@@ -389,6 +390,85 @@ def _install(genome: Genome, alias: str, sources, local_root: Path, move: bool =
 
     write_genome(target, genome)
     return target
+
+
+def _fetch_genome_files(genome: Genome, name: str, tmp: Path) -> tuple[list, str]:
+    """Download a genome's files into tmp, without any click I/O.
+
+    Thread-safe: NCBI's datasets CLI runs as a subprocess and Zenodo downloads go
+    through `requests` directly to a per-call directory, so concurrent callers with
+    distinct tmp dirs don't interfere. Returns (written_paths, error_message); exactly
+    one of the two is truthy.
+    """
+    doi = genome.zenodo_doi
+    accession = genome.accession
+    if doi:
+        written = download_record_files(record_id_from_doi(doi), tmp, sandbox=is_sandbox_doi(doi))
+        return written, "" if written else "Zenodo record has no files"
+    if accession:
+        fasta, gff = fetch_fasta_gff(accession, tmp)
+        if not fasta:
+            return [], f"NCBI has no data for {accession}"
+        return [p for p in (fasta, gff) if p], ""
+    if genome.fasta and genome.path and (genome.path / genome.fasta).exists():
+        written = [genome.path / genome.fasta]
+        if genome.gff and (genome.path / genome.gff).exists():
+            written.append(genome.path / genome.gff)
+        return written, ""
+    return [], f"{name} records neither a Zenodo DOI nor an NCBI accession"
+
+
+def _install_many_parallel(pairs, local_dir: Path, force: bool, no_link: bool, workers: int, echo) -> list:
+    """Download PAIRS of (genome, alias) concurrently, install sequentially as each lands.
+
+    Network fetch is the slow part and is safe to parallelize (see _fetch_genome_files);
+    the local install (file copy, metadata write, linking) stays on the main thread since
+    it's fast and keeps output and accessions.txt writes race-free. Returns aliases that
+    failed.
+    """
+    local_dir = Path(local_dir)
+    todo = []
+    for genome, alias in pairs:
+        target = local_dir / alias
+        if (target / "metadata.yaml").exists() and not force:
+            echo(f"Already installed: {alias}")
+            _link(alias, [p for _, p, _ in read_genome(target).file_paths() if p.exists()], no_link)
+            _record_download(local_dir, genome.identifier or alias, alias)
+        else:
+            todo.append((genome, alias))
+
+    failed = []
+    if not todo:
+        return failed
+
+    with tempfile.TemporaryDirectory() as scratch:
+        scratch = Path(scratch)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+            future_to_pair = {}
+            for genome, alias in todo:
+                tmp = scratch / alias
+                tmp.mkdir(parents=True, exist_ok=True)
+                future = pool.submit(_fetch_genome_files, genome, alias, tmp)
+                future_to_pair[future] = (genome, alias)
+
+            for future in concurrent.futures.as_completed(future_to_pair):
+                genome, alias = future_to_pair[future]
+                try:
+                    written, error = future.result()
+                except Exception as exc:  # a network hiccup on one genome must not sink the batch
+                    written, error = [], str(exc)
+
+                if error:
+                    echo(f"  {alias}: {error}")
+                    failed.append(alias)
+                    continue
+
+                installed = _install(genome, alias, written, local_dir)
+                echo(f"  {alias}: installed into {installed}")
+                _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
+                _record_download(local_dir, genome.identifier or alias, alias)
+
+    return failed
 
 
 ACCESSIONS_FILE = "accessions.txt"
@@ -947,7 +1027,8 @@ def prune_scaffold_cmd(name, local_dir):
 @click.option("--dry-run", is_flag=True, help="List what would be downloaded and stop")
 @click.option("--from-installed", is_flag=True, help="Write the file from what is already installed, then stop")
 @click.option("--verbose", is_flag=True, help="Show each download in full instead of a progress bar")
-def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verbose):
+@click.option("--parallel", type=int, default=1, show_default=True, help="Concurrent downloads")
+def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verbose, parallel):
     """Re-download every genome listed in accessions.txt in the current directory.
 
     'leishref install' records what it installed under which alias to accessions.txt,
@@ -963,6 +1044,7 @@ def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verb
       leishref restore --from-installed
       leishref restore --file ../other-project/accessions.txt
       leishref restore --verbose
+      leishref restore --parallel 8
     """
     path = Path(accessions) if accessions else Path.cwd() / ACCESSIONS_FILE
 
@@ -1000,41 +1082,54 @@ def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verb
         return
 
     failed = []
-    # Restoring a whole database is a long, mostly uninteresting wait, so the per-genome
-    # chatter of 'download' is swallowed and only a progress bar is shown. What was
-    # swallowed is printed for the genomes that failed, where it is the diagnosis.
-    # disable=None leaves the bar off when stderr is not a terminal, so a piped or
-    # redirected restore stays clean.
-    bar = tqdm(pairs, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
-    for name, alias in bar:
-        if not verbose:
-            bar.set_description_str(alias[:28], refresh=True)
-        else:
-            console.print(f"\n[bold]{escape(alias)}[/] <- {escape(name)}")
 
-        captured = io.StringIO()
-        try:
-            with contextlib.ExitStack() as stack:
-                if not verbose:
-                    stack.enter_context(contextlib.redirect_stdout(captured))
-                    stack.enter_context(contextlib.redirect_stderr(captured))
-                click.get_current_context().invoke(
-                    install,
-                    name=name,
-                    alias=alias,
-                    local_dir=local_dir,
-                    force=force,
-                    no_link=no_link,
-                )
-        except SystemExit as exc:
-            # One unavailable genome should not abandon the rest of the database.
-            if exc.code:
+    if parallel > 1:
+        entries = catalog()
+        genome_pairs = []
+        for name, alias in pairs:
+            genome = find(entries, name)
+            if genome is None:
+                click.echo(f"failed: {alias} <- {name} (not in catalog)", err=True)
                 failed.append(alias)
-                message = captured.getvalue().strip()
-                tqdm.write(f"failed: {alias} <- {name}")
-                if message:
-                    tqdm.write(textwrap.indent(message, "  "))
-    bar.close()
+                continue
+            genome_pairs.append((genome, alias))
+        failed.extend(_install_many_parallel(genome_pairs, Path(local_dir), force, no_link, parallel, click.echo))
+    else:
+        # Restoring a whole database is a long, mostly uninteresting wait, so the
+        # per-genome chatter of 'download' is swallowed and only a progress bar is
+        # shown. What was swallowed is printed for the genomes that failed, where it
+        # is the diagnosis. disable=None leaves the bar off when stderr is not a
+        # terminal, so a piped or redirected restore stays clean.
+        bar = tqdm(pairs, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
+        for name, alias in bar:
+            if not verbose:
+                bar.set_description_str(alias[:28], refresh=True)
+            else:
+                console.print(f"\n[bold]{escape(alias)}[/] <- {escape(name)}")
+
+            captured = io.StringIO()
+            try:
+                with contextlib.ExitStack() as stack:
+                    if not verbose:
+                        stack.enter_context(contextlib.redirect_stdout(captured))
+                        stack.enter_context(contextlib.redirect_stderr(captured))
+                    click.get_current_context().invoke(
+                        install,
+                        name=name,
+                        alias=alias,
+                        local_dir=local_dir,
+                        force=force,
+                        no_link=no_link,
+                    )
+            except SystemExit as exc:
+                # One unavailable genome should not abandon the rest of the database.
+                if exc.code:
+                    failed.append(alias)
+                    message = captured.getvalue().strip()
+                    tqdm.write(f"failed: {alias} <- {name}")
+                    if message:
+                        tqdm.write(textwrap.indent(message, "  "))
+        bar.close()
 
     console.print(f"Restored [bold]{len(pairs) - len(failed)}[/]/{len(pairs)} into [cyan]{escape(str(local_dir))}[/]")
     if failed:
@@ -1042,12 +1137,21 @@ def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verb
         raise SystemExit(1)
 
 
+def _ncbi_install_alias(genome_for_alias) -> str:
+    """Catalog alias for an NCBI accession (Ld1S, LdBPK), or a sanitized suggested one."""
+    alias = get_catalog_alias(genome_for_alias.accession) if genome_for_alias.accession else None
+    if not alias:
+        alias = suggest_alias(genome_for_alias).replace("/", "_")
+    return alias
+
+
 @cli.command("install-ncbi")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--force", is_flag=True, help="Install again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlinks")
 @click.option("--verbose", is_flag=True, help="Show each install details instead of progress bar")
-def install_ncbi(local_dir, force, no_link, verbose):
+@click.option("--parallel", type=int, default=1, show_default=True, help="Concurrent downloads")
+def install_ncbi(local_dir, force, no_link, verbose, parallel):
     """Install all NCBI entries from the catalog.
 
     Examples:
@@ -1055,6 +1159,7 @@ def install_ncbi(local_dir, force, no_link, verbose):
     \b
       leishref install-ncbi
       leishref install-ncbi --force
+      leishref install-ncbi --parallel 8
     """
     entries = catalog()
     ncbi_genomes = [g for g in entries if g.source == "NCBI" and g.accession]
@@ -1064,36 +1169,38 @@ def install_ncbi(local_dir, force, no_link, verbose):
         return
 
     click.echo(f"Installing {len(ncbi_genomes)} NCBI genomes...")
-    bar = tqdm(ncbi_genomes, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
-    failed = []
 
-    for genome in bar:
-        # Prefer catalog alias (Ld1S, LdBPK), fall back to suggest_alias
-        alias = get_catalog_alias(genome.accession) if genome.accession else None
-        if not alias:
-            alias = suggest_alias(genome)
-            alias = alias.replace("/", "_")  # Sanitize path separators
-        bar.set_description_str(alias[:28], refresh=True)
+    if parallel > 1:
+        pairs = [(g, _ncbi_install_alias(g)) for g in ncbi_genomes]
+        failed = _install_many_parallel(pairs, Path(local_dir), force, no_link, parallel, click.echo)
+    else:
+        bar = tqdm(ncbi_genomes, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
+        failed = []
 
-        captured = io.StringIO()
-        try:
-            with contextlib.ExitStack() as stack:
-                if not verbose:
-                    stack.enter_context(contextlib.redirect_stdout(captured))
-                    stack.enter_context(contextlib.redirect_stderr(captured))
-                click.get_current_context().invoke(
-                    install,
-                    name=genome.accession,
-                    alias=alias,
-                    local_dir=local_dir,
-                    force=force,
-                    no_link=no_link,
-                )
-        except SystemExit as exc:
-            if exc.code:
-                failed.append(alias)
-                if verbose:
-                    click.echo(f"  Failed: {alias}", err=True)
+        for genome in bar:
+            # Prefer catalog alias (Ld1S, LdBPK), fall back to suggest_alias
+            alias = _ncbi_install_alias(genome)
+            bar.set_description_str(alias[:28], refresh=True)
+
+            captured = io.StringIO()
+            try:
+                with contextlib.ExitStack() as stack:
+                    if not verbose:
+                        stack.enter_context(contextlib.redirect_stdout(captured))
+                        stack.enter_context(contextlib.redirect_stderr(captured))
+                    click.get_current_context().invoke(
+                        install,
+                        name=genome.accession,
+                        alias=alias,
+                        local_dir=local_dir,
+                        force=force,
+                        no_link=no_link,
+                    )
+            except SystemExit as exc:
+                if exc.code:
+                    failed.append(alias)
+                    if verbose:
+                        click.echo(f"  Failed: {alias}", err=True)
 
     if failed:
         click.echo(f"\nFailed: {len(failed)}/{len(ncbi_genomes)}", err=True)
@@ -1109,7 +1216,8 @@ def install_ncbi(local_dir, force, no_link, verbose):
 @click.option("--force", is_flag=True, help="Install again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlinks")
 @click.option("--verbose", is_flag=True, help="Show each install details instead of progress bar")
-def install_ncbi_refseq(local_dir, force, no_link, verbose):
+@click.option("--parallel", type=int, default=1, show_default=True, help="Concurrent downloads")
+def install_ncbi_refseq(local_dir, force, no_link, verbose, parallel):
     """Install all RefSeq (GCF) NCBI entries from the catalog.
 
     Examples:
@@ -1117,6 +1225,7 @@ def install_ncbi_refseq(local_dir, force, no_link, verbose):
     \b
       leishref install-ncbi-refseq
       leishref install-ncbi-refseq --force
+      leishref install-ncbi-refseq --parallel 8
     """
     entries = catalog()
     ncbi_genomes = [g for g in entries if g.source == "NCBI" and g.accession and g.accession.startswith("GCF_")]
@@ -1126,35 +1235,37 @@ def install_ncbi_refseq(local_dir, force, no_link, verbose):
         return
 
     click.echo(f"Installing {len(ncbi_genomes)} RefSeq genomes...")
-    bar = tqdm(ncbi_genomes, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
-    failed = []
 
-    for genome in bar:
-        alias = get_catalog_alias(genome.accession) if genome.accession else None
-        if not alias:
-            alias = suggest_alias(genome)
-            alias = alias.replace("/", "_")
-        bar.set_description_str(alias[:28], refresh=True)
+    if parallel > 1:
+        pairs = [(g, _ncbi_install_alias(g)) for g in ncbi_genomes]
+        failed = _install_many_parallel(pairs, Path(local_dir), force, no_link, parallel, click.echo)
+    else:
+        bar = tqdm(ncbi_genomes, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
+        failed = []
 
-        captured = io.StringIO()
-        try:
-            with contextlib.ExitStack() as stack:
-                if not verbose:
-                    stack.enter_context(contextlib.redirect_stdout(captured))
-                    stack.enter_context(contextlib.redirect_stderr(captured))
-                click.get_current_context().invoke(
-                    install,
-                    name=genome.accession,
-                    alias=alias,
-                    local_dir=local_dir,
-                    force=force,
-                    no_link=no_link,
-                )
-        except SystemExit as exc:
-            if exc.code:
-                failed.append(alias)
-                if verbose:
-                    click.echo(f"  Failed: {alias}", err=True)
+        for genome in bar:
+            alias = _ncbi_install_alias(genome)
+            bar.set_description_str(alias[:28], refresh=True)
+
+            captured = io.StringIO()
+            try:
+                with contextlib.ExitStack() as stack:
+                    if not verbose:
+                        stack.enter_context(contextlib.redirect_stdout(captured))
+                        stack.enter_context(contextlib.redirect_stderr(captured))
+                    click.get_current_context().invoke(
+                        install,
+                        name=genome.accession,
+                        alias=alias,
+                        local_dir=local_dir,
+                        force=force,
+                        no_link=no_link,
+                    )
+            except SystemExit as exc:
+                if exc.code:
+                    failed.append(alias)
+                    if verbose:
+                        click.echo(f"  Failed: {alias}", err=True)
 
     if failed:
         click.echo(f"\nFailed: {len(failed)}/{len(ncbi_genomes)}", err=True)
