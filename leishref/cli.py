@@ -100,6 +100,7 @@ click.rich_click.COMMAND_GROUPS = {
                 "rename-sequences",
                 "prune-scaffold",
                 "bundle",
+                "export",
             ],
         },
         {
@@ -1408,6 +1409,100 @@ def bundle(patterns, local_dir, basedir, output):
             tar.add(filepath, arcname=arcname)
 
     click.echo(f"\nBundled to {output_path} ({output_path.stat().st_size / 1e6:.1f} MB)")
+
+
+def _flatten_dict(d: dict, prefix: str = "") -> dict:
+    """Nested dict to dot-separated flat dict, for tabular formats."""
+    items = {}
+    for key, value in d.items():
+        flat_key = f"{prefix}.{key}" if prefix else key
+        if isinstance(value, dict):
+            items.update(_flatten_dict(value, flat_key))
+        else:
+            items[flat_key] = value
+    return items
+
+
+def _records_to_tsv(records: list) -> str:
+    """Flatten records and render as TSV, column union across all rows."""
+    import csv
+    import io
+
+    flattened = [_flatten_dict(r) for r in records]
+    columns = []
+    seen = set()
+    for row in flattened:
+        for key in row:
+            if key not in seen:
+                seen.add(key)
+                columns.append(key)
+
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=columns, delimiter="\t", extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(flattened)
+    return buf.getvalue()
+
+
+@cli.command()
+@click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
+@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
+@click.option(
+    "--source",
+    type=click.Choice(["catalog", "local", "both"]),
+    default="catalog",
+    show_default=True,
+    help="Which genomes to export",
+)
+@click.option(
+    "--format",
+    "fmt",
+    type=click.Choice(["json", "yaml", "tsv"]),
+    default="json",
+    show_default=True,
+    help="Output format",
+)
+@click.option("--output", "-o", type=click.Path(), help="Write to file instead of stdout")
+def export(catalog_dir, local_dir, source, fmt, output):
+    """Export genome metadata as JSON, YAML, or TSV.
+
+    Exports the catalog by default; pass --source local or --source both to include
+    the cached database. TSV flattens nested fields with dot notation (e.g.
+    stats.num_scaffolds), with a column union across all exported genomes.
+
+    Examples:
+
+    \b
+      leishref export --format json
+      leishref export --format tsv -o catalog.tsv
+      leishref export --source both --format yaml -o everything.yaml
+    """
+    cat_root = Path(catalog_dir) if catalog_dir else None
+
+    genomes = []
+    if source in ("catalog", "both"):
+        genomes.extend(catalog(cat_root))
+    if source in ("local", "both"):
+        genomes.extend(local(Path(local_dir)))
+
+    records = [g.to_dict() for g in genomes]
+
+    if fmt == "json":
+        import json
+
+        text = json.dumps(records, indent=2, default=str)
+    elif fmt == "yaml":
+        import yaml
+
+        text = yaml.safe_dump(records, sort_keys=False, default_flow_style=False)
+    else:
+        text = _records_to_tsv(records)
+
+    if output:
+        Path(output).write_text(text)
+        click.echo(f"Exported {len(records)} genome{'s' if len(records) != 1 else ''} to {output}")
+    else:
+        click.echo(text)
 
 
 # ------------------------------------------------------------------------ dev commands

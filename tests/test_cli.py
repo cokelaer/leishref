@@ -676,3 +676,65 @@ def test_bundle_from_symlinks(tmp_path):
         # Check files are extracted correctly
         content = tar.extractfile("Ld1S.fna").read().decode()
         assert ">seq_Ld1S" in content
+
+
+def test_export_local_as_json(installed):
+    """Export --source local --format json writes valid JSON with genome records."""
+    import json
+
+    base, _ = installed
+    result = run(["export", "--source", "local", "--local-dir", "data", "--format", "json"], base)
+    assert result.exit_code == 0
+
+    records = json.loads(result.output)
+    assert len(records) == 1
+    assert records[0]["identifier"] == "Ltrop.flye"
+    assert records[0]["files"]["fasta"] == "assembly.fa"
+
+
+def test_export_local_as_yaml(installed):
+    """Export --format yaml writes valid YAML with genome records."""
+    import yaml
+
+    base, _ = installed
+    result = run(["export", "--source", "local", "--local-dir", "data", "--format", "yaml"], base)
+    assert result.exit_code == 0
+
+    records = yaml.safe_load(result.output)
+    assert len(records) == 1
+    assert records[0]["identifier"] == "Ltrop.flye"
+
+
+def test_export_local_as_tsv(installed):
+    """Export --format tsv flattens nested fields with dot notation."""
+    base, _ = installed
+    result = run(["export", "--source", "local", "--local-dir", "data", "--format", "tsv"], base)
+    assert result.exit_code == 0
+
+    lines = result.output.strip().splitlines()
+    header = lines[0].split("\t")
+    assert "identifier" in header
+    assert "files.fasta" in header
+    assert "checksums.fasta" in header
+
+    row = dict(zip(header, lines[1].split("\t")))
+    assert row["identifier"] == "Ltrop.flye"
+    assert row["files.fasta"] == "assembly.fa"
+
+
+def test_export_writes_to_file(installed):
+    """Export --output writes to a file instead of stdout."""
+    base, _ = installed
+    output = base / "export.json"
+
+    result = run(
+        ["export", "--source", "local", "--local-dir", "data", "--format", "json", "--output", str(output)], base
+    )
+    assert result.exit_code == 0
+    assert output.exists()
+    assert "Exported 1 genome" in result.output
+
+    import json
+
+    records = json.loads(output.read_text())
+    assert records[0]["identifier"] == "Ltrop.flye"
