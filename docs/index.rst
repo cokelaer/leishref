@@ -19,6 +19,8 @@ TriTrypDB and Zenodo to find out what exists or where it lives.
    usage
    search
    install
+   workflow
+   troubleshooting
 
 .. toctree::
    :maxdepth: 2

@@ -24,14 +24,19 @@ Install all NCBI genomes from the catalog::
     leishref install-ncbi
     leishref install-ncbi --force
     leishref install-ncbi --verbose
+    leishref install-ncbi --parallel 8
 
 Uses accession as local alias for each genome. Quiet by default (progress bar only).
-Reports failed installs without stopping the batch.
+Reports failed installs without stopping the batch. ``--parallel N`` downloads N
+genomes concurrently instead of one at a time (network fetch runs in a thread pool;
+the local install step stays sequential so output and ``accessions.txt`` writes
+don't race).
 
 Options:
 - ``--force`` — Install again even if already installed
 - ``--no-link`` — Skip alias-named symlinks
 - ``--verbose`` — Show each install details (MD5, etc) instead of progress bar
+- ``--parallel N`` — Download N genomes concurrently (default 1)
 
 leishref install-ncbi-refseq
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -40,6 +45,7 @@ Install RefSeq (GCF) genomes only from NCBI::
 
     leishref install-ncbi-refseq
     leishref install-ncbi-refseq --force
+    leishref install-ncbi-refseq --parallel 8
 
 Filters out GenBank (GCA) duplicates, installing only the RefSeq-annotated genomes.
 Uses accession as local alias. Same options and behavior as ``install-ncbi``.
@@ -48,6 +54,7 @@ Options:
 - ``--force`` — Install again even if already installed
 - ``--no-link`` — Skip alias-named symlinks
 - ``--verbose`` — Show each install details (MD5, etc) instead of progress bar
+- ``--parallel N`` — Download N genomes concurrently (default 1)
 
 leishref info
 ~~~~~~~~~~~~~
@@ -83,7 +90,10 @@ Search the catalog::
 
     leishref search TERM [TERM ...]
 
-Returns all genomes matching all terms.
+Returns all genomes matching all terms. A term may be a wildcard pattern
+(``*``, ``?``, ``[...]``); quote it so the shell does not expand it first::
+
+    leishref search 'GCF_*' infantum
 
 leishref verify
 ~~~~~~~~~~~~~~~
@@ -91,8 +101,95 @@ leishref verify
 Check integrity of local genomes::
 
     leishref verify
+    leishref verify --quick
 
-Verifies MD5 checksums.
+Verifies MD5 checksums. ``--quick`` checks presence only, skipping checksums.
+
+leishref restore
+~~~~~~~~~~~~~~~~~
+
+Re-download every genome listed in ``accessions.txt`` in the current directory::
+
+    leishref restore
+    leishref restore --dry-run
+    leishref restore --parallel 8
+
+``leishref install`` appends every genome it installs to ``./accessions.txt`` as
+``<catalog-id><TAB><alias>``. ``restore`` reads that file back and re-installs each
+entry, so a database built on one machine can be rebuilt on another (or after the
+local cache is cleared) with a single command. Genomes already installed are left
+alone unless ``--force`` is given.
+
+Options:
+- ``--file PATH`` — Read from here instead of ``./accessions.txt``
+- ``--force`` — Download again even if already installed
+- ``--dry-run`` — List what would be downloaded and stop
+- ``--from-installed`` — Write the file from what is already installed, then stop
+- ``--verbose`` — Show each download in full instead of a progress bar
+- ``--parallel N`` — Download N genomes concurrently (default 1)
+
+leishref bundle
+~~~~~~~~~~~~~~~~
+
+Pack genomes into a ``.tar.gz``, either from the alias-named symlinks left in the
+current directory or by genome name in the local database::
+
+    leishref bundle '*.fna'
+    leishref bundle 'Ld*.fna' 'Ltrop*.gff'
+    leishref bundle Ld1S LdBPK
+    leishref bundle 'Ld*' -o ld-all.tar.gz
+
+A symlink pattern (matched against files in ``--basedir``, default ``.``) is resolved
+to the real file it points at before archiving, so the tarball never contains bare
+symlinks. A pattern or name that matches nothing on disk falls back to a genome-name
+lookup in ``--local-dir``, with wildcard support via ``fnmatch``. Archiving from
+symlinks keeps a flat layout (just the filename); archiving by genome name preserves
+``<genome-id>/<filename>``.
+
+Options:
+- ``--local-dir PATH`` — Local database to search for genome names
+- ``--basedir PATH`` — Directory to search for symlinks (default ``.``)
+- ``--output PATH, -o PATH`` — Output tarball path (default ``bundle.tar.gz``)
+
+leishref export
+~~~~~~~~~~~~~~~~
+
+Export genome metadata as JSON, YAML, or TSV::
+
+    leishref export --format json
+    leishref export --source both --format tsv -o catalog.tsv
+    leishref export --source local --format yaml
+
+Exports the catalog by default; ``--source local`` exports the cached database
+instead, and ``--source both`` exports both. TSV flattens nested fields with dot
+notation (e.g. ``stats.num_scaffolds``, ``files.fasta``), with a column union across
+every exported genome since not all genomes carry the same optional fields.
+
+Options:
+- ``--source {catalog,local,both}`` — Which genomes to export (default ``catalog``)
+- ``--format {json,yaml,tsv}`` — Output format (default ``json``)
+- ``--output PATH, -o PATH`` — Write to a file instead of stdout
+
+leishref plot-stats / plot-sizes / plot-histogram / plot-chromosome-histogram
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Plotting utilities for publications, built from catalog statistics and (for the
+chromosome histogram) locally available FASTA files::
+
+    leishref plot-stats --output stats.png
+    leishref plot-sizes --species donovani --species major
+    leishref plot-histogram --include-kinetoplast
+    leishref plot-chromosome-histogram --species tropica
+
+- ``plot-stats`` — genome size, scaffold count, contig count, scaffold N50
+- ``plot-sizes`` — genome sizes by species
+- ``plot-histogram`` — distribution of genome sizes
+- ``plot-chromosome-histogram`` — chromosome/sequence length distribution (requires
+  the FASTA locally; sequences below 1 kb are excluded)
+
+All four accept ``--catalog-dir`` and ``--output``; ``plot-sizes`` and
+``plot-histogram`` also accept ``--include-kinetoplast`` to include kinetoplast-only
+genomes (excluded by default as outliers).
 
 leishref rename-sequences
 ~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1,10 +1,10 @@
 Development
 ============
 
-Contributing
-------------
+Repository layout
+------------------
 
-The repository structure::
+::
 
     leishref/
       __init__.py
@@ -15,6 +15,33 @@ The repository structure::
       scaffold.py      # Ragtag scaffolding wrapper
       zenodo.py        # Zenodo publishing
       data/            # Shipped catalog (metadata.yaml per genome)
+
+Contributing a genome
+-----------------------
+
+If you just want to add a genome to the catalog, you don't need to touch any code:
+run ``leishref dev fetch`` (NCBI) or ``leishref dev add`` (a local assembly), check
+the resulting ``leishref/data/.../metadata.yaml``, run
+``leishref dev check-aliases`` to catch accidental duplicates, and open a pull
+request with the new entry. See :doc:`workflow` for the full add → scaffold →
+publish path, and :doc:`catalog` for where a new entry belongs.
+
+Contributing code
+--------------------
+
+1. Fork the repository and create a branch for your change.
+2. ``poetry install --with dev`` to set up a matching dev environment.
+3. Make your change. Prefer small, focused commits over one large diff.
+4. Add or update tests under ``tests/`` for any behavior change — see *Testing*
+   below.
+5. Run ``pre-commit run --all-files`` before committing; the same hooks run in CI,
+   so a local pass avoids a red build.
+6. Open a pull request describing *why* the change is needed, not just what
+   changed — the diff already shows the what.
+
+Code style is enforced by pre-commit hooks (black, isort, flake8; see
+``.pre-commit-config.yaml`` and ``.flake8``) rather than by convention, so there's
+nothing to memorize: run the hooks and fix whatever they flag.
 
 Testing
 -------
@@ -28,7 +55,15 @@ With coverage::
 
     pytest --cov=leishref --cov-report=term-missing
 
-Code style is enforced by pre-commit hooks; see ``.pre-commit-config.yaml``.
+A single test::
+
+    pytest tests/test_cli.py::test_bundle_from_symlinks -xvs
+
+Tests that would otherwise hit the network (NCBI, Zenodo) mock the relevant
+function with ``monkeypatch`` rather than making real requests — see
+``test_install_many_parallel_installs_all_genomes`` in ``tests/test_cli.py`` for
+the pattern. Keep new tests network-free the same way, so the suite stays fast and
+doesn't flake on connectivity.
 
 Maintainer commands
 -------------------
