@@ -5,6 +5,7 @@ taxon_id: 5670
 species: Leishmania guyanensis
 assembly_name: Lgu
 assembly_level: Chromosome
+molecule_type: kinetoplast,maxicircle
 release_date: '2019-10-04'
 files:
   fasta: GCA_902369315.1_Lgu_genomic.fna

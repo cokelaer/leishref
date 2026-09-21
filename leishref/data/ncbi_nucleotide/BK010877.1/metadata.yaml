@@ -4,6 +4,7 @@ accession: BK010877.1
 taxon_id: 5671
 species: Leishmania infantum
 strain: JPCM5
+molecule_type: kinetoplast,maxicircle
 release_date: '2019-09-26'
 files:
   fasta: BK010877.1.fasta

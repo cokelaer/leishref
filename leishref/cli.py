@@ -831,6 +831,8 @@ def search(terms, local_dir, installed, long_form):
         contiguity = f"N50 {n50 / 1e6:.1f}M" if n50 and n50 >= 1e6 else (f"N50 {n50 / 1e3:.0f}k" if n50 else "")
 
         suffixes = []
+        if genome.molecule_type:
+            suffixes.append(genome.molecule_type)
         alias = get_catalog_alias(genome.accession or genome.identifier)
         if alias:
             suffixes.append(f"alias: {alias}")
@@ -1638,21 +1640,31 @@ def export(catalog_dir, local_dir, source, fmt, output):
 @click.option("--alias", help="Also install into the local database under this name")
 @click.option("--species", help="Override the species reported by NCBI")
 @click.option("--strain", help="Override the strain reported by NCBI")
+@click.option(
+    "--molecule-type",
+    help="What this actually is when it isn't a nuclear assembly, e.g. 'kinetoplast,maxicircle'",
+)
 @click.option("--catalog-dir", type=click.Path(), help="Write the entry here instead")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--force", is_flag=True, help="Replace an existing catalog entry")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
-def fetch_genome(accession, alias, species, strain, catalog_dir, local_dir, force, no_link):
+def fetch_genome(accession, alias, species, strain, molecule_type, catalog_dir, local_dir, force, no_link):
     """Add an NCBI genome assembly to the catalog.
 
     Downloads the assembly to record its checksums and statistics. Pass --alias to keep
     the files in the local database rather than discarding them.
+
+    NCBI's own assembly_level doesn't flag a lone kinetoplast/maxicircle sequence
+    submitted as a "genome assembly" - it still comes back as e.g. "Chromosome" - so
+    pass --molecule-type by hand when you know that's what it actually is; otherwise
+    it won't turn up in `leishref search kinetoplast`.
 
     Examples:
 
     \b
       leishref dev fetch-genome GCA_000410715.1
       leishref dev fetch-genome GCA_000410715.1 --alias Ltrop.L590
+      leishref dev fetch-genome GCA_902369315.1 --molecule-type kinetoplast,maxicircle
     """
     root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
     entry = root / "ncbi" / accession
@@ -1679,6 +1691,7 @@ def fetch_genome(accession, alias, species, strain, catalog_dir, local_dir, forc
             strain=strain or meta.get("strain"),
             assembly_name=meta.get("assembly_name"),
             assembly_level=meta.get("assembly_level"),
+            molecule_type=molecule_type,
             release_date=meta.get("release_date"),
             files={k: v.name for k, v in (("fasta", fasta), ("gff", gff)) if v},
             checksums={k: md5_file(v) for k, v in (("fasta", fasta), ("gff", gff)) if v},
@@ -1710,23 +1723,34 @@ def fetch_genome(accession, alias, species, strain, catalog_dir, local_dir, forc
 @click.option("--alias", help="Also install into the local database under this name")
 @click.option("--species", help="Override the organism reported by NCBI")
 @click.option("--strain", help="Override the strain reported by NCBI")
+@click.option(
+    "--molecule-type",
+    default="kinetoplast",
+    show_default=True,
+    help="What this is, e.g. 'kinetoplast,maxicircle'. Pass '' to leave unset.",
+)
 @click.option("--email", help="Contact email for NCBI EUtils (recommended; avoids rate-limit warnings)")
 @click.option("--catalog-dir", type=click.Path(), help="Write the entry here instead")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--force", is_flag=True, help="Replace an existing catalog entry")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
-def fetch_nucleotide(accession, alias, species, strain, email, catalog_dir, local_dir, force, no_link):
+def fetch_nucleotide(accession, alias, species, strain, molecule_type, email, catalog_dir, local_dir, force, no_link):
     """Add a standalone NCBI nucleotide (nuccore) record to the catalog.
 
     For a single sequence that isn't part of a GCA/GCF assembly - e.g. a lone
     kinetoplast or maxicircle deposited on its own. Fetched via NCBI EUtils
     (bioservices), not the `datasets` CLI used for assemblies.
 
+    A standalone nuccore record is a kinetoplast/maxicircle far more often than
+    anything else, so --molecule-type defaults to "kinetoplast" here (unlike
+    fetch-genome, where it defaults unset); override it if this one is different.
+
     Examples:
 
     \b
       leishref dev fetch-nucleotide BK010877.1
       leishref dev fetch-nucleotide BK010877.1 --alias LiJPCM5.kinetoplast
+      leishref dev fetch-nucleotide BK010877.1 --molecule-type kinetoplast,maxicircle
     """
     root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
     entry = root / "ncbi_nucleotide" / accession
@@ -1751,6 +1775,7 @@ def fetch_nucleotide(accession, alias, species, strain, email, catalog_dir, loca
             taxon_id=meta.get("taxon_id"),
             species=species or meta.get("organism"),
             strain=strain or meta.get("strain"),
+            molecule_type=molecule_type or None,
             release_date=meta.get("release_date"),
             files={"fasta": fasta.name},
             checksums={"fasta": md5_file(fasta)},
@@ -1776,10 +1801,14 @@ def fetch_nucleotide(accession, alias, species, strain, email, catalog_dir, loca
 @click.option("--strain", help="Strain name")
 @click.option("--technology", help="Sequencing technology, e.g. 'PacBio RS II'")
 @click.option("--assembler", help="Assembler used, e.g. Flye")
+@click.option(
+    "--molecule-type",
+    help="What this actually is when it isn't a nuclear assembly, e.g. 'kinetoplast,maxicircle'",
+)
 @click.option("--catalog-dir", type=click.Path(), help="Write the entry here instead")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
-def add(fasta, gff, alias, species, strain, technology, assembler, catalog_dir, local_dir, no_link):
+def add(fasta, gff, alias, species, strain, technology, assembler, molecule_type, catalog_dir, local_dir, no_link):
     """Add a local assembly to the catalog and install it locally.
 
     Examples:
@@ -1787,6 +1816,7 @@ def add(fasta, gff, alias, species, strain, technology, assembler, catalog_dir, 
     \b
       leishref dev add assembly.fa --alias Ltrop.flye --species "Leishmania tropica"
       leishref dev add assembly.fa assembly.gff --alias Ltrop.flye
+      leishref dev add kdna.fa --alias Lgu.kinetoplast --molecule-type kinetoplast,maxicircle
     """
     fasta, gff = Path(fasta), Path(gff) if gff else None
     root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
@@ -1796,6 +1826,7 @@ def add(fasta, gff, alias, species, strain, technology, assembler, catalog_dir, 
         source="Local",
         species=species,
         strain=strain,
+        molecule_type=molecule_type,
         files={k: v.name for k, v in (("fasta", fasta), ("gff", gff)) if v},
         checksums={k: md5_file(v) for k, v in (("fasta", fasta), ("gff", gff)) if v},
         stats=genome_stats(fasta),

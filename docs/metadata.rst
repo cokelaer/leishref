@@ -33,6 +33,16 @@ Core fields
 **assembly_level** (string)
     Completeness: ``chromosome``, ``scaffold``, ``contig``.
 
+**molecule_type** (string, optional)
+    What this entry actually is, when it isn't an ordinary nuclear assembly - e.g.
+    ``kinetoplast``, or ``kinetoplast,maxicircle``. Unset for ordinary nuclear genomes.
+    NCBI's own ``assembly_level`` doesn't distinguish this - a lone maxicircle
+    submitted as a "genome assembly" still comes back as e.g. ``Chromosome`` - so
+    nothing infers it automatically; set it by hand with ``--molecule-type`` on
+    ``dev fetch-genome``, ``dev fetch-nucleotide``, or ``dev add``. Included in
+    :doc:`search`, so ``leishref search kinetoplast`` finds anything tagged this way
+    regardless of species or accession.
+
 **release_date** (date)
     Date assembled (ISO 8601 format).
 
