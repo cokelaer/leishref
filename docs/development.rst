@@ -20,8 +20,9 @@ Contributing a genome
 -----------------------
 
 If you just want to add a genome to the catalog, you don't need to touch any code:
-run ``leishref dev fetch`` (NCBI) or ``leishref dev add`` (a local assembly), check
-the resulting ``leishref/data/.../metadata.yaml``, run
+run ``leishref dev fetch-genome`` (an NCBI GCA/GCF assembly), ``leishref dev
+fetch-nucleotide`` (a standalone NCBI nuccore record), or ``leishref dev add`` (a
+local assembly), check the resulting ``leishref/data/.../metadata.yaml``, run
 ``leishref dev check-aliases`` to catch accidental duplicates, and open a pull
 request with the new entry. See :doc:`workflow` for the full add → scaffold →
 publish path, and :doc:`catalog` for where a new entry belongs.
@@ -68,9 +69,9 @@ doesn't flake on connectivity.
 Maintainer commands
 -------------------
 
-Add NCBI genome to catalog::
+Add NCBI genome assembly to catalog::
 
-    leishref dev fetch --accession GCA_000227135.2
+    leishref dev fetch-genome GCA_000227135.2
 
 Downloads metadata and FASTA/GFF from NCBI, creates ``leishref/data/ncbi/GCA_000227135.2/metadata.yaml``.
 

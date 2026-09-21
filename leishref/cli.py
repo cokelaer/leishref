@@ -117,7 +117,7 @@ click.rich_click.COMMAND_GROUPS = {
     "leishref dev": [
         {
             "name": "Adding genomes",
-            "commands": ["fetch", "fetch-nucleotide", "add", "import", "scaffold", "derive-agp"],
+            "commands": ["fetch-genome", "fetch-nucleotide", "add", "import", "scaffold", "derive-agp"],
         },
         {
             "name": "Publishing and managing",
@@ -148,7 +148,7 @@ click.rich_click.OPTION_GROUPS = {
             "--verbose",
             "--help",
         ],
-        "leishref dev fetch": ["--alias", "--species", "--strain", "--force", "--no-link", "--help"],
+        "leishref dev fetch-genome": ["--alias", "--species", "--strain", "--force", "--no-link", "--help"],
         "leishref dev add": [
             "--fasta",
             "--gff",
@@ -988,7 +988,7 @@ def prune_scaffold_cmd(name, local_dir):
 
     if not chrom_info:
         click.echo(f"No chromosome info found for {genome.accession}", err=True)
-        click.echo("Populate chromosome database using 'leishref dev fetch'", err=True)
+        click.echo("Populate chromosome database using 'leishref dev fetch-genome'", err=True)
         raise SystemExit(1)
 
     fasta_path = None
@@ -1622,7 +1622,7 @@ def export(catalog_dir, local_dir, source, fmt, output):
 # ------------------------------------------------------------------------ dev commands
 
 
-@dev.command()
+@dev.command("fetch-genome")
 @click.argument("accession")
 @click.option("--alias", help="Also install into the local database under this name")
 @click.option("--species", help="Override the species reported by NCBI")
@@ -1631,8 +1631,8 @@ def export(catalog_dir, local_dir, source, fmt, output):
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--force", is_flag=True, help="Replace an existing catalog entry")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
-def fetch(accession, alias, species, strain, catalog_dir, local_dir, force, no_link):
-    """Add an NCBI genome to the catalog.
+def fetch_genome(accession, alias, species, strain, catalog_dir, local_dir, force, no_link):
+    """Add an NCBI genome assembly to the catalog.
 
     Downloads the assembly to record its checksums and statistics. Pass --alias to keep
     the files in the local database rather than discarding them.
@@ -1640,8 +1640,8 @@ def fetch(accession, alias, species, strain, catalog_dir, local_dir, force, no_l
     Examples:
 
     \b
-      leishref dev fetch GCA_000410715.1
-      leishref dev fetch GCA_000410715.1 --alias Ltrop.L590
+      leishref dev fetch-genome GCA_000410715.1
+      leishref dev fetch-genome GCA_000410715.1 --alias Ltrop.L590
     """
     root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
     entry = root / "ncbi" / accession

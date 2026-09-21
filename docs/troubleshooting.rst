@@ -21,9 +21,11 @@ usually to copy the suggested command as-is.
 ``datasets download failed`` / NCBI fetch returns nothing
 -------------------------------------------------------------
 
-Commands that touch NCBI (``install`` for an NCBI accession, ``dev fetch``,
-``dev checksum``, ``install-ncbi``) shell out to NCBI's ``datasets`` CLI. If it
-isn't installed or isn't on ``PATH``, every one of those commands fails.
+Commands that touch NCBI assemblies (``install`` for an NCBI accession,
+``dev fetch-genome``, ``dev checksum``, ``install-ncbi``) shell out to NCBI's
+``datasets`` CLI. If it isn't installed or isn't on ``PATH``, every one of those
+commands fails. (``dev fetch-nucleotide`` is unaffected - it goes through
+bioservices EUtils instead, see below.)
 
 Check it's available::
 
@@ -39,6 +41,18 @@ A genome that legitimately has no NCBI data (withdrawn, suppressed, or a typo'd
 accession) prints ``NCBI has no data for <accession>`` rather than a stack trace —
 double-check the accession against `NCBI Datasets
 <https://www.ncbi.nlm.nih.gov/datasets/>`_ if you see this.
+
+``NCBI nuccore has no data for <accession>``
+--------------------------------------------------
+
+``dev fetch-nucleotide`` doesn't use ``datasets`` at all - it goes through
+`bioservices <https://bioservices.readthedocs.io/>`_'s EUtils wrapper against
+NCBI's ``nuccore`` database, so it needs ``bioservices`` installed
+(``poetry install`` pulls it in as a regular dependency) rather than the
+``datasets`` CLI. This error means the accession genuinely isn't a nuccore
+record - it's most likely a GCA/GCF assembly accession instead, which belongs to
+``dev fetch-genome`` (``ncbi/``), not ``dev fetch-nucleotide``
+(``ncbi_nucleotide/``) - see :doc:`catalog`.
 
 ``ragtag.py not found in PATH or conda envs``
 --------------------------------------------------

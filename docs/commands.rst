@@ -206,7 +206,7 @@ Flavors:
 - ``roman`` — Rename to 'I', 'II', 'III', etc. (Roman numerals)
 - ``name`` — Use names from local chromosome database
 
-Requires chromosome info in local database (populated during ``leishref dev fetch`` from NCBI).
+Requires chromosome info in local database (populated during ``leishref dev fetch-genome`` from NCBI).
 Rewrites FASTA file in-place and updates stored checksum.
 
 leishref prune-scaffold
@@ -220,7 +220,7 @@ Removes sequences not found in chromosome database while automatically preservin
 kinetoplast sequences (recognized by patterns: kinetoplast, maxicircle, maxi,
 mitochondrion, etc.). Rewrites FASTA in-place and updates statistics.
 
-Requires chromosome info in local database (populated during ``leishref dev fetch``).
+Requires chromosome info in local database (populated during ``leishref dev fetch-genome``).
 
 Developer and maintainer commands
 ----------------------------------
@@ -239,13 +239,13 @@ All maintainer commands are under ``leishref dev``::
 
     leishref dev --help
 
-leishref dev fetch
-~~~~~~~~~~~~~~~~~~~
+leishref dev fetch-genome
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Add a genome *assembly* from NCBI (GCA_/GCF_ accession, via the ``datasets`` CLI)::
 
-    leishref dev fetch GCA_000227135.2
-    leishref dev fetch GCA_000227135.2 --alias Ld1S
+    leishref dev fetch-genome GCA_000227135.2
+    leishref dev fetch-genome GCA_000227135.2 --alias Ld1S
 
 leishref dev fetch-nucleotide
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
