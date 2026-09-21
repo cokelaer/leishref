@@ -22,10 +22,10 @@ usually to copy the suggested command as-is.
 -------------------------------------------------------------
 
 Commands that touch NCBI assemblies (``install`` for an NCBI accession,
-``dev fetch-genome``, ``dev checksum``, ``install-ncbi``) shell out to NCBI's
-``datasets`` CLI. If it isn't installed or isn't on ``PATH``, every one of those
-commands fails. (``dev fetch-nucleotide`` is unaffected - it goes through
-bioservices EUtils instead, see below.)
+``dev fetch-genome``, ``install-ncbi``) shell out to NCBI's ``datasets`` CLI. If it
+isn't installed or isn't on ``PATH``, every one of those commands fails.
+(``dev fetch-nucleotide`` is unaffected - it goes through bioservices EUtils
+instead, see below.)
 
 Check it's available::
 

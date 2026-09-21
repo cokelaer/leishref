@@ -77,19 +77,6 @@ scaffold from it, from raw FASTA through to a published, installable entry.
     # Zenodo for everyone else too:
     leishref install Ltrop.raw.scaffold.Ld1S --alias my-scaffold
 
-Adding an NCBI genome without downloading it
------------------------------------------------
-
-For bulk catalog growth, ``dev import`` adds entries from NCBI's assembly summary
-without downloading sequence, then ``dev checksum`` backfills the md5 later::
-
-    leishref dev import GCA_000227135.2 GCA_000410715.1
-    leishref dev import --from-tsv ~/Downloads/ncbi_dataset.tsv --dry-run
-    leishref dev import --from-tsv ~/Downloads/ncbi_dataset.tsv
-
-    # Later, fill in checksums for entries that don't have one yet
-    leishref dev checksum --limit 10
-
 Packaging genomes for offline sharing
 ----------------------------------------
 
