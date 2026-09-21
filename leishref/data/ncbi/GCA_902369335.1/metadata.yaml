@@ -5,6 +5,7 @@ taxon_id: 5671
 species: Leishmania infantum
 assembly_name: Linf
 assembly_level: Chromosome
+molecule_type: kinetoplast,maxicircle
 release_date: '2019-10-04'
 files:
   fasta: GCA_902369335.1_Linf_genomic.fna
