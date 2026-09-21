@@ -59,6 +59,18 @@ def test_user_and_dev_commands_are_separated():
         assert command in dev.output
 
 
+def test_import_and_checksum_commands_are_removed():
+    """Bulk metadata-only import + backfill-checksum was a one-time bootstrap path,
+    superseded now that fetch-genome/fetch-nucleotide/add/scaffold always
+    download and checksum in one step."""
+    dev = CliRunner().invoke(cli, ["dev", "--help"])
+    assert "import" not in dev.output
+    assert "checksum" not in dev.output
+
+    assert CliRunner().invoke(cli, ["dev", "import"]).exit_code != 0
+    assert CliRunner().invoke(cli, ["dev", "checksum"]).exit_code != 0
+
+
 def test_verify_passes_on_an_intact_database(installed):
     base, _ = installed
     result = run(["verify", "--local-dir", "data"], base)

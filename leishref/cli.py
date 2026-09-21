@@ -41,7 +41,7 @@ from leishref.metadata import (
     write_genome,
 )
 from leishref.naming import suggest_alias
-from leishref.ncbi import fetch_fasta_gff, fetch_metadata, fetch_metadata_many, species_from_organism
+from leishref.ncbi import fetch_fasta_gff, fetch_metadata, species_from_organism
 from leishref.nuccore import NuccoreError, fetch_nucleotide_fasta, fetch_nucleotide_metadata
 from leishref.prune import prune_fasta
 from leishref.scaffold import clean_scaffolded_fasta, ragtag_version, run_scaffold
@@ -117,11 +117,11 @@ click.rich_click.COMMAND_GROUPS = {
     "leishref dev": [
         {
             "name": "Adding genomes",
-            "commands": ["fetch-genome", "fetch-nucleotide", "add", "import", "scaffold", "derive-agp"],
+            "commands": ["fetch-genome", "fetch-nucleotide", "add", "scaffold", "derive-agp"],
         },
         {
             "name": "Publishing and managing",
-            "commands": ["publish", "checksum", "remove"],
+            "commands": ["publish", "remove"],
         },
     ],
 }
@@ -171,7 +171,6 @@ click.rich_click.OPTION_GROUPS = {
             "--no-link",
             "--help",
         ],
-        "leishref dev import": ["--from-tsv", "--overwrite", "--dry-run", "--help"],
     }.items()
 }
 
@@ -2073,101 +2072,6 @@ def remove(identifier, catalog_dir, force):
     click.echo(f"Removed {entry_path}")
 
 
-def _genome_from_ncbi(accession: str, meta: dict) -> Genome:
-    """Build a catalog entry from a `datasets summary` record."""
-    return Genome(
-        identifier=accession,
-        source="NCBI",
-        accession=accession,
-        taxon_id=meta.get("taxon_id"),
-        species=species_from_organism(meta.get("organism_name")) or None,
-        strain=meta.get("strain"),
-        assembly_name=meta.get("assembly_name"),
-        assembly_level=meta.get("assembly_level"),
-        release_date=meta.get("release_date"),
-        stats=meta.get("stats") or {},
-        provenance={
-            k: v
-            for k, v in (
-                ("bioproject", meta.get("bioproject")),
-                ("biosample", meta.get("biosample")),
-                ("sequencing_technology", meta.get("sequencing_technology")),
-                ("assembler", meta.get("assembler")),
-            )
-            if v
-        },
-        date_added=today_iso(),
-    )
-
-
-def _accessions_from_tsv(path: Path) -> list:
-    """Accessions from an NCBI Datasets table export."""
-    import csv
-
-    with open(path, newline="") as handle:
-        rows = list(csv.DictReader(handle, delimiter="\t"))
-    column = next((c for c in (rows[0] if rows else {}) if c.strip().lower() == "assembly accession"), None)
-    if column is None:
-        raise click.ClickException(f"No 'Assembly Accession' column in {path}")
-    return [r[column].strip() for r in rows if r.get(column, "").strip()]
-
-
-@dev.command("import")
-@click.argument("accessions", nargs=-1)
-@click.option("--from-tsv", type=click.Path(exists=True), help="NCBI Datasets TSV export to read accessions from")
-@click.option("--catalog-dir", type=click.Path(), help="Write entries here instead")
-@click.option("--overwrite", is_flag=True, help="Replace entries that already exist")
-@click.option("--dry-run", is_flag=True, help="Report what would be added without writing")
-def import_cmd(accessions, from_tsv, catalog_dir, overwrite, dry_run):
-    """Add catalog entries from NCBI without downloading any sequence.
-
-    NCBI's summary already carries the assembly statistics, and they agree with computing
-    them from the FASTA, so a catalog entry needs no download. Only the md5 checksums are
-    missing; `leishref dev checksum` fills those in.
-
-    Examples:
-
-    \b
-      leishref dev import GCA_000227135.2 GCA_000410715.1
-      leishref dev import --from-tsv ~/Downloads/ncbi_dataset.tsv
-      leishref dev import --from-tsv ncbi_dataset.tsv --dry-run
-    """
-    wanted = list(accessions) + (_accessions_from_tsv(Path(from_tsv)) if from_tsv else [])
-    if not wanted:
-        raise click.ClickException("Give accessions, or --from-tsv")
-
-    # Preserve order while removing the duplicates a TSV export often carries.
-    seen = set()
-    wanted = [a for a in wanted if not (a in seen or seen.add(a))]
-
-    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
-    existing = {d.name for d in root.iterdir() if (d / "metadata.yaml").is_file()} if root.is_dir() else set()
-
-    todo = wanted if overwrite else [a for a in wanted if a not in existing]
-    click.echo(f"{len(wanted)} accessions, {len(wanted) - len(todo)} already in the catalog, {len(todo)} to add")
-    if not todo:
-        return
-
-    if dry_run:
-        for accession in todo:
-            click.echo(f"  would add {accession}")
-        return
-
-    added = skipped = 0
-    with click.progressbar(fetch_metadata_many(todo), length=len(todo), label="Querying NCBI") as stream:
-        for accession, meta in stream:
-            if not meta:
-                skipped += 1
-                continue
-            write_genome(root / "ncbi" / accession, _genome_from_ncbi(accession, meta))
-            added += 1
-
-    click.echo(f"Added {added} entries to {root}")
-    if skipped:
-        click.echo(f"{skipped} accessions returned nothing from NCBI", err=True)
-    click.echo("Checksums are still missing; run 'leishref dev checksum' to fill them in")
-
-
 @dev.command("check-aliases")
 @click.option("--catalog-dir", type=click.Path(), help="Check this catalog instead")
 def check_aliases(catalog_dir):
@@ -2220,65 +2124,6 @@ def check_aliases(catalog_dir):
             click.echo(f"✓ No duplicate aliases ({len(aliases)} total)")
 
     click.echo("✓ All checks passed")
-
-
-@dev.command()
-@click.option("--catalog-dir", type=click.Path(), help="Update entries here instead")
-@click.option("--workdir", type=click.Path(), default="NCBI", show_default=True, help="Where downloads land")
-@click.option("--keep", is_flag=True, help="Keep the downloaded files instead of discarding them")
-@click.option("--limit", type=int, help="Stop after this many genomes")
-def checksum(catalog_dir, workdir, keep, limit):
-    """Download genomes that have no checksum yet and record md5 and gap counts.
-
-    Entries added by `dev import` carry NCBI's statistics but no md5, because that needs
-    the sequence itself. This fetches each one, records the checksum, and recomputes the
-    statistics locally, which also fills in num_gaps.
-
-    Examples:
-
-    \b
-      leishref dev checksum
-      leishref dev checksum --limit 10
-      leishref dev checksum --keep
-    """
-    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
-    workdir = Path(workdir)
-
-    pending = [g for g in catalog(root) if g.accession and not g.checksums.get("fasta")]
-    if limit:
-        pending = pending[:limit]
-
-    if not pending:
-        click.echo("Every catalog entry already has a checksum")
-        return
-
-    click.echo(f"{len(pending)} entries without a checksum")
-    done = failed = 0
-
-    for genome in pending:
-        scratch = None if keep else tempfile.TemporaryDirectory()
-        destination = workdir if keep else Path(scratch.name)
-        try:
-            fasta, gff = fetch_fasta_gff(genome.accession, destination)
-            if not fasta:
-                click.echo(f"  {genome.accession}: nothing on NCBI", err=True)
-                failed += 1
-                continue
-
-            genome.files = {k: v.name for k, v in (("fasta", fasta), ("gff", gff)) if v}
-            genome.checksums = {k: md5_file(v) for k, v in (("fasta", fasta), ("gff", gff)) if v}
-            genome.stats = genome_stats(fasta)
-            write_genome(genome.path or catalog_entry_dir(root, genome), genome)
-            done += 1
-            click.echo(f"  {genome.accession}: {genome.stats['num_scaffolds']} scaffolds, md5 recorded")
-        except Exception as exc:  # one bad genome must not end the batch
-            click.echo(f"  {genome.accession}: {exc}", err=True)
-            failed += 1
-        finally:
-            if scratch is not None:
-                scratch.cleanup()
-
-    click.echo(f"\nRecorded {done} checksums, {failed} failed")
 
 
 if __name__ == "__main__":
