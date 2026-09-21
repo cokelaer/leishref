@@ -24,13 +24,13 @@ def test_link_name_standardizes_fasta_extension():
     assert link_name("Ltrop.ncbi.L590", Path("x/y.fa")) == "Ltrop.ncbi.L590.fna"
 
 
-def test_link_is_relative_so_the_tree_stays_movable(tree):
+def test_link_is_absolute_so_it_still_works_if_moved(tree):
     base, fasta, _ = tree
     link = make_link("Ltrop.ncbi.L590", fasta, base)
 
     target = os.readlink(link)
-    assert not os.path.isabs(target)
-    assert target == "NCBI/GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna"
+    assert os.path.isabs(target)
+    assert target == str(fasta.resolve())
     assert link.read_text() == ">c1\nACGT\n"
 
 
@@ -38,6 +38,18 @@ def test_repeated_linking_is_a_no_op(tree):
     base, fasta, _ = tree
     assert make_link("Ltrop.ncbi.L590", fasta, base) is not None
     assert make_link("Ltrop.ncbi.L590", fasta, base) is None
+
+
+def test_an_old_relative_link_is_upgraded_to_absolute(tree):
+    """Links made before the switch to absolute paths self-heal on next use."""
+    base, fasta, _ = tree
+    link = base / "Ltrop.ncbi.L590.fna"
+    link.symlink_to(os.path.relpath(fasta.resolve(), start=base.resolve()))
+
+    upgraded = make_link("Ltrop.ncbi.L590", fasta, base)
+
+    assert upgraded is not None
+    assert os.path.isabs(os.readlink(link))
 
 
 def test_stale_symlink_is_repointed(tree):
