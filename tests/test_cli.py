@@ -187,6 +187,52 @@ def test_install_by_catalog_alias_uses_aliases_txt(tmp_path):
     assert "--alias LtrL590" in result.output
 
 
+def test_install_is_a_quiet_noop_when_the_same_genome_is_already_installed(tmp_path):
+    """Re-running install with the same NAME/ALIAS shouldn't nag about --force."""
+    genome_dir = tmp_path / "data" / "Ld1S"
+    genome_dir.mkdir(parents=True)
+    fasta = genome_dir / "assembly.fna"
+    fasta.write_text(">c1\nACGT\n")
+    write_genome(
+        genome_dir,
+        Genome(
+            identifier="Ld1S",
+            source="NCBI",
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+            provenance={"catalog_id": "GCA_000410715.1"},
+        ),
+    )
+
+    result = run(["install", "GCA_000410715.1", "--alias", "Ld1S", "--local-dir", "data", "--no-link"], tmp_path)
+    assert result.exit_code == 0
+    assert "Already installed" in result.output
+    assert "force" not in result.output.lower()
+
+
+def test_install_refuses_to_silently_replace_a_different_genome_under_the_same_alias(tmp_path):
+    """A different genome already cached under ALIAS is a real conflict, not a no-op."""
+    genome_dir = tmp_path / "data" / "Ld1S"
+    genome_dir.mkdir(parents=True)
+    fasta = genome_dir / "assembly.fna"
+    fasta.write_text(">c1\nACGT\n")
+    write_genome(
+        genome_dir,
+        Genome(
+            identifier="Ld1S",
+            source="NCBI",
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+            provenance={"catalog_id": "GCA_000002725.2"},
+        ),
+    )
+
+    result = run(["install", "GCA_000410715.1", "--alias", "Ld1S", "--local-dir", "data", "--no-link"], tmp_path)
+    assert result.exit_code == 1
+    assert "already used by a different genome" in result.output
+    assert "--force" in result.output
+
+
 def test_install_rejects_an_unknown_name_before_asking_for_an_alias(tmp_path):
     result = run(["install", "nonexistent", "--local-dir", "data"], tmp_path)
     assert result.exit_code == 1
