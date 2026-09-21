@@ -138,6 +138,24 @@ def test_matches_finds_taxon_id_given_as_text(genome):
     assert genome.matches(["5666"])
 
 
+def test_molecule_type_is_searchable_and_roundtrips(tmp_path, genome):
+    """A kinetoplast/maxicircle entry should turn up in a plain search by name."""
+    genome.molecule_type = "kinetoplast,maxicircle"
+    assert genome.matches(["kinetoplast"])
+    assert genome.matches(["maxicircle"])
+
+    written = write_genome(tmp_path / "GCA_1.1", genome)
+    loaded = read_genome(tmp_path / "GCA_1.1")
+    assert loaded.molecule_type == "kinetoplast,maxicircle"
+    assert "molecule_type: kinetoplast,maxicircle" in written.read_text()
+
+
+def test_molecule_type_absent_by_default(genome):
+    """An ordinary nuclear genome shouldn't turn up in a kinetoplast search."""
+    assert genome.molecule_type is None
+    assert not genome.matches(["kinetoplast"])
+
+
 def test_a_lone_star_matches_every_genome(genome):
     assert genome.matches(["*"])
 

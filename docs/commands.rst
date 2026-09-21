@@ -253,6 +253,13 @@ Add a genome *assembly* from NCBI (GCA_/GCF_ accession, via the ``datasets`` CLI
     leishref dev fetch-genome GCA_000227135.2
     leishref dev fetch-genome GCA_000227135.2 --alias Ld1S
 
+NCBI's own ``assembly_level`` doesn't distinguish a lone kinetoplast/maxicircle
+sequence submitted as a "genome assembly" from a real nuclear genome - it still
+comes back as e.g. ``Chromosome``. Pass ``--molecule-type`` when you know that's
+what it actually is, so it turns up in ``leishref search kinetoplast``::
+
+    leishref dev fetch-genome GCA_902369315.1 --molecule-type kinetoplast,maxicircle
+
 leishref dev fetch-nucleotide
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -268,10 +275,16 @@ Fetched via NCBI EUtils (through `bioservices
 ``leishref/data/ncbi_nucleotide/`` (``source: NCBI-Nucleotide``) rather than
 ``ncbi/``, since it's a different kind of record with a different fetch mechanism.
 
+A standalone nuccore record is a kinetoplast/maxicircle far more often than
+anything else, so ``--molecule-type`` defaults to ``kinetoplast`` here (unlike
+``fetch-genome``, where it's unset by default); pass ``--molecule-type
+kinetoplast,maxicircle`` or ``--molecule-type ''`` to override.
+
 Options:
 - ``--alias ALIAS`` — Also install into the local database under this name
 - ``--species TEXT`` — Override the organism reported by NCBI
 - ``--strain TEXT`` — Override the strain reported by NCBI
+- ``--molecule-type TEXT`` — What this is (default ``kinetoplast``); pass ``''`` to leave unset
 - ``--email TEXT`` — Contact email for NCBI EUtils (also settable in ``~/.config/bioservices/bioservices.cfg``)
 - ``--force`` — Replace an existing catalog entry
 - ``--no-link`` — Skip the alias-named symlink
@@ -282,6 +295,7 @@ leishref dev add
 Add a local assembly::
 
     leishref dev add FASTA [--technology TECH]
+    leishref dev add kdna.fa --alias Lgu.kinetoplast --molecule-type kinetoplast,maxicircle
 
 leishref dev scaffold
 ~~~~~~~~~~~~~~~~~~~~~

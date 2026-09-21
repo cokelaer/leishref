@@ -139,6 +139,45 @@ def test_search_matches_taxon_id(installed):
     assert "donovani" in result.output
 
 
+def test_search_finds_catalog_entries_tagged_as_kinetoplast(installed):
+    """Genomes that are actually a lone kinetoplast/maxicircle carry molecule_type,
+    so 'guyanensis Lgu' (a mislabeled kinetoplast) turns up under 'kinetoplast'."""
+    base, _ = installed
+    result = run(["search", "kinetoplast", "--local-dir", "data"], base)
+    assert result.exit_code == 0
+    assert "GCA_902369315.1" in result.output
+    assert "BK010877.1" in result.output
+    assert "kinetoplast,maxicircle" in result.output
+
+
+def test_dev_add_records_molecule_type(tmp_path):
+    """dev add --molecule-type tags a local kinetoplast/maxicircle assembly."""
+    fasta = tmp_path / "kdna.fa"
+    fasta.write_text(">maxicircle\nACGTACGT\n")
+
+    result = run(
+        [
+            "dev",
+            "add",
+            str(fasta),
+            "--alias",
+            "Lgu.kinetoplast",
+            "--molecule-type",
+            "kinetoplast,maxicircle",
+            "--catalog-dir",
+            "catalog",
+            "--local-dir",
+            "data",
+        ],
+        tmp_path,
+    )
+    assert result.exit_code == 0
+
+    entry = read_genome(tmp_path / "catalog" / "local" / "Lgu.kinetoplast")
+    assert entry.molecule_type == "kinetoplast,maxicircle"
+    assert entry.matches(["kinetoplast"])
+
+
 def test_search_without_a_match_exits_nonzero(installed):
     base, _ = installed
     result = run(["search", "xyzzy", "--local-dir", "data"], base)
