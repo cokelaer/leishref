@@ -251,12 +251,14 @@ data/Ltrop.L590/
   metadata.yaml         # copied from the catalog, identifier rewritten to your alias
   GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna
   GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.gff
-Ltrop.L590.fna -> data/Ltrop.L590/...     # relative symlink
-Ltrop.L590.gff -> data/Ltrop.L590/...
+Ltrop.L590.fna -> /home/you/.config/leishref/Ltrop.L590/...    # absolute symlink
+Ltrop.L590.gff -> /home/you/.config/leishref/Ltrop.L590/...
 ```
 
-The extension is preserved so file-type sniffing works, and links are relative so the
-tree can be moved or shared. `leishref link` refreshes them; `--no-link` opts out. An
+FASTA symlinks are always named `.fna` regardless of the source file's own extension
+(`.fa`, `.fasta`). Links are absolute, since the target lives in the shared cache
+(`~/.config/leishref`) rather than beside the link, so they keep working if you copy or
+move the symlink elsewhere. `leishref link` refreshes them; `--no-link` opts out. An
 existing symlink is repointed, but a regular file of the same name is never overwritten.
 
 ### Look around

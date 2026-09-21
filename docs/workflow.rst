@@ -21,7 +21,7 @@ The common case: find a genome, install it, and confirm it's intact.
     leishref verify
 
 ``leishref install`` creates ``~/.config/leishref/Ld1S/`` with the FASTA (and GFF, if
-the catalog entry has one) plus a relative symlink ``Ld1S.fna`` in the current
+the catalog entry has one) plus an absolute symlink ``Ld1S.fna`` in the current
 directory, and appends the install to ``./accessions.txt`` so it can be replayed
 later with ``leishref restore``.
 
