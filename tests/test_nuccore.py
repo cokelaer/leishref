@@ -1,5 +1,7 @@
 """Standalone NCBI nuccore record fetching, with bioservices mocked out."""
 
+import logging
+
 import pytest
 
 from leishref.nuccore import NuccoreError, fetch_nucleotide_fasta, fetch_nucleotide_metadata
@@ -74,3 +76,13 @@ def test_fetch_nucleotide_metadata_returns_empty_dict_when_not_found(monkeypatch
     monkeypatch.setattr("leishref.nuccore._client", lambda email=None: FakeClient(search={"idlist": []}))
 
     assert fetch_nucleotide_metadata("nonexistent") == {}
+
+
+def test_client_suppresses_bioservices_missing_email_warning(caplog):
+    """EUtils() logs a rate-limit notice whenever no email is configured; we mute it."""
+    from leishref.nuccore import _client
+
+    with caplog.at_level(logging.WARNING, logger="bioservices.EUtils"):
+        _client()
+
+    assert caplog.records == []

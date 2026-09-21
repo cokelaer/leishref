@@ -6,6 +6,7 @@ accompanying nuclear genome assembly. It has no scaffold/contig structure and no
 `datasets` support, so it needs its own fetch path through NCBI's EUtils.
 """
 
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -17,7 +18,16 @@ class NuccoreError(Exception):
 def _client(email: Optional[str] = None):
     from bioservices import EUtils
 
-    return EUtils(email=email) if email else EUtils()
+    # Without an email, EUtils() logs a real but harmless rate-limit notice on every
+    # construction - bioservices resets its logger's level to WARNING inside REST()
+    # right before emitting it, so lowering the logger's own level ahead of time has
+    # no effect; logging.disable() overrides that unconditionally.
+    previous = logging.root.manager.disable
+    logging.disable(logging.WARNING)
+    try:
+        return EUtils(email=email) if email else EUtils()
+    finally:
+        logging.disable(previous)
 
 
 def fetch_nucleotide_fasta(accession: str, outdir: Path, email: Optional[str] = None) -> Path:
