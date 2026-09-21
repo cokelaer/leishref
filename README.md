@@ -59,11 +59,12 @@ $ leishref --help
   dev        Commands for maintaining the shipped catalog
 
 $ leishref dev --help
-  fetch        Add an NCBI genome to the catalog
-  add          Add a local assembly to the catalog
-  scaffold     Scaffold an assembly against a reference with ragtag
-  publish      Deposit an installed genome on Zenodo
-  derive-agp   Derive an AGP showing how one assembly was laid out from another
+  fetch-genome      Add an NCBI genome assembly to the catalog
+  fetch-nucleotide  Add a standalone NCBI nuccore record to the catalog
+  add               Add a local assembly to the catalog
+  scaffold          Scaffold an assembly against a reference with ragtag
+  publish           Deposit an installed genome on Zenodo
+  derive-agp        Derive an AGP showing how one assembly was laid out from another
 ```
 
 Everything under `dev` writes to `leishref/data/`, the catalog that ships with the
@@ -196,6 +197,7 @@ record count does. `search` shows the scaffold figures; both levels are in the r
 | source | meaning |
 |---|---|
 | `NCBI` | fetched by accession through the `datasets` CLI |
+| `NCBI-Nucleotide` | a standalone nuccore record (not a GCA/GCF assembly), fetched via `dev fetch-nucleotide` over NCBI EUtils |
 | `Zenodo` | published to Zenodo; retrieved by DOI, no token needed |
 | `TriTrypDB` | downloaded by hand, because their downloads require a login |
 | `Local` | added from disk and not published anywhere yet |
@@ -311,8 +313,11 @@ Exits non-zero on a missing file or a checksum mismatch, so it can gate CI or ru
 ## Maintaining the catalog
 
 ```bash
-# Add an NCBI genome. --alias also keeps the files locally rather than discarding them.
-leishref dev fetch GCA_000410715.1 --alias Ltrop.L590
+# Add an NCBI genome assembly. --alias also keeps the files locally rather than discarding them.
+leishref dev fetch-genome GCA_000410715.1 --alias Ltrop.L590
+
+# Add a standalone NCBI nuccore record (not a GCA/GCF assembly, e.g. a lone kinetoplast)
+leishref dev fetch-nucleotide BK010877.1 --alias LiJPCM5.kinetoplast
 
 # Register your own assembly
 leishref dev add assembly.fa --alias Ltrop.flye --species "Leishmania tropica" \
@@ -329,7 +334,7 @@ leishref dev publish Ltrop.flye --confirm --version v1.0
 Use `ZENODO_SANDBOX_TOKEN` with `--sandbox` to rehearse. A sandbox DOI is deliberately
 not recorded, since it would block the real publish later.
 
-**Contributing a genome:** run `leishref dev fetch` or `dev add`, check the new
+**Contributing a genome:** run `leishref dev fetch-genome`, `dev fetch-nucleotide`, or `dev add`, check the new
 `leishref/data/<id>/metadata.yaml`, and open a pull request. Only metadata is committed;
 sequence data never enters the repository.
 

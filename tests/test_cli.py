@@ -55,7 +55,7 @@ def test_user_and_dev_commands_are_separated():
     assert "publish" not in result.output, "maintainer commands belong under dev"
 
     dev = CliRunner().invoke(cli, ["dev", "--help"])
-    for command in ("fetch", "add", "scaffold", "publish"):
+    for command in ("fetch-genome", "add", "scaffold", "publish"):
         assert command in dev.output
 
 

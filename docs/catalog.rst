@@ -26,7 +26,7 @@ named by accession for NCBI genomes and by alias for everything else::
     │       └── metadata.yaml
     └── zenodo/
 
-``leishref dev fetch`` and ``leishref dev import`` write into ``ncbi/``,
+``leishref dev fetch-genome`` and ``leishref dev import`` write into ``ncbi/``,
 ``leishref dev scaffold`` into ``scaffold/``, and a TriTrypDB or Zenodo genome into the
 directory of the same name. Grouping follows how a genome was *made*, not where its
 files currently live: ``leishref dev publish`` deposits a scaffold on Zenodo and records
@@ -100,7 +100,7 @@ Updating the catalog
 
 Add a new genome::
 
-    leishref dev fetch --accession <GCA_ID>
+    leishref dev fetch-genome <GCA_ID>
 
 The catalog is version-controlled in git. Commit metadata changes::
 

@@ -10,10 +10,13 @@ Core fields
     Human-readable name (e.g., ``Ld1S``).
 
 **source** (string)
-    Origin: ``ncbi``, ``tritrypdb``, ``zenodo``, or ``scaffold``.
+    Origin: ``ncbi``, ``ncbi_nucleotide``, ``tritrypdb``, ``zenodo``, or ``scaffold``.
+    ``ncbi_nucleotide`` is a standalone NCBI nuccore record (e.g. a lone kinetoplast
+    sequence) rather than a GCA/GCF assembly - see :doc:`catalog`.
 
 **accession** (string)
-    NCBI assembly accession (e.g., ``GCA_000227135.2``).
+    NCBI assembly accession (e.g., ``GCA_000227135.2``), or a nuccore accession (e.g.,
+    ``BK010877.1``) when ``source`` is ``ncbi_nucleotide``.
 
 **taxon_id** (int)
     NCBI Taxonomy ID (e.g., ``5671`` for *Leishmania donovani*).
