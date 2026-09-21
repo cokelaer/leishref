@@ -26,6 +26,7 @@ leishref/data/**/*.fai
 # Only version-control the structured catalog groups.
 leishref/data/*/
 !leishref/data/ncbi/
+!leishref/data/ncbi_nucleotide/
 !leishref/data/scaffold/
 !leishref/data/tritrypdb/
 !leishref/data/zenodo/

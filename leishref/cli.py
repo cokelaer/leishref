@@ -42,6 +42,7 @@ from leishref.metadata import (
 )
 from leishref.naming import suggest_alias
 from leishref.ncbi import fetch_fasta_gff, fetch_metadata, fetch_metadata_many, species_from_organism
+from leishref.nuccore import NuccoreError, fetch_nucleotide_fasta, fetch_nucleotide_metadata
 from leishref.prune import prune_fasta
 from leishref.scaffold import clean_scaffolded_fasta, ragtag_version, run_scaffold
 from leishref.visualize import (
@@ -116,7 +117,7 @@ click.rich_click.COMMAND_GROUPS = {
     "leishref dev": [
         {
             "name": "Adding genomes",
-            "commands": ["fetch", "add", "import", "scaffold", "derive-agp"],
+            "commands": ["fetch", "fetch-nucleotide", "add", "import", "scaffold", "derive-agp"],
         },
         {
             "name": "Publishing and managing",
@@ -216,6 +217,7 @@ SOURCE_STYLES = {
     "TriTrypDB": "yellow",
     "Local": "dim",
     "Scaffold": "blue",
+    "NCBI-Nucleotide": "cyan",
 }
 
 
@@ -478,6 +480,7 @@ ACCESSIONS_FILE = "accessions.txt"
 #: Zenodo and local entries are everything else.
 INFO_SECTIONS = {
     "ncbi": "NCBI",
+    "ncbi_nucleotide": "NCBI Nucleotide",
     "tritrypdb": "TriTrypDB",
     "scaffolds": "Scaffolds",
     "custom": "Custom",
@@ -1687,6 +1690,69 @@ def fetch(accession, alias, species, strain, catalog_dir, local_dir, force, no_l
 
         if alias:
             installed = _install(genome, alias, [fasta, gff], Path(local_dir))
+            click.echo(f"Installed into {installed}")
+            _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
+
+
+@dev.command("fetch-nucleotide")
+@click.argument("accession")
+@click.option("--alias", help="Also install into the local database under this name")
+@click.option("--species", help="Override the organism reported by NCBI")
+@click.option("--strain", help="Override the strain reported by NCBI")
+@click.option("--email", help="Contact email for NCBI EUtils (recommended; avoids rate-limit warnings)")
+@click.option("--catalog-dir", type=click.Path(), help="Write the entry here instead")
+@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
+@click.option("--force", is_flag=True, help="Replace an existing catalog entry")
+@click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
+def fetch_nucleotide(accession, alias, species, strain, email, catalog_dir, local_dir, force, no_link):
+    """Add a standalone NCBI nucleotide (nuccore) record to the catalog.
+
+    For a single sequence that isn't part of a GCA/GCF assembly - e.g. a lone
+    kinetoplast or maxicircle deposited on its own. Fetched via NCBI EUtils
+    (bioservices), not the `datasets` CLI used for assemblies.
+
+    Examples:
+
+    \b
+      leishref dev fetch-nucleotide BK010877.1
+      leishref dev fetch-nucleotide BK010877.1 --alias LiJPCM5.kinetoplast
+    """
+    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
+    entry = root / "ncbi_nucleotide" / accession
+    if (entry / "metadata.yaml").exists() and not force:
+        click.echo(f"Already in the catalog: {entry}", err=True)
+        click.echo("Use --force to replace it", err=True)
+        raise SystemExit(1)
+
+    click.echo(f"Fetching {accession} from NCBI nuccore...")
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            fasta = fetch_nucleotide_fasta(accession, Path(tmp), email=email)
+            meta = fetch_nucleotide_metadata(accession, email=email)
+        except NuccoreError as exc:
+            click.echo(str(exc), err=True)
+            raise SystemExit(1)
+
+        genome = Genome(
+            identifier=accession,
+            source="NCBI-Nucleotide",
+            accession=accession,
+            taxon_id=meta.get("taxon_id"),
+            species=species or meta.get("organism"),
+            strain=strain or meta.get("strain"),
+            release_date=meta.get("release_date"),
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+            stats=genome_stats(fasta),
+            notes=meta.get("title"),
+            date_added=today_iso(),
+        )
+
+        write_genome(entry, genome)
+        click.echo(f"Catalog entry: {entry}")
+
+        if alias:
+            installed = _install(genome, alias, [fasta], Path(local_dir))
             click.echo(f"Installed into {installed}")
             _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
 

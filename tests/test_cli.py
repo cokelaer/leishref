@@ -745,6 +745,8 @@ def test_install_many_parallel_installs_all_genomes(tmp_path, monkeypatch):
     """_install_many_parallel fetches concurrently and installs each genome."""
     import leishref.cli as cli_module
 
+    monkeypatch.chdir(tmp_path)  # _record_download writes accessions.txt to cwd
+
     def fake_fetch(accession, outdir):
         fasta = Path(outdir) / f"{accession}.fna"
         fasta.write_text(f">seq_{accession}\nACGT\n")
@@ -771,6 +773,8 @@ def test_install_many_parallel_installs_all_genomes(tmp_path, monkeypatch):
 def test_install_many_parallel_reports_failures(tmp_path, monkeypatch):
     """_install_many_parallel collects failures without aborting the whole batch."""
     import leishref.cli as cli_module
+
+    monkeypatch.chdir(tmp_path)  # _record_download writes accessions.txt to cwd
 
     def fake_fetch(accession, outdir):
         if accession == "GCA_bad":
@@ -800,6 +804,8 @@ def test_install_many_parallel_reports_failures(tmp_path, monkeypatch):
 def test_install_many_parallel_skips_already_installed(tmp_path, monkeypatch):
     """_install_many_parallel does not re-fetch a genome already on disk."""
     import leishref.cli as cli_module
+
+    monkeypatch.chdir(tmp_path)  # _record_download writes accessions.txt to cwd
 
     calls = []
 
