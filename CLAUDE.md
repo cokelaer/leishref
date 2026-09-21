@@ -4,7 +4,11 @@
 
 **DO NOT MOVE directories around.** Catalog organization is fixed:
 
-- `leishref/data/ncbi/` — NCBI reference genomes (GCA_/GCF_ accessions)
+- `leishref/data/ncbi/` — NCBI reference genome *assemblies* (GCA_/GCF_ accessions)
+- `leishref/data/ncbi_nucleotide/` — standalone NCBI nuccore records that are not a
+  GCA/GCF assembly (e.g. a lone kinetoplast/maxicircle sequence). Fetched via
+  `leishref dev fetch-nucleotide` (bioservices EUtils), not the `datasets` CLI used
+  for `ncbi/`. `source: NCBI-Nucleotide`.
 - `leishref/data/scaffolds/` — Scaffolds made from RefSeq genomes using ragtag
 - `leishref/data/custom/` — All custom genomes, including experimental scaffolds (source="Custom", even if published on Zenodo)
 - `leishref/data/tritrypdb/` — TriTrypDB genomes

@@ -20,7 +20,7 @@ METADATA_FILE = "metadata.yaml"
 CATALOG_DIR = Path(__file__).parent / "data"
 
 #: Catalog entries are grouped by where the genome came from, one directory per origin.
-CATALOG_GROUPS = ("ncbi", "scaffolds", "zenodo", "tritrypdb", "custom", "local")
+CATALOG_GROUPS = ("ncbi", "ncbi_nucleotide", "scaffolds", "zenodo", "tritrypdb", "custom", "local")
 
 #: Global cache directory for downloaded genomes, shared across all projects.
 CACHE_DIR = Path.home() / ".config" / "leishref"
@@ -186,14 +186,18 @@ def catalog_group(genome) -> str:
     """The catalog subdirectory a genome belongs in.
 
     Grouping follows the source: custom entries stay in custom/ (even if on Zenodo),
-    scaffolds go to scaffolds/, NCBI accessions to ncbi/, TriTrypDB to tritrypdb/,
-    and Zenodo-published genomes to zenodo/.
+    scaffolds go to scaffolds/, NCBI assemblies to ncbi/, standalone NCBI nuccore
+    records (not a GCA/GCF assembly - e.g. a lone kinetoplast/maxicircle sequence)
+    to ncbi_nucleotide/, TriTrypDB to tritrypdb/, and Zenodo-published genomes to
+    zenodo/.
     """
     source = (genome.source or "").lower()
     if source == "custom":
         return "custom"
     if genome.scaffold:
         return "scaffolds"
+    if source == "ncbi-nucleotide":
+        return "ncbi_nucleotide"
     if source in ("tritrypdb", "ncbi"):
         return source
     accession = genome.accession or ""

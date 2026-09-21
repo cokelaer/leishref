@@ -15,6 +15,9 @@ named by accession for NCBI genomes and by alias for everything else::
     │   │   └── metadata.yaml
     │   └── GCA_000410715.1/
     │       └── metadata.yaml
+    ├── ncbi_nucleotide/
+    │   └── BK010877.1/
+    │       └── metadata.yaml
     ├── scaffold/
     │   └── Ltropica.Ld1S.scaffold.flye/
     │       └── metadata.yaml
@@ -28,6 +31,12 @@ named by accession for NCBI genomes and by alias for everything else::
 directory of the same name. Grouping follows how a genome was *made*, not where its
 files currently live: ``leishref dev publish`` deposits a scaffold on Zenodo and records
 the DOI, but the entry stays under ``scaffold/`` rather than moving.
+
+``ncbi/`` is for GCA/GCF *assemblies*, fetched with NCBI's ``datasets`` CLI.
+``ncbi_nucleotide/`` is for a standalone NCBI nuccore record that isn't part of any
+assembly - typically a single sequence such as a kinetoplast/maxicircle deposited on
+its own - fetched instead via ``leishref dev fetch-nucleotide`` over NCBI EUtils
+(through `bioservices <https://bioservices.readthedocs.io/>`_).
 
 A flat layout is still read, so a local database (``data/<alias>/``) and any catalog
 written before the grouping are both loaded without change.

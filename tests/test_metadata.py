@@ -168,7 +168,7 @@ def test_every_catalog_genome_has_statistics():
 
 def test_catalog_sources_come_from_a_known_vocabulary():
     """source says where `download` fetches a genome from, not who assembled it."""
-    allowed = {"NCBI", "Zenodo", "TriTrypDB", "Local", "Leishref", "Custom"}
+    allowed = {"NCBI", "NCBI-Nucleotide", "Zenodo", "TriTrypDB", "Local", "Leishref", "Custom"}
     for entry in catalog():
         assert entry.source in allowed, f"{entry.identifier} has source {entry.source!r}"
 
@@ -253,6 +253,15 @@ def test_an_accession_decides_the_ncbi_group(genome):
     assert catalog_group(genome) == "ncbi"
     genome.accession = "GCA_000002875.2"
     assert catalog_group(genome) == "ncbi"
+
+
+def test_a_standalone_nuccore_record_groups_separately_from_assemblies(genome):
+    """A lone nuccore record (not a GCA/GCF assembly) must not land in ncbi/."""
+    from leishref.metadata import catalog_group
+
+    genome.source = "NCBI-Nucleotide"
+    genome.accession = "BK010877.1"
+    assert catalog_group(genome) == "ncbi_nucleotide"
 
 
 def test_a_genome_with_no_origin_at_all_is_local(genome):

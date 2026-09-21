@@ -242,9 +242,33 @@ All maintainer commands are under ``leishref dev``::
 leishref dev fetch
 ~~~~~~~~~~~~~~~~~~~
 
-Add a genome from NCBI::
+Add a genome *assembly* from NCBI (GCA_/GCF_ accession, via the ``datasets`` CLI)::
 
-    leishref dev fetch --accession GCA_000227135.2
+    leishref dev fetch GCA_000227135.2
+    leishref dev fetch GCA_000227135.2 --alias Ld1S
+
+leishref dev fetch-nucleotide
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Add a standalone NCBI nucleotide (nuccore) record - a single sequence that isn't
+part of any GCA/GCF assembly, such as a lone kinetoplast/maxicircle::
+
+    leishref dev fetch-nucleotide BK010877.1
+    leishref dev fetch-nucleotide BK010877.1 --alias LiJPCM5.kinetoplast
+
+Fetched via NCBI EUtils (through `bioservices
+<https://bioservices.readthedocs.io/>`_) rather than the ``datasets`` CLI, since
+``datasets`` only knows about assemblies. Written to
+``leishref/data/ncbi_nucleotide/`` (``source: NCBI-Nucleotide``) rather than
+``ncbi/``, since it's a different kind of record with a different fetch mechanism.
+
+Options:
+- ``--alias ALIAS`` — Also install into the local database under this name
+- ``--species TEXT`` — Override the organism reported by NCBI
+- ``--strain TEXT`` — Override the strain reported by NCBI
+- ``--email TEXT`` — Contact email for NCBI EUtils (also settable in ``~/.config/bioservices/bioservices.cfg``)
+- ``--force`` — Replace an existing catalog entry
+- ``--no-link`` — Skip the alias-named symlink
 
 leishref dev add
 ~~~~~~~~~~~~~~~~
