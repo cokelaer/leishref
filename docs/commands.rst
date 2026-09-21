@@ -9,11 +9,17 @@ leishref install
 
 Install a genome from the catalog::
 
-    leishref install --alias ALIAS ACCESSION
     leishref install GCA_002243465.1 --alias Ld1S
+
+Re-running the exact same command is a safe no-op: it just makes sure the
+alias-named symlink is in place, without re-downloading or printing anything about
+``--force``. ``--force`` is only needed to force a fresh download, or when ALIAS is
+already used by a *different* genome - reusing an alias for a different genome
+without ``--force`` is refused with a clear error rather than silently swapped.
 
 Options:
 - ``--alias ALIAS`` — Local directory name (required)
+- ``--force`` — Re-download, or replace a different genome under this alias
 - ``--no-link`` — Don't create symlinks
 
 leishref install-ncbi

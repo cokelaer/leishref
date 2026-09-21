@@ -551,7 +551,7 @@ def _require(genomes, key, what, catalog_root=None):
     show_default=True,
     help="Cache directory for downloaded genomes",
 )
-@click.option("--force", is_flag=True, help="Install again even if already installed")
+@click.option("--force", is_flag=True, help="Re-download, or replace a different genome under this alias")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
 def install(name, alias, local_dir, force, no_link):
     """Download a catalog genome and cache it with ALIAS.
@@ -560,6 +560,10 @@ def install(name, alias, local_dir, force, no_link):
     name for the cached copy: becomes the directory under ~/.config/leishref/ and the
     symlink name, so it is yours to choose and required. Recorded in ./accessions.txt
     so 'leishref restore' can rebuild this later.
+
+    Re-running install with the same NAME and ALIAS is a safe no-op: it just makes sure
+    the symlink is in place. --force is only needed to force a fresh download, or to
+    replace a *different* genome already cached under this ALIAS.
 
     Examples:
 
@@ -580,10 +584,18 @@ def install(name, alias, local_dir, force, no_link):
 
     target = Path(local_dir) / alias
     if (target / "metadata.yaml").exists() and not force:
+        existing = read_genome(target)
+        existing_origin = existing.provenance.get("catalog_id") or existing.accession or existing.identifier
+        if existing_origin != genome.identifier:
+            click.echo(f"--alias {alias} is already used by a different genome: {existing_origin}", err=True)
+            click.echo("Use --force to replace it", err=True)
+            raise SystemExit(1)
+
+        # Same genome already cached under this alias: nothing worth re-downloading,
+        # so this is quiet unless the symlink itself needed fixing.
         click.echo(f"Already installed: {target}")
-        _link(alias, [p for _, p, _ in read_genome(target).file_paths() if p.exists()], no_link)
+        _link(alias, [p for _, p, _ in existing.file_paths() if p.exists()], no_link)
         _record_download(Path(local_dir), genome.identifier or name, alias)
-        click.echo("Use --force to install again")
         return
 
     doi = genome.zenodo_doi
