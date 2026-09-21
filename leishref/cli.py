@@ -836,8 +836,9 @@ def search(terms, local_dir, installed, long_form):
         alias = get_catalog_alias(genome.accession or genome.identifier)
         if alias:
             suffixes.append(f"alias: {alias}")
-        if genome.identifier in by_origin:
-            suffixes.append(f"installed as {by_origin[genome.identifier]}")
+        installed_as = by_origin.get(genome.identifier)
+        if installed_as and installed_as != alias:
+            suffixes.append(f"installed as {installed_as}")
         suffix = "  [" + ", ".join(suffixes) + "]" if suffixes else ""
 
         source = _source_label(genome)
