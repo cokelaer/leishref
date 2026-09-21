@@ -220,6 +220,26 @@ def test_search_flags_installed_genomes(tmp_path):
     assert "installed as mine" in result.output
 
 
+def test_search_does_not_repeat_installed_as_when_it_matches_the_alias(tmp_path, monkeypatch):
+    """If the local install alias is the same string as the catalog alias, showing
+    both 'alias: X' and 'installed as X' is pure repetition."""
+    from leishref.metadata import catalog as read_catalog
+
+    origin = read_catalog()[0]
+    monkeypatch.setattr("leishref.cli.get_catalog_alias", lambda accession, catalog_root=None: "Shortname")
+
+    directory = tmp_path / "data" / "Shortname"
+    directory.mkdir(parents=True)
+    write_genome(
+        directory,
+        Genome(identifier="Shortname", species=origin.species, provenance={"catalog_id": origin.identifier}),
+    )
+
+    result = run(["search", origin.identifier, "--local-dir", "data"], tmp_path)
+    assert "alias: Shortname" in result.output
+    assert "installed as" not in result.output
+
+
 def test_install_without_an_alias_suggests_one(tmp_path):
     result = run(["install", "GCA_000410715.1", "--local-dir", "data"], tmp_path)
 
