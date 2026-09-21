@@ -6,6 +6,7 @@ species: Leishmania major
 strain: Friedlin
 assembly_name: Lma_mini
 assembly_level: Contig
+molecule_type: kinetoplast,minicircle
 release_date: '2019-10-13'
 files:
   fasta: GCA_902498725.1_Lma_mini_genomic.fna

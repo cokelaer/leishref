@@ -150,6 +150,17 @@ def test_search_finds_catalog_entries_tagged_as_kinetoplast(installed):
     assert "kinetoplast,maxicircle" in result.output
 
 
+def test_search_minicircle_is_distinct_from_maxicircle(installed):
+    """GCA_902498725.1 (Lma_mini, 4 short contigs) is a minicircle assembly, not a
+    maxicircle - the two are different kDNA molecule classes and shouldn't be
+    conflated under one search term."""
+    base, _ = installed
+    result = run(["search", "minicircle", "--local-dir", "data"], base)
+    assert result.exit_code == 0
+    assert "GCA_902498725.1" in result.output
+    assert "GCA_902369315.1" not in result.output
+
+
 def test_dev_add_records_molecule_type(tmp_path):
     """dev add --molecule-type tags a local kinetoplast/maxicircle assembly."""
     fasta = tmp_path / "kdna.fa"
