@@ -277,7 +277,7 @@ def test_dev_publish_creates_a_custom_catalog_entry_from_a_staged_path(tmp_path,
     result = run(
         ["dev", "publish", str(staged), "--confirm", "--catalog-dir", str(catalog_dir)],
         tmp_path,
-        input="Test Author\n",
+        input="Test Author\n\n",
     )
 
     assert result.exit_code == 0
@@ -329,13 +329,54 @@ def test_dev_publish_updates_an_existing_catalog_entry_by_name(tmp_path, monkeyp
             str(catalog_dir),
         ],
         tmp_path,
-        input="Test Author\n",
+        input="Test Author\n\n",
     )
 
     assert result.exit_code == 0
     entry = read_genome(shipped_dir)
     assert entry.zenodo_doi == "10.5281/zenodo.888"
     assert entry.source == "Zenodo"
+
+
+def test_dev_publish_accepts_and_records_optional_notes(tmp_path, monkeypatch):
+    """Publishing prompts for optional notes, adds them to the Zenodo description,
+    and archives them in metadata.yaml provenance."""
+    fasta = tmp_path / "Ltropica.TEST.genome.flye.fasta"
+    fasta.write_text(">chr1\nACGT\n")
+    run(["dev", "add", str(fasta)], tmp_path)
+    _fake_zenodo(monkeypatch)
+
+    staged = tmp_path / "to_publish_on_zenodo" / "Ltropica.TEST.genome.flye"
+    catalog_dir = tmp_path / "catalog"
+
+    # Capture the description passed to update_metadata
+    captured_description = None
+
+    def capture_update_metadata(dep_id, payload, sandbox=False):
+        nonlocal captured_description
+        captured_description = payload["metadata"]["description"]
+
+    import leishref.cli as cli_module
+
+    monkeypatch.setattr(
+        cli_module, "create_deposition", lambda *args, **kwargs: {"id": 1, "metadata": {"title": "", "creators": []}}
+    )
+    monkeypatch.setattr(cli_module, "upload_file", lambda *args, **kwargs: {})
+    monkeypatch.setattr(cli_module, "update_metadata", capture_update_metadata)
+    monkeypatch.setattr(cli_module, "publish_deposition", lambda *args, **kwargs: {"doi": "10.5281/zenodo.999"})
+
+    result = run(
+        ["dev", "publish", str(staged), "--confirm", "--catalog-dir", str(catalog_dir)],
+        tmp_path,
+        input="Test Author\nAssembled with latest tools and verified\n",
+    )
+
+    assert result.exit_code == 0
+    assert "Additional notes:" in captured_description
+    assert "Assembled with latest tools and verified" in captured_description
+
+    entry = read_genome(catalog_dir / "custom" / "Ltropica.TEST.genome.flye")
+    assert entry.provenance.get("zenodo_notes") == "Assembled with latest tools and verified"
 
 
 def test_search_without_a_match_exits_nonzero(installed):

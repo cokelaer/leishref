@@ -2107,6 +2107,9 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
 
     Needs ZENODO_TOKEN, or ZENODO_SANDBOX_TOKEN with --sandbox.
 
+    With --confirm, prompts for author name and optional additional notes to be
+    included in the Zenodo description and metadata.
+
     Examples:
 
     \b
@@ -2134,9 +2137,12 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
         return
 
     author = click.prompt("Author name")
+    notes = click.prompt("Additional notes (optional)", default="", show_default=False)
     try:
         title = f"Leishmania genome: {genome.identifier}"
         description = _zenodo_description(genome)
+        if notes:
+            description += f"\n\n<p><strong>Additional notes:</strong><br/>{notes}</p>"
         creators = ["LeishRef"]
         if author:
             creators.append(author)
@@ -2184,6 +2190,8 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
         return
 
     genome.provenance["zenodo_doi"] = doi
+    if notes:
+        genome.provenance["zenodo_notes"] = notes
     # A Custom entry stays Custom - and so in leishref/data/custom/ - even once
     # published; only entries that started life some other way (scaffolds) flip to
     # Zenodo. See CLAUDE.md's catalog placement rule.
@@ -2199,6 +2207,8 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
         # Already catalogued (e.g. a scaffold's shipped entry): update it in place.
         shipped = read_genome(entry)
         shipped.provenance["zenodo_doi"] = doi
+        if notes:
+            shipped.provenance["zenodo_notes"] = notes
         if shipped.source != "Custom":
             shipped.source = "Zenodo"
         write_genome(entry, shipped)
