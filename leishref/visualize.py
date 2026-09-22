@@ -45,6 +45,38 @@ def _species_matches_filter(species_name: str, species_filter: List[str]) -> boo
     return False
 
 
+def _classify_technology(tech_string: str) -> str:
+    """Classify sequencing technology into category.
+
+    Handles semicolon-separated hybrid techs; returns primary tech or "Hybrid".
+    """
+    if not tech_string:
+        return "Unknown"
+
+    tech_lower = tech_string.lower().replace(" ", "").replace(";", ",")
+    parts = [p.strip() for p in tech_string.split(";")]
+
+    # Check for hybrids (multiple tech types)
+    has_illumina = any("illumina" in p.lower() for p in parts)
+    has_nanopore = any("nanopore" in p.lower() or "ont" in p.lower() for p in parts)
+    has_pacbio = any("pacbio" in p.lower() or "pac" in p.lower() for p in parts)
+    has_legacy = any(x in tech_lower for x in ["454", "ion", "solid"])
+
+    if sum([has_illumina, has_nanopore, has_pacbio, has_legacy]) > 1:
+        return "Hybrid"
+
+    if has_illumina:
+        return "Illumina"
+    if has_nanopore:
+        return "Oxford Nanopore"
+    if has_pacbio:
+        return "PacBio"
+    if has_legacy:
+        return "Legacy (454/IonTorrent)"
+
+    return "Unknown"
+
+
 def plot_genome_sizes(
     catalog_dir: Optional[Path] = None,
     output_path: Optional[Path] = None,
@@ -288,6 +320,165 @@ def plot_chromosome_length_histogram(
 
     if output_path is None:
         output_path = Path("chromosome_length_histogram.png")
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return output_path
+
+
+def plot_sequencing_technology(
+    catalog_dir: Optional[Path] = None,
+    output_path: Optional[Path] = None,
+) -> Path:
+    """Plot pie chart of sequencing technology distribution.
+
+    Classifies techs into: Illumina, Oxford Nanopore, PacBio, Legacy, Hybrid, Unknown.
+
+    Args:
+        catalog_dir: Catalog directory (default: CATALOG_DIR)
+        output_path: Save plot to this path (default: sequencing_technology.png)
+
+    Returns:
+        Path to saved plot
+    """
+    import matplotlib.pyplot as plt
+
+    entries = catalog(catalog_dir)
+
+    # Classify by technology
+    techs = {}
+    for genome in entries:
+        if genome.provenance and genome.provenance.get("sequencing_technology"):
+            tech_str = genome.provenance["sequencing_technology"]
+            category = _classify_technology(tech_str)
+        else:
+            category = "Unknown"
+
+        techs[category] = techs.get(category, 0) + 1
+
+    if not techs:
+        raise ValueError("No genomes found in catalog")
+
+    sorted_techs = sorted(techs.items(), key=lambda x: x[1], reverse=True)
+    labels, counts = zip(*sorted_techs)
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    colors = {
+        "Illumina": "#3498db",  # blue
+        "Oxford Nanopore": "#e74c3c",  # red
+        "PacBio": "#2ecc71",  # green
+        "Hybrid": "#f39c12",  # orange
+        "Legacy (454/IonTorrent)": "#9b59b6",  # purple
+        "Unknown": "#95a5a6",  # gray
+    }
+    pie_colors = [colors.get(label, "#bdc3c7") for label in labels]
+
+    wedges, texts, autotexts = ax.pie(
+        counts,
+        labels=labels,
+        autopct="%1.1f%%",
+        colors=pie_colors,
+        startangle=90,
+        textprops={"fontsize": 10},
+    )
+
+    for autotext in autotexts:
+        autotext.set_color("white")
+        autotext.set_fontweight("bold")
+        autotext.set_fontsize(10)
+
+    legend_labels = [f"{label}: n={count}" for label, count in sorted_techs]
+    ax.legend(legend_labels, loc="center left", bbox_to_anchor=(1, 0, 0.5, 1), fontsize=10)
+
+    ax.set_title("Sequencing Technology Distribution", fontsize=12, fontweight="bold", pad=20)
+
+    if output_path is None:
+        output_path = Path("sequencing_technology.png")
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return output_path
+
+
+def plot_assembly_level_by_technology(
+    catalog_dir: Optional[Path] = None,
+    output_path: Optional[Path] = None,
+) -> Path:
+    """Plot assembly_level vs sequencing technology as grouped bar chart.
+
+    Shows quality (completeness) as a function of sequencing method.
+
+    Args:
+        catalog_dir: Catalog directory (default: CATALOG_DIR)
+        output_path: Save plot to this path (default: assembly_level_by_technology.png)
+
+    Returns:
+        Path to saved plot
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    entries = catalog(catalog_dir)
+
+    # Group by tech x assembly_level
+    data = {}
+    for genome in entries:
+        if genome.provenance and genome.provenance.get("sequencing_technology"):
+            tech_str = genome.provenance["sequencing_technology"]
+            tech_cat = _classify_technology(tech_str)
+        else:
+            tech_cat = "Unknown"
+
+        level = genome.assembly_level or "Unknown"
+
+        key = (tech_cat, level)
+        data[key] = data.get(key, 0) + 1
+
+    if not data:
+        raise ValueError("No genomes found in catalog")
+
+    # Pivot: techs x levels
+    all_techs = sorted(set(k[0] for k in data.keys()))
+    all_levels = sorted(
+        set(k[1] for k in data.keys()),
+        key=lambda x: (x != "Complete Genome", x != "Chromosome", x != "Scaffold", x),
+    )
+
+    matrix = {}
+    for tech in all_techs:
+        matrix[tech] = [data.get((tech, level), 0) for level in all_levels]
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    x = np.arange(len(all_techs))
+    width = 0.15
+    colors_level = {
+        "Complete Genome": "#2ecc71",
+        "Chromosome": "#3498db",
+        "Scaffold": "#f39c12",
+        "Contig": "#e74c3c",
+        "Unknown": "#95a5a6",
+    }
+
+    for i, level in enumerate(all_levels):
+        values = [matrix[tech][i] for tech in all_techs]
+        ax.bar(x + i * width, values, width, label=level, color=colors_level.get(level, "#bdc3c7"))
+
+    ax.set_xlabel("Sequencing Technology", fontsize=11)
+    ax.set_ylabel("Number of Genomes", fontsize=11)
+    ax.set_title("Assembly Level vs Sequencing Technology", fontsize=12, fontweight="bold")
+    ax.set_xticks(x + width * (len(all_levels) - 1) / 2)
+    ax.set_xticklabels(all_techs, rotation=45, ha="right")
+    ax.legend(fontsize=10)
+    ax.grid(axis="y", alpha=0.3)
+
+    if output_path is None:
+        output_path = Path("assembly_level_by_technology.png")
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
