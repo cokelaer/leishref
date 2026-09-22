@@ -1,8 +1,8 @@
 Install a genome/entry
 ======================
 
-Installing genomes locally
----------------------------
+Installing a genome
+-------------------
 
 Install a genome from the catalog::
 
