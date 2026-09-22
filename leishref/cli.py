@@ -47,11 +47,13 @@ from leishref.nuccore import NuccoreError, fetch_nucleotide_fasta, fetch_nucleot
 from leishref.prune import prune_fasta
 from leishref.scaffold import clean_scaffolded_fasta, ragtag_version, run_scaffold
 from leishref.visualize import (
+    plot_assembly_level_by_technology,
     plot_chromosome_length_histogram,
     plot_genome_completeness,
     plot_genome_size_histogram,
     plot_genome_sizes,
     plot_genome_stats,
+    plot_sequencing_technology,
 )
 from leishref.zenodo import (
     ZenodoError,

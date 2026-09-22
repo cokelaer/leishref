@@ -45,6 +45,38 @@ def _species_matches_filter(species_name: str, species_filter: List[str]) -> boo
     return False
 
 
+def _classify_technology(tech_string: str) -> str:
+    """Classify sequencing technology into category.
+
+    Handles semicolon-separated hybrid techs; returns primary tech or "Hybrid".
+    """
+    if not tech_string:
+        return "Unknown"
+
+    tech_lower = tech_string.lower().replace(" ", "").replace(";", ",")
+    parts = [p.strip() for p in tech_string.split(";")]
+
+    # Check for hybrids (multiple tech types)
+    has_illumina = any("illumina" in p.lower() for p in parts)
+    has_nanopore = any("nanopore" in p.lower() or "ont" in p.lower() for p in parts)
+    has_pacbio = any("pacbio" in p.lower() or "pac" in p.lower() for p in parts)
+    has_legacy = any(x in tech_lower for x in ["454", "ion", "solid"])
+
+    if sum([has_illumina, has_nanopore, has_pacbio, has_legacy]) > 1:
+        return "Hybrid"
+
+    if has_illumina:
+        return "Illumina"
+    if has_nanopore:
+        return "Oxford Nanopore"
+    if has_pacbio:
+        return "PacBio"
+    if has_legacy:
+        return "Legacy (454/IonTorrent)"
+
+    return "Unknown"
+
+
 def plot_genome_sizes(
     catalog_dir: Optional[Path] = None,
     output_path: Optional[Path] = None,
