@@ -5,7 +5,12 @@ import matplotlib.axes
 import pytest
 
 from leishref.metadata import Genome, write_genome
-from leishref.visualize import plot_chromosome_length_histogram, plot_genome_stats
+from leishref.visualize import (
+    plot_assembly_level_by_technology,
+    plot_chromosome_length_histogram,
+    plot_genome_stats,
+    plot_sequencing_technology,
+)
 
 
 def _write_genome_with_optional_fasta(
@@ -179,6 +184,96 @@ def test_plot_chromosome_length_histogram_falls_back_to_vert_boxplot(tmp_path, m
 
     output = tmp_path / "fallback.png"
     out = plot_chromosome_length_histogram(tmp_path, output)
+
+    assert out == output
+    assert output.exists()
+    assert output.stat().st_size > 0
+
+
+def test_plot_sequencing_technology_creates_file(tmp_path):
+    directory = tmp_path / "ncbi" / "GCA_1"
+    directory.mkdir(parents=True, exist_ok=True)
+    write_genome(
+        directory,
+        Genome(
+            identifier="GCA_1",
+            source="NCBI",
+            accession="GCA_1",
+            species="Leishmania major",
+            provenance={"sequencing_technology": "Illumina HiSeq"},
+            stats={"num_bases": 32000000},
+        ),
+    )
+
+    directory = tmp_path / "ncbi" / "GCA_2"
+    directory.mkdir(parents=True, exist_ok=True)
+    write_genome(
+        directory,
+        Genome(
+            identifier="GCA_2",
+            source="NCBI",
+            accession="GCA_2",
+            species="Leishmania donovani",
+            provenance={"sequencing_technology": "Oxford Nanopore GridION"},
+            stats={"num_bases": 33000000},
+        ),
+    )
+
+    directory = tmp_path / "ncbi" / "GCA_3"
+    directory.mkdir(parents=True, exist_ok=True)
+    write_genome(
+        directory,
+        Genome(
+            identifier="GCA_3",
+            source="NCBI",
+            accession="GCA_3",
+            species="Leishmania infantum",
+            provenance={"sequencing_technology": "PacBio RSII; Illumina HiSeq"},
+            stats={"num_bases": 31000000},
+        ),
+    )
+
+    output = tmp_path / "technology.png"
+    out = plot_sequencing_technology(tmp_path, output)
+
+    assert out == output
+    assert output.exists()
+    assert output.stat().st_size > 0
+
+
+def test_plot_assembly_level_by_technology_creates_file(tmp_path):
+    directory = tmp_path / "ncbi" / "GCA_1"
+    directory.mkdir(parents=True, exist_ok=True)
+    write_genome(
+        directory,
+        Genome(
+            identifier="GCA_1",
+            source="NCBI",
+            accession="GCA_1",
+            species="Leishmania major",
+            assembly_level="Complete Genome",
+            provenance={"sequencing_technology": "Illumina HiSeq"},
+            stats={"num_bases": 32000000},
+        ),
+    )
+
+    directory = tmp_path / "ncbi" / "GCA_2"
+    directory.mkdir(parents=True, exist_ok=True)
+    write_genome(
+        directory,
+        Genome(
+            identifier="GCA_2",
+            source="NCBI",
+            accession="GCA_2",
+            species="Leishmania donovani",
+            assembly_level="Chromosome",
+            provenance={"sequencing_technology": "Oxford Nanopore GridION"},
+            stats={"num_bases": 33000000},
+        ),
+    )
+
+    output = tmp_path / "assembly_by_tech.png"
+    out = plot_assembly_level_by_technology(tmp_path, output)
 
     assert out == output
     assert output.exists()
