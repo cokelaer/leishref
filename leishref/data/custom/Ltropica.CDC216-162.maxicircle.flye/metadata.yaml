@@ -1,0 +1,29 @@
+identifier: Ltropica.CDC216-162.maxicircle.flye
+source: Custom
+species: Leishmania Tropica
+strain: CDC216-162
+molecule_type: kinetoplast,maxicircle
+files:
+  fasta: Ltropica.CDC216-162.maxicircle.flye.fa
+checksums:
+  fasta: af5731275f629c43a1c621b1ea45f103
+stats:
+  num_bases: 29614
+  num_ungapped: 29614
+  num_scaffolds: 1
+  num_contigs: 1
+  gc_percent: 22.7
+  scaffold_n50: 29614
+  scaffold_l50: 1
+  contig_n50: 29614
+  contig_l50: 1
+  num_ambiguous: 0
+  num_gaps: 0
+provenance:
+  sequencing_technology: pacbio RS II
+  assembler: flye
+  alias: LtropCDC_maxi
+  zenodo_doi: 10.5281/zenodo.22897134
+  zenodo_notes: This is the maxicircle assembled using raw Ltropica data from GCA_014139745.1
+    (Bioproject PRJNA484340).
+date_added: '2026-09-22'
