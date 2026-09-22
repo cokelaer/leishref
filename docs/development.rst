@@ -77,11 +77,14 @@ Downloads metadata and FASTA/GFF from NCBI, creates ``leishref/data/ncbi/GCA_000
 
 Add local assembly to catalog::
 
-    leishref dev add ~/my_assembly.fasta --alias Ltrop.mine --technology pacbio
+    leishref dev add ~/my_assembly.fasta \
+        --alias Ltropica.CDC216-162.genome.flye --technology pacbio
 
 ``--alias`` is required: it becomes both the catalog identifier and the local
 install name (unlike ``install``, where those two are separate). Adds the FASTA to
 ``leishref/data/local/`` with metadata, and installs it locally in the same step.
+See :doc:`workflow` for the ``<species>.<strain>.<molecule_type>.<assembler>``
+naming convention this alias follows.
 
 Scaffold assembly against reference::
 
@@ -91,7 +94,7 @@ Creates scaffolded assembly by aligning query to reference, adds to ``leishref/d
 
 Publish a local genome to Zenodo::
 
-    leishref dev publish Ltrop.mine
+    leishref dev publish Ltropica.CDC216-162.genome.flye
 
 Takes the genome's local/catalog identifier - not a file path - since it uploads
 whatever ``leishref install``-style install already produced for that name.
