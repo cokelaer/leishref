@@ -414,6 +414,12 @@ def _fetch_genome_files(genome: Genome, name: str, tmp: Path) -> tuple[list, str
     if doi:
         written = download_record_files(record_id_from_doi(doi), tmp, sandbox=is_sandbox_doi(doi))
         return written, "" if written else "Zenodo record has no files"
+    if accession and genome.source == "NCBI-Nucleotide":
+        try:
+            fasta = fetch_nucleotide_fasta(accession, tmp)
+        except NuccoreError as exc:
+            return [], str(exc)
+        return [fasta], ""
     if accession:
         fasta, gff = fetch_fasta_gff(accession, tmp)
         if not fasta:
@@ -660,6 +666,13 @@ def install(name, alias, local_dir, force, no_link):
         if doi:
             click.echo(f"{name} -> {doi} (Zenodo)")
             written = download_record_files(record_id_from_doi(doi), tmp, sandbox=is_sandbox_doi(doi))
+        elif accession and genome.source == "NCBI-Nucleotide":
+            click.echo(f"{name} -> {accession} (NCBI nuccore)")
+            try:
+                written = [fetch_nucleotide_fasta(accession, tmp)]
+            except NuccoreError as exc:
+                click.echo(str(exc), err=True)
+                raise SystemExit(1)
         elif accession:
             click.echo(f"{name} -> {accession} (NCBI)")
             fasta, gff = fetch_fasta_gff(accession, tmp)
