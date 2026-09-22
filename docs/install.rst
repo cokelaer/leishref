@@ -8,7 +8,8 @@ Install a genome from the catalog::
 
     leishref install GCA_000227135.2 --alias MyStrain
 
-This creates a local directory ``data/MyStrain/`` with the genome FASTA and GFF.
+This downloads and caches the genome under ``~/.config/leishref/`` (the default location)
+with a symlink ``MyStrain.fna`` in the current directory.
 
 Using aliases
 -------------
@@ -26,11 +27,11 @@ All installs are verified against recorded MD5 checksums::
 
     leishref verify
 
-Local database
---------------
+Local database location
+----------------------
 
-Genomes are stored under ``data/<alias>/`` relative to where you run leishref (default).
-Customize the location with ``--local-dir``::
+By default, genomes are cached under ``~/.config/leishref/``. To use a different
+location (e.g., for a shared project database), use ``--local-dir``::
 
     leishref install GCA_002243465.1 --local-dir /mnt/genomes/data --alias Ld1S
 
