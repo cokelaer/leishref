@@ -296,3 +296,82 @@ def plot_chromosome_length_histogram(
     plt.close()
 
     return output_path
+
+
+def plot_genome_completeness(
+    catalog_dir: Optional[Path] = None,
+    output_path: Optional[Path] = None,
+) -> Path:
+    """Plot pie chart of genome completeness (assembly_level breakdown).
+
+    Args:
+        catalog_dir: Catalog directory (default: CATALOG_DIR)
+        output_path: Save plot to this path (default: genome_completeness.png)
+
+    Returns:
+        Path to saved plot
+    """
+    import matplotlib.pyplot as plt
+
+    entries = catalog(catalog_dir)
+
+    # Count genomes by assembly_level
+    levels = {}
+    for genome in entries:
+        level = genome.assembly_level or "Unknown"
+        levels[level] = levels.get(level, 0) + 1
+
+    if not levels:
+        raise ValueError("No genomes found in catalog")
+
+    # Sort by count (descending) for readability
+    sorted_levels = sorted(levels.items(), key=lambda x: x[1], reverse=True)
+    labels, counts = zip(*sorted_levels)
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    colors = [
+        "#2ecc71",  # Complete Genome - green
+        "#3498db",  # Chromosome - blue
+        "#e74c3c",  # Scaffold - red
+        "#f39c12",  # Contig - orange
+        "#95a5a6",  # Unknown - gray
+    ]
+    color_map = {
+        "Complete Genome": colors[0],
+        "Chromosome": colors[1],
+        "Scaffold": colors[2],
+        "Contig": colors[3],
+        "Unknown": colors[4],
+    }
+    pie_colors = [color_map.get(label, "#bdc3c7") for label in labels]
+
+    wedges, texts, autotexts = ax.pie(
+        counts,
+        labels=labels,
+        autopct="%1.1f%%",
+        colors=pie_colors,
+        startangle=90,
+        textprops={"fontsize": 10},
+    )
+
+    # Style the percentage labels
+    for autotext in autotexts:
+        autotext.set_color("white")
+        autotext.set_fontweight("bold")
+        autotext.set_fontsize(10)
+
+    # Add count in legend
+    legend_labels = [f"{label}: n={count}" for label, count in sorted_levels]
+    ax.legend(legend_labels, loc="center left", bbox_to_anchor=(1, 0, 0.5, 1), fontsize=10)
+
+    ax.set_title("Leishmania Genome Completeness (Assembly Level)", fontsize=12, fontweight="bold", pad=20)
+
+    if output_path is None:
+        output_path = Path("genome_completeness.png")
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return output_path
