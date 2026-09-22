@@ -40,7 +40,7 @@ alongside your analysis code instead of the downloaded genomes themselves::
     leishref restore
 
     # Faster, for a large accessions.txt
-    leishref restore --parallel 8
+    leishref restore --parallel 4
 
     # See what would happen first
     leishref restore --dry-run
