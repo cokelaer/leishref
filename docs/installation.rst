@@ -26,5 +26,4 @@ Optional dependencies
 
 For maintainer commands (``leishref dev``), you need:
 
-- NCBI ``datasets`` CLI: ``damona activate sequana_tools``
 - ``ragtag.py`` for scaffolding
