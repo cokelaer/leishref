@@ -566,3 +566,88 @@ def plot_assembly_level_by_technology(
     plt.close()
 
     return output_path
+
+
+def plot_species_genome_count(
+    catalog_dir: Optional[Path] = None,
+    output_path: Optional[Path] = None,
+) -> Path:
+    """Plot bar chart of genome count per species."""
+    import matplotlib.cm as cm
+    import matplotlib.pyplot as plt
+
+    entries = catalog(catalog_dir)
+    species_counts = {}
+    for g in entries:
+        sp = g.species or "Unknown"
+        species_counts[sp] = species_counts.get(sp, 0) + 1
+
+    if not species_counts:
+        raise ValueError("No genomes found in catalog")
+
+    sorted_sp = sorted(species_counts.items(), key=lambda x: x[1], reverse=True)
+    species_names, counts = zip(*sorted_sp)
+
+    fig, ax = plt.subplots(figsize=(12, max(8, len(species_names) * 0.3)))
+    colors = cm.viridis([(c - min(counts)) / (max(counts) - min(counts)) for c in counts])
+
+    bars = ax.barh(range(len(species_names)), counts, color=colors)
+    ax.set_yticks(range(len(species_names)))
+    ax.set_yticklabels(species_names, fontsize=10)
+    ax.set_xlabel("Number of Genomes", fontsize=11)
+    ax.set_title("Genome Count per Species", fontsize=12, fontweight="bold")
+    ax.grid(axis="x", alpha=0.3)
+
+    for i, (bar, count) in enumerate(zip(bars, counts)):
+        ax.text(count + 0.5, i, str(count), va="center", fontsize=9)
+
+    if output_path is None:
+        output_path = Path("species_genome_count.png")
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return output_path
+
+
+def plot_gc_content_by_species(
+    catalog_dir: Optional[Path] = None,
+    output_path: Optional[Path] = None,
+) -> Path:
+    """Plot GC content distribution histogram by species."""
+    import matplotlib.pyplot as plt
+
+    entries = catalog(catalog_dir)
+    species_gc = {}
+    for g in entries:
+        if g.stats and g.stats.get("gc_percent") is not None:
+            sp = g.species or "Unknown"
+            if sp not in species_gc:
+                species_gc[sp] = []
+            species_gc[sp].append(g.stats["gc_percent"])
+
+    if not species_gc:
+        raise ValueError("No genomes with GC content found")
+
+    sorted_sp = sorted(species_gc.items(), key=lambda x: sum(x[1]) / len(x[1]), reverse=True)
+    species_labels = [sp for sp, _ in sorted_sp]
+    gc_data = [species_gc[sp] for sp, _ in sorted_sp]
+
+    fig, ax = plt.subplots(figsize=(14, 8))
+    parts = ax.violinplot(gc_data, positions=range(len(species_labels)), widths=0.7, showmeans=True, showmedians=True)
+
+    ax.set_xticks(range(len(species_labels)))
+    ax.set_xticklabels(species_labels, rotation=45, ha="right", fontsize=9)
+    ax.set_ylabel("GC Content (%)", fontsize=11)
+    ax.set_title("GC Content Distribution by Species", fontsize=12, fontweight="bold")
+    ax.grid(axis="y", alpha=0.3)
+
+    if output_path is None:
+        output_path = Path("gc_content_by_species.png")
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return output_path
