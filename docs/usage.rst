@@ -8,13 +8,17 @@ List the entire catalog::
 
     leishref info
 
+Show details for one genome::
+
+    leishref info GCA_037177955.1
+
 Search for genomes::
 
     leishref search donovani
 
 Download a genome locally::
 
-    leishref install --alias Ld1S GCA_000227135.2
+    leishref install GCA_000227135.2 --alias Ld1S
 
 Verify checksums::
 
