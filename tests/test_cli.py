@@ -98,12 +98,20 @@ def test_verify_reports_a_missing_file(installed):
 
 def test_link_creates_alias_named_symlinks(installed):
     base, _ = installed
+    (base / "accessions.txt").write_text("Ltrop.flye\tLtrop.flye\n")
     result = run(["link", "--local-dir", "data"], base)
 
     link = base / "Ltrop.flye.fna"
     assert result.exit_code == 0
     assert link.is_symlink()
     assert link.read_text() == ">c1\nACGTACGT\n"
+
+
+def test_link_requires_accessions_file(installed):
+    base, _ = installed
+    result = run(["link", "--local-dir", "data"], base)
+    assert result.exit_code == 1
+    assert "No accessions.txt" in result.output
 
 
 def test_info_lists_catalog_and_local(installed):
@@ -203,18 +211,16 @@ def test_search_requires_a_term(installed):
 
 
 def test_search_flags_installed_genomes(tmp_path):
-    """A cached install records its origin, so search can say it is already present."""
+    """A cached genome (keyed by its own identity) shows the local alias for it
+    recorded in ./accessions.txt, so search can say it is already present."""
     from leishref.metadata import catalog as read_catalog
 
     origin = read_catalog()[0]
-    directory = tmp_path / "data" / "mine"
+    directory = tmp_path / "data" / origin.identifier
     directory.mkdir(parents=True)
-    genome = Genome(
-        identifier="mine",
-        species=origin.species,
-        provenance={"catalog_id": origin.identifier},
-    )
+    genome = Genome(identifier=origin.identifier, species=origin.species)
     write_genome(directory, genome)
+    (tmp_path / "accessions.txt").write_text(f"{origin.identifier}\tmine\n")
 
     result = run(["search", origin.identifier, "--local-dir", "data"], tmp_path)
     assert "installed as mine" in result.output
@@ -228,12 +234,10 @@ def test_search_does_not_repeat_installed_as_when_it_matches_the_alias(tmp_path,
     origin = read_catalog()[0]
     monkeypatch.setattr("leishref.cli.get_catalog_alias", lambda accession, catalog_root=None: "Shortname")
 
-    directory = tmp_path / "data" / "Shortname"
+    directory = tmp_path / "data" / origin.identifier
     directory.mkdir(parents=True)
-    write_genome(
-        directory,
-        Genome(identifier="Shortname", species=origin.species, provenance={"catalog_id": origin.identifier}),
-    )
+    write_genome(directory, Genome(identifier=origin.identifier, species=origin.species))
+    (tmp_path / "accessions.txt").write_text(f"{origin.identifier}\tShortname\n")
 
     result = run(["search", origin.identifier, "--local-dir", "data"], tmp_path)
     assert "alias: Shortname" in result.output
@@ -258,19 +262,21 @@ def test_install_by_catalog_alias_uses_aliases_txt(tmp_path):
 
 
 def test_install_is_a_quiet_noop_when_the_same_genome_is_already_installed(tmp_path):
-    """Re-running install with the same NAME/ALIAS shouldn't nag about --force."""
-    genome_dir = tmp_path / "data" / "Ld1S"
+    """Re-running install for the same NAME (regardless of ALIAS) shouldn't nag about
+    --force: the cache is keyed by accession, so it's deterministically the same
+    genome whenever the cache directory exists at all."""
+    genome_dir = tmp_path / "data" / "GCA_000410715.1"
     genome_dir.mkdir(parents=True)
     fasta = genome_dir / "assembly.fna"
     fasta.write_text(">c1\nACGT\n")
     write_genome(
         genome_dir,
         Genome(
-            identifier="Ld1S",
+            identifier="GCA_000410715.1",
             source="NCBI",
+            accession="GCA_000410715.1",
             files={"fasta": fasta.name},
             checksums={"fasta": md5_file(fasta)},
-            provenance={"catalog_id": "GCA_000410715.1"},
         ),
     )
 
@@ -280,27 +286,35 @@ def test_install_is_a_quiet_noop_when_the_same_genome_is_already_installed(tmp_p
     assert "force" not in result.output.lower()
 
 
-def test_install_refuses_to_silently_replace_a_different_genome_under_the_same_alias(tmp_path):
-    """A different genome already cached under ALIAS is a real conflict, not a no-op."""
-    genome_dir = tmp_path / "data" / "Ld1S"
-    genome_dir.mkdir(parents=True)
-    fasta = genome_dir / "assembly.fna"
-    fasta.write_text(">c1\nACGT\n")
-    write_genome(
-        genome_dir,
-        Genome(
-            identifier="Ld1S",
-            source="NCBI",
-            files={"fasta": fasta.name},
-            checksums={"fasta": md5_file(fasta)},
-            provenance={"catalog_id": "GCA_000002725.2"},
-        ),
-    )
+def test_install_reusing_an_alias_for_a_different_genome_just_repoints_it(tmp_path):
+    """The cache is keyed by accession, not by alias, so an alias can never collide
+    with a different genome's cached copy - reusing one just repoints the symlink,
+    with no --force needed and no risk of clobbering the wrong cache entry."""
+    for accession in ("GCA_000410715.1", "GCA_000002725.2"):
+        genome_dir = tmp_path / "data" / accession
+        genome_dir.mkdir(parents=True)
+        fasta = genome_dir / "assembly.fna"
+        fasta.write_text(f">seq_{accession}\nACGT\n")
+        write_genome(
+            genome_dir,
+            Genome(
+                identifier=accession,
+                source="NCBI",
+                accession=accession,
+                files={"fasta": fasta.name},
+                checksums={"fasta": md5_file(fasta)},
+            ),
+        )
 
-    result = run(["install", "GCA_000410715.1", "--alias", "Ld1S", "--local-dir", "data", "--no-link"], tmp_path)
-    assert result.exit_code == 1
-    assert "already used by a different genome" in result.output
-    assert "--force" in result.output
+    run(["install", "GCA_000410715.1", "--alias", "Ld1S", "--local-dir", "data"], tmp_path)
+    result = run(["install", "GCA_000002725.2", "--alias", "Ld1S", "--local-dir", "data"], tmp_path)
+
+    assert result.exit_code == 0
+    link = tmp_path / "Ld1S.fna"
+    assert link.read_text() == ">seq_GCA_000002725.2\nACGT\n"
+    # Both cache entries survive untouched; nothing was clobbered.
+    assert (tmp_path / "data" / "GCA_000410715.1" / "metadata.yaml").exists()
+    assert (tmp_path / "data" / "GCA_000002725.2" / "metadata.yaml").exists()
 
 
 def test_install_rejects_an_unknown_name_before_asking_for_an_alias(tmp_path):
@@ -387,12 +401,22 @@ def test_install_records_the_files_it_wrote(tmp_path):
     catalog_entry = Genome(identifier="GCA_9.1", source="NCBI", accession="GCA_9.1")
     assert catalog_entry.files == {}
 
-    target = _install(catalog_entry, "mine", [source, gff], tmp_path / "data")
+    target = _install(catalog_entry, "GCA_9.1", [source, gff], tmp_path / "data")
     written = read_genome(target)
 
     assert written.files == {"fasta": "GCA_9_genomic.fna", "gff": "GCA_9_genomic.gff"}
-    assert written.identifier == "mine"
-    assert written.provenance["catalog_id"] == "GCA_9.1"
+    # The genome's own identity is left alone: the cache key names the directory, it
+    # doesn't rename what's inside it.
+    assert written.identifier == "GCA_9.1"
+
+
+def test_cache_key_prefers_accession_over_identifier():
+    from leishref.cli import cache_key
+
+    assert cache_key(Genome(identifier="Ld1S", accession="GCA_9.1")) == "GCA_9.1"
+    # No accession (scaffolds, local/custom entries): falls back to the identifier,
+    # which for these is already the stable name chosen at creation time.
+    assert cache_key(Genome(identifier="Ltrop.flye")) == "Ltrop.flye"
 
 
 def test_organism_does_not_repeat_a_strain_already_in_the_species():
@@ -408,12 +432,9 @@ def recorded(tmp_path):
     from leishref.metadata import catalog as read_catalog
 
     origin = read_catalog()[0]
-    directory = tmp_path / "data" / "mine"
+    directory = tmp_path / "data" / origin.identifier
     directory.mkdir(parents=True)
-    write_genome(
-        directory,
-        Genome(identifier="mine", species=origin.species, provenance={"catalog_id": origin.identifier}),
-    )
+    write_genome(directory, Genome(identifier=origin.identifier, species=origin.species))
     return tmp_path, origin.identifier
 
 
@@ -446,10 +467,10 @@ def test_restore_lists_what_it_would_do(recorded):
 
 
 def test_restore_reports_a_genome_that_is_no_longer_there(recorded):
-    """A recorded alias whose directory was deleted shows up as missing."""
+    """A recorded alias whose cache entry was deleted shows up as missing."""
     base, name = recorded
     run(["install", name, "--alias", "mine", "--local-dir", "data", "--no-link"], base)
-    (base / "data" / "mine" / "metadata.yaml").unlink()
+    (base / "data" / name / "metadata.yaml").unlink()
 
     result = run(["restore", "--local-dir", "data", "--dry-run"], base)
     assert "missing" in result.output
@@ -482,22 +503,15 @@ def test_a_malformed_accessions_line_is_skipped(recorded):
 
 
 def test_from_installed_describes_an_existing_database(recorded):
-    """A database built before accessions.txt existed can still write its own recipe."""
+    """A database built before accessions.txt existed can still write its own recipe -
+    though since the cache no longer carries a per-project alias, the best it can do
+    is record each entry under its own identifier as both name and alias."""
     base, name = recorded
     result = run(["restore", "--from-installed", "--local-dir", "data"], base)
 
     assert result.exit_code == 0
-    assert f"{name}\tmine" in (base / "accessions.txt").read_text()
-
-
-def test_from_installed_skips_a_genome_with_no_origin(tmp_path):
-    directory = tmp_path / "data" / "orphan"
-    directory.mkdir(parents=True)
-    write_genome(directory, Genome(identifier="orphan", source="Local"))
-
-    result = run(["restore", "--from-installed", "--local-dir", "data"], tmp_path)
-    assert "no catalog origin recorded" in result.output
-    assert "Recorded 0 genomes" in result.output
+    assert f"{name}\t{name}" in (base / "accessions.txt").read_text()
+    assert "Recorded 1 genome" in result.output
 
 
 def test_restore_is_quiet_about_the_genomes_that_worked(recorded):
@@ -893,7 +907,7 @@ def test_install_many_parallel_installs_all_genomes(tmp_path, monkeypatch):
 
     assert failed == []
     for i in range(1, 4):
-        genome_dir = local_dir / f"alias{i}"
+        genome_dir = local_dir / f"GCA_{i}"
         assert (genome_dir / "metadata.yaml").exists()
         assert (genome_dir / f"GCA_{i}.fna").exists()
 
@@ -925,8 +939,8 @@ def test_install_many_parallel_reports_failures(tmp_path, monkeypatch):
     )
 
     assert failed == ["bad"]
-    assert (local_dir / "good" / "metadata.yaml").exists()
-    assert not (local_dir / "bad").exists()
+    assert (local_dir / "GCA_good" / "metadata.yaml").exists()
+    assert not (local_dir / "GCA_bad").exists()
 
 
 def test_install_many_parallel_skips_already_installed(tmp_path, monkeypatch):
@@ -946,14 +960,18 @@ def test_install_many_parallel_skips_already_installed(tmp_path, monkeypatch):
     monkeypatch.setattr(cli_module, "fetch_fasta_gff", fake_fetch)
 
     local_dir = tmp_path / "data"
-    genome_dir = local_dir / "already"
+    genome_dir = local_dir / "GCA_x"
     genome_dir.mkdir(parents=True)
     fasta = genome_dir / "assembly.fna"
     fasta.write_text(">seq\nACGT\n")
     write_genome(
         genome_dir,
         Genome(
-            identifier="already", source="NCBI", files={"fasta": "assembly.fna"}, checksums={"fasta": md5_file(fasta)}
+            identifier="GCA_x",
+            source="NCBI",
+            accession="GCA_x",
+            files={"fasta": "assembly.fna"},
+            checksums={"fasta": md5_file(fasta)},
         ),
     )
 

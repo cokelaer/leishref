@@ -7,8 +7,8 @@ Troubleshooting
 ::
 
     $ leishref install GCA_000410715.1
-    --alias is required: it names the cached genome,
-    becoming the directory under ~/.config/leishref/ and the symlink name.
+    --alias is required: it names the symlink in the current directory,
+    not the cache itself (shared, under ~/.config/leishref/).
 
       leishref install GCA_000410715.1 --alias Ltrop.L590
 

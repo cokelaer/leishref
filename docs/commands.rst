@@ -11,15 +11,21 @@ Install a genome from the catalog::
 
     leishref install GCA_002243465.1 --alias Ld1S
 
-Re-running the exact same command is a safe no-op: it just makes sure the
-alias-named symlink is in place, without re-downloading or printing anything about
-``--force``. ``--force`` is only needed to force a fresh download, or when ALIAS is
-already used by a *different* genome - reusing an alias for a different genome
-without ``--force`` is refused with a clear error rather than silently swapped.
+The genome itself is cached under ``~/.config/leishref/<accession>/``, shared
+across every project on the machine and keyed by accession - not by ALIAS. ALIAS
+only names the symlink this command leaves in the current directory. Because of
+that, two different projects (or two different ``--alias`` values in the same
+project) can install the same accession without downloading it twice, and reusing
+an alias for a *different* genome is never a conflict: it just repoints the
+symlink, no ``--force`` needed.
+
+Re-running the exact same command is always a safe no-op: it just makes sure the
+symlink is in place, without re-downloading or printing anything about
+``--force``. ``--force`` only forces a fresh download.
 
 Options:
-- ``--alias ALIAS`` — Local directory name (required)
-- ``--force`` — Re-download, or replace a different genome under this alias
+- ``--alias ALIAS`` — Name for the symlink in the current directory (required)
+- ``--force`` — Re-download even though the cache already has this genome
 - ``--no-link`` — Don't create symlinks
 
 leishref install-ncbi
@@ -234,9 +240,13 @@ Developer and maintainer commands
 leishref link
 ~~~~~~~~~~~~~
 
-Refresh symlinks to local genomes::
+Refresh the symlinks for everything this project installed::
 
     leishref link
+
+Reads ``./accessions.txt`` for the (genome, alias) pairs - the shared cache itself
+doesn't know what any particular project calls a given genome, so there's nothing
+to refresh without it.
 
 Developer commands
 ------------------
