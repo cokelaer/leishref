@@ -77,18 +77,24 @@ Downloads metadata and FASTA/GFF from NCBI, creates ``leishref/data/ncbi/GCA_000
 
 Add local assembly to catalog::
 
-    leishref dev add ~/my_assembly.fasta --technology pacbio
+    leishref dev add ~/my_assembly.fasta --alias Ltrop.mine --technology pacbio
 
-Adds local FASTA to catalog as a new genome entry with metadata.
+``--alias`` is required: it becomes both the catalog identifier and the local
+install name (unlike ``install``, where those two are separate). Adds the FASTA to
+``leishref/data/local/`` with metadata, and installs it locally in the same step.
 
 Scaffold assembly against reference::
 
     leishref dev scaffold --query query.fasta --reference Ld1S
 
-Creates scaffolded assembly by aligning query to reference, adds to ``leishref/data/scaffold/``.
+Creates scaffolded assembly by aligning query to reference, adds to ``leishref/data/scaffolds/``.
 
-Publish scaffold to Zenodo::
+Publish a local genome to Zenodo::
 
-    leishref dev publish scaffold.fasta
+    leishref dev publish Ltrop.mine
 
-Uploads scaffold files to Zenodo, records DOI in catalog metadata.
+Takes the genome's local/catalog identifier - not a file path - since it uploads
+whatever ``leishref install``-style install already produced for that name.
+Uploads its files to Zenodo and records the DOI in catalog metadata. See
+:doc:`workflow` for the full add → publish walk-through, including
+``--confirm``/dry-run and the sandbox.

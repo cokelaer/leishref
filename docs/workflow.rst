@@ -77,6 +77,52 @@ scaffold from it, from raw FASTA through to a published, installable entry.
     # Zenodo for everyone else too:
     leishref install Ltrop.raw.scaffold.Ld1S --alias my-scaffold
 
+Adding a local file to the database and publishing it to Zenodo
+--------------------------------------------------------------------
+
+The direct path, for a genome you already have as a FASTA - not derived by
+scaffolding anything (see the previous section if it is). Typical for a genome you
+assembled yourself, or downloaded from somewhere leishref doesn't fetch from
+automatically (e.g. TriTrypDB, which needs a login).
+
+::
+
+    # 1. Add it to both the catalog and your local database in one step
+    leishref dev add my_assembly.fasta --alias Ltrop.mine --species "Leishmania tropica" \
+        --strain "MyStrain" --technology "PacBio RS II" --assembler Flye
+
+    # A GFF, if you have one, goes right after the FASTA:
+    leishref dev add my_assembly.fasta my_assembly.gff --alias Ltrop.mine
+
+    # A standalone kinetoplast/maxicircle instead of a nuclear genome? Tag it so it's
+    # searchable (see :doc:`metadata`):
+    leishref dev add kdna.fasta --alias Ltrop.mine.kdna --molecule-type kinetoplast,maxicircle
+
+    # 2. Sanity-check what was written
+    leishref info Ltrop.mine
+    leishref verify
+
+    # 3. Set your Zenodo token (production or sandbox)
+    export ZENODO_TOKEN=your-token                    # zenodo.org
+    export ZENODO_SANDBOX_TOKEN=your-sandbox-token     # sandbox.zenodo.org, with --sandbox
+
+    # 4. Publish - dry-run first, shows what would upload without touching Zenodo
+    leishref dev publish Ltrop.mine
+    leishref dev publish Ltrop.mine --confirm --version v1.0
+
+    # Rehearse on the sandbox first if you're not sure: a sandbox DOI is deliberately
+    # not recorded in the catalog, so it can't block the real publish afterwards.
+    leishref dev publish Ltrop.mine --confirm --sandbox
+
+``dev publish`` takes the genome's identifier (what you gave ``--alias`` above), not
+a file path - it uploads whatever is already sitting in the local install it made in
+step 1. Once published, ``leishref/data/local/Ltrop.mine/metadata.yaml`` records the
+DOI and the entry's ``source`` becomes ``Zenodo``, so from then on
+``leishref install Ltrop.mine --alias <anything>`` fetches it from Zenodo instead of
+needing your local file again - including for anyone else who pulls the catalog
+update. Commit that ``metadata.yaml`` change (only metadata - never the sequence
+itself) as a pull request; see :doc:`development`.
+
 Packaging genomes for offline sharing
 ----------------------------------------
 
