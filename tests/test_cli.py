@@ -317,6 +317,36 @@ def test_install_reusing_an_alias_for_a_different_genome_just_repoints_it(tmp_pa
     assert (tmp_path / "data" / "GCA_000002725.2" / "metadata.yaml").exists()
 
 
+def test_install_uses_nuccore_fetch_for_ncbi_nucleotide_entries(tmp_path, monkeypatch):
+    """A standalone nuccore record (source: NCBI-Nucleotide, e.g. BK010877.1) isn't a
+    GCA/GCF assembly, so `install` must not send it through the datasets-CLI path -
+    that always fails for these with "NCBI has no data for <accession>"."""
+    import leishref.cli as cli_module
+
+    calls = []
+
+    def fake_datasets_fetch(accession, outdir):
+        calls.append(("datasets", accession))
+        return None, None  # would fail for a real nuccore accession
+
+    def fake_nuccore_fetch(accession, outdir):
+        calls.append(("nuccore", accession))
+        fasta = Path(outdir) / f"{accession}.fasta"
+        fasta.write_text(f">seq_{accession}\nACGT\n")
+        return fasta
+
+    catalog_entry = Genome(identifier="BK010877.1", source="NCBI-Nucleotide", accession="BK010877.1")
+    monkeypatch.setattr(cli_module, "catalog", lambda: [catalog_entry])
+    monkeypatch.setattr(cli_module, "fetch_fasta_gff", fake_datasets_fetch)
+    monkeypatch.setattr(cli_module, "fetch_nucleotide_fasta", fake_nuccore_fetch)
+
+    result = run(["install", "BK010877.1", "--alias", "Linf_maxi", "--local-dir", "data"], tmp_path)
+
+    assert result.exit_code == 0
+    assert calls == [("nuccore", "BK010877.1")]
+    assert (tmp_path / "data" / "BK010877.1" / "metadata.yaml").exists()
+
+
 def test_install_rejects_an_unknown_name_before_asking_for_an_alias(tmp_path):
     result = run(["install", "nonexistent", "--local-dir", "data"], tmp_path)
     assert result.exit_code == 1
@@ -910,6 +940,39 @@ def test_install_many_parallel_installs_all_genomes(tmp_path, monkeypatch):
         genome_dir = local_dir / f"GCA_{i}"
         assert (genome_dir / "metadata.yaml").exists()
         assert (genome_dir / f"GCA_{i}.fna").exists()
+
+
+def test_install_many_parallel_uses_nuccore_fetch_for_ncbi_nucleotide(tmp_path, monkeypatch):
+    """The parallel path has the same datasets-vs-EUtils split as install() - a
+    standalone nuccore record must go through fetch_nucleotide_fasta, not
+    fetch_fasta_gff (the assembly-only datasets CLI wrapper)."""
+    import leishref.cli as cli_module
+
+    monkeypatch.chdir(tmp_path)
+    calls = []
+
+    def fake_datasets_fetch(accession, outdir):
+        calls.append(("datasets", accession))
+        return None, None
+
+    def fake_nuccore_fetch(accession, outdir):
+        calls.append(("nuccore", accession))
+        fasta = Path(outdir) / f"{accession}.fasta"
+        fasta.write_text(f">seq_{accession}\nACGT\n")
+        return fasta
+
+    monkeypatch.setattr(cli_module, "fetch_fasta_gff", fake_datasets_fetch)
+    monkeypatch.setattr(cli_module, "fetch_nucleotide_fasta", fake_nuccore_fetch)
+
+    genome = Genome(identifier="BK010877.1", source="NCBI-Nucleotide", accession="BK010877.1")
+    local_dir = tmp_path / "data"
+    failed = cli_module._install_many_parallel(
+        [(genome, "Linf_maxi")], local_dir, force=False, no_link=True, workers=1, echo=lambda m: None
+    )
+
+    assert failed == []
+    assert calls == [("nuccore", "BK010877.1")]
+    assert (local_dir / "BK010877.1" / "metadata.yaml").exists()
 
 
 def test_install_many_parallel_reports_failures(tmp_path, monkeypatch):
