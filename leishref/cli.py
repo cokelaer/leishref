@@ -272,7 +272,7 @@ def _resolve_assembly(value, local_root: Path, cat_root, what: str):
         return as_path, None
 
     # Try local first
-    genome = find(local(local_root), value, cat_root)
+    genome = _resolve_local(local(local_root), value)
     if genome and genome.path and genome.fasta and (genome.path / genome.fasta).exists():
         return genome.path / genome.fasta, genome
 
@@ -319,7 +319,7 @@ def _parent_record(path: Path, genome) -> dict:
     record = {"file": path.name, "md5": md5_file(path)}
     if genome is None:
         return record
-    record["name"] = genome.provenance.get("catalog_id") or genome.accession or genome.identifier
+    record["name"] = genome.accession or genome.identifier
     for field in ("species", "strain", "assembly_level"):
         value = getattr(genome, field, None)
         if value:
@@ -355,21 +355,29 @@ def _link(alias: str, paths, no_link: bool) -> None:
         click.echo(f"  not linked: {exc}", err=True)
 
 
-def _install(genome: Genome, alias: str, sources, local_root: Path, move: bool = False) -> Path:
-    """Put a genome into the local database at data/<alias>/, metadata and files together.
+def cache_key(genome: Genome) -> str:
+    """The shared cache's own name for this genome: its accession, or its catalog
+    identifier when there isn't one (scaffolds, local/custom entries).
 
-    The installed copy takes the alias as its identifier, since locally the directory
-    name is the name. Where it came from is kept under provenance so the link back to
-    the catalog entry survives.
+    Never a user-chosen alias. The cache is shared across every project on the
+    machine, so it's keyed by what a genome *is*, not by what any one project calls
+    it - two aliases (or two projects) for the same accession share one download
+    instead of duplicating it, and an alias can never collide with a different
+    genome's cached copy.
     """
-    target = Path(local_root) / alias
+    return genome.accession or genome.identifier
+
+
+def _install(genome: Genome, key: str, sources, local_root: Path, move: bool = False) -> Path:
+    """Put a genome into the shared cache at <local_root>/<key>/, metadata and files
+    together. `key` is the cache key (see cache_key()), not a user-chosen alias - the
+    genome's own identifier is left untouched, so the same cache entry stays correct
+    however many different local aliases end up pointing at it.
+    """
+    target = Path(local_root) / key
     target.mkdir(parents=True, exist_ok=True)
 
     genome = Genome.from_dict(genome.to_dict())
-    if genome.identifier and genome.identifier != alias:
-        genome.provenance = dict(genome.provenance)
-        genome.provenance["catalog_id"] = genome.identifier
-    genome.identifier = alias
 
     # Entries imported from NCBI's summary carry no filenames, because nothing was
     # downloaded to name. Record what actually arrived so verify and link can see it.
@@ -430,11 +438,12 @@ def _install_many_parallel(pairs, local_dir: Path, force: bool, no_link: bool, w
     local_dir = Path(local_dir)
     todo = []
     for genome, alias in pairs:
-        target = local_dir / alias
+        key = cache_key(genome)
+        target = local_dir / key
         if (target / "metadata.yaml").exists() and not force:
             echo(f"Already installed: {alias}")
             _link(alias, [p for _, p, _ in read_genome(target).file_paths() if p.exists()], no_link)
-            _record_download(local_dir, genome.identifier or alias, alias)
+            _record_download(local_dir, genome.identifier, alias)
         else:
             todo.append((genome, alias))
 
@@ -464,10 +473,10 @@ def _install_many_parallel(pairs, local_dir: Path, force: bool, no_link: bool, w
                     failed.append(alias)
                     continue
 
-                installed = _install(genome, alias, written, local_dir)
+                installed = _install(genome, cache_key(genome), written, local_dir)
                 echo(f"  {alias}: installed into {installed}")
                 _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
-                _record_download(local_dir, genome.identifier or alias, alias)
+                _record_download(local_dir, genome.identifier, alias)
 
     return failed
 
@@ -538,6 +547,38 @@ def _require(genomes, key, what, catalog_root=None):
     return genome
 
 
+def _local_alias_map() -> dict:
+    """alias -> catalog identifier, from ./accessions.txt in the current directory.
+
+    This is the only place a local alias is recorded now that the shared cache is
+    keyed by accession/identifier rather than by alias - the cache entry itself no
+    longer carries what any particular project called it.
+    """
+    path = Path.cwd() / ACCESSIONS_FILE
+    if not path.exists():
+        return {}
+    return {alias: name for name, alias in _read_accessions(path)}
+
+
+def _resolve_local(genomes, name: str):
+    """Find a locally cached genome by its own identity, or by the alias it was
+    installed under in this project (./accessions.txt)."""
+    genome = find(genomes, name)
+    if genome is not None:
+        return genome
+    origin = _local_alias_map().get(name)
+    return find(genomes, origin) if origin else None
+
+
+def _require_local(genomes, name, what):
+    genome = _resolve_local(genomes, name)
+    if genome is None:
+        click.echo(f"Not in {what}: {name}", err=True)
+        click.echo("Run 'leishref info' to see what is available", err=True)
+        raise SystemExit(1)
+    return genome
+
+
 # ----------------------------------------------------------------------- user commands
 
 
@@ -551,19 +592,20 @@ def _require(genomes, key, what, catalog_root=None):
     show_default=True,
     help="Cache directory for downloaded genomes",
 )
-@click.option("--force", is_flag=True, help="Re-download, or replace a different genome under this alias")
+@click.option("--force", is_flag=True, help="Re-download even though the cache already has this genome")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
 def install(name, alias, local_dir, force, no_link):
-    """Download a catalog genome and cache it with ALIAS.
+    """Download a catalog genome and cache it, with a symlink named ALIAS.
 
-    NAME picks the genome out of the catalog by accession or catalog id. ALIAS is the
-    name for the cached copy: becomes the directory under ~/.config/leishref/ and the
-    symlink name, so it is yours to choose and required. Recorded in ./accessions.txt
-    so 'leishref restore' can rebuild this later.
+    NAME picks the genome out of the catalog by accession or catalog id. The genome
+    itself is cached under ~/.config/leishref/<accession>/, shared across every
+    project on this machine; ALIAS only names the symlink this command leaves in the
+    current directory, so it's yours to choose and required. Recorded in
+    ./accessions.txt so 'leishref restore' can rebuild this later.
 
-    Re-running install with the same NAME and ALIAS is a safe no-op: it just makes sure
-    the symlink is in place. --force is only needed to force a fresh download, or to
-    replace a *different* genome already cached under this ALIAS.
+    Because the cache is shared and keyed by accession, re-running install for the
+    same NAME - under any ALIAS - is always a safe no-op that just makes sure the
+    symlink is in place; --force only forces a fresh download.
 
     Examples:
 
@@ -575,27 +617,23 @@ def install(name, alias, local_dir, force, no_link):
     genome = _require(entries, name, "catalog")
 
     if not alias:
-        click.echo("--alias is required: it names the cached genome,", err=True)
-        click.echo("becoming the directory under ~/.config/leishref/ and the symlink name.\n", err=True)
+        click.echo("--alias is required: it names the symlink in the current directory,", err=True)
+        click.echo("not the cache itself (shared, under ~/.config/leishref/).\n", err=True)
         aliases = load_aliases()
         suggested = aliases.get(genome.identifier) or get_catalog_alias(genome.accession or "") or suggest_alias(genome)
         click.echo(f"  leishref install {name} --alias {suggested}", err=True)
         raise SystemExit(2)
 
-    target = Path(local_dir) / alias
+    key = cache_key(genome)
+    target = Path(local_dir) / key
     if (target / "metadata.yaml").exists() and not force:
         existing = read_genome(target)
-        existing_origin = existing.provenance.get("catalog_id") or existing.accession or existing.identifier
-        if existing_origin != genome.identifier:
-            click.echo(f"--alias {alias} is already used by a different genome: {existing_origin}", err=True)
-            click.echo("Use --force to replace it", err=True)
-            raise SystemExit(1)
-
-        # Same genome already cached under this alias: nothing worth re-downloading,
-        # so this is quiet unless the symlink itself needed fixing.
+        # Cache is keyed by accession/identifier, so if it's here at all it's
+        # deterministically this genome - nothing worth re-downloading. Quiet
+        # unless the symlink itself needed fixing.
         click.echo(f"Already installed: {target}")
         _link(alias, [p for _, p, _ in existing.file_paths() if p.exists()], no_link)
-        _record_download(Path(local_dir), genome.identifier or name, alias)
+        _record_download(Path(local_dir), genome.identifier, alias)
         return
 
     doi = genome.zenodo_doi
@@ -606,7 +644,6 @@ def install(name, alias, local_dir, force, no_link):
     click.echo(f"Installing {source_name} → {target}")
 
     # Check if files already exist locally with correct checksums
-    target = Path(local_dir) / alias
     if not force and target.exists() and genome.checksums:
         local_checksums = {}
         for kind, path, _ in genome.file_paths():
@@ -643,7 +680,7 @@ def install(name, alias, local_dir, force, no_link):
                 click.echo("TriTrypDB needs a login; get the file manually, then 'leishref dev add'", err=True)
             raise SystemExit(1)
 
-        installed = _install(genome, alias, written, Path(local_dir))
+        installed = _install(genome, key, written, Path(local_dir))
 
     click.echo(f"Installed into {installed}")
 
@@ -670,7 +707,7 @@ def install(name, alias, local_dir, force, no_link):
         write_genome(installed, local_genome)
 
     _link(alias, [p for _, p, _ in local_genome.file_paths() if p.exists()], no_link)
-    recorded_in = _record_download(Path(local_dir), genome.identifier or name, alias)
+    recorded_in = _record_download(Path(local_dir), genome.identifier, alias)
     click.echo(f"  recorded in {recorded_in}")
     if bad:
         raise SystemExit(1)
@@ -692,7 +729,7 @@ def info(name, local_dir):
     installed = local(Path(local_dir))
 
     if name:
-        genome = find(installed, name) or _require(entries, name, "catalog")
+        genome = _resolve_local(installed, name) or _require(entries, name, "catalog")
         import yaml
 
         console = _console()
@@ -706,7 +743,7 @@ def info(name, local_dir):
         )
         if genome.path:
             console.print(f"\npath: [cyan]{escape(str(genome.path))}[/]")
-        if find(installed, name) is None:
+        if _resolve_local(installed, name) is None:
             console.print(f"suggested alias: [bold cyan]{escape(suggest_alias(genome))}[/]")
         return
 
@@ -734,12 +771,13 @@ def info(name, local_dir):
             )
 
     console.print(f"\n[bold]Cached:[/] [bold]{len(installed)}[/] installed  [dim]({Path(local_dir)})[/]")
+    alias_for_id = {}
+    for alias, origin in _local_alias_map().items():
+        alias_for_id.setdefault(origin, []).append(alias)
     for genome in _by_organism(installed):
-        source_ref = genome.provenance.get("catalog_id") or genome.accession or ""
-        console.print(
-            f"  [bold cyan]{escape(genome.identifier):<38}[/] {escape(_organism(genome)):<50}"
-            f" [dim]{escape(source_ref)}[/]"
-        )
+        aliases_here = ", ".join(alias_for_id.get(genome.identifier, []))
+        alias_txt = f" [dim](alias: {escape(aliases_here)})[/]" if aliases_here else ""
+        console.print(f"  [bold cyan]{escape(genome.identifier):<38}[/] {escape(_organism(genome)):<50}{alias_txt}")
     if not installed:
         console.print("  [dim](nothing yet -- 'leishref install <name> --alias <alias>')[/]")
 
@@ -772,11 +810,11 @@ def search(terms, local_dir, installed, long_form):
     entries = catalog()
     here = local(Path(local_dir))
 
-    # A cached install records where it came from, so matches can be flagged as present.
-    by_origin = {}
-    for genome in here:
-        origin = genome.provenance.get("catalog_id") or genome.identifier
-        by_origin[origin] = genome.identifier
+    # A cached genome can be flagged as present; the display alias prefers what this
+    # project calls it (./accessions.txt) over the cache's own accession/identifier.
+    local_aliases = _local_alias_map()
+    alias_for_id = {origin: alias for alias, origin in local_aliases.items()}
+    by_origin = {genome.identifier: alias_for_id.get(genome.identifier, genome.identifier) for genome in here}
 
     # Load aliases for matching
     aliases = load_aliases()
@@ -923,7 +961,7 @@ def rename_sequences_cmd(name, flavor, local_dir):
       leishref rename-sequences Ld1S --flavor number
       leishref rename-sequences Ld1S --flavor roman
     """
-    genome = _require(local(Path(local_dir)), name, "cached database")
+    genome = _require_local(local(Path(local_dir)), name, "cached database")
 
     fasta_path = None
     for kind, path, _ in genome.file_paths():
@@ -992,7 +1030,7 @@ def prune_scaffold_cmd(name, local_dir):
     \b
       leishref prune-scaffold Ld1S
     """
-    genome = _require(local(Path(local_dir)), name, "cached database")
+    genome = _require_local(local(Path(local_dir)), name, "cached database")
 
     if not genome.accession:
         click.echo(f"Genome {name} has no accession; cannot look up chromosome info", err=True)
@@ -1066,16 +1104,14 @@ def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verb
     path = Path(accessions) if accessions else Path.cwd() / ACCESSIONS_FILE
 
     if from_installed:
-        # A database built before this file existed can still describe itself: every
-        # cached genome remembers the catalog entry it came from under provenance.
+        # The shared cache is keyed by accession/identifier, not by alias, so this can
+        # only recover *what's installed*, not what any particular project used to
+        # call it - that mapping only ever lived in accessions.txt itself. Every
+        # entry is recorded under its own identifier as both name and alias; rename
+        # the alias column by hand afterwards if you want nicer local names.
         written = 0
         for genome in _by_organism(local(Path(local_dir))):
-            origin = genome.provenance.get("catalog_id") or genome.accession
-            if not origin:
-                click.echo(f"  no catalog origin recorded, skipping: {genome.identifier}", err=True)
-                continue
-            alias = genome.path.name  # Cached directory name is the alias
-            _record_download(Path(local_dir), origin, alias)
+            _record_download(Path(local_dir), genome.identifier, genome.identifier)
             written += 1
         click.echo(f"Recorded {written} genome{'s' if written != 1 else ''} in {path}")
         return
@@ -1093,8 +1129,11 @@ def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verb
     console.print(f"[bold]{len(pairs)}[/] genome{'s' if len(pairs) > 1 else ''} listed in [cyan]{escape(str(path))}[/]")
 
     if dry_run:
+        entries = catalog()
         for name, alias in pairs:
-            state = "installed" if (Path(local_dir) / alias / "metadata.yaml").exists() else "missing"
+            genome = find(entries, name)
+            key = cache_key(genome) if genome else name
+            state = "installed" if (Path(local_dir) / key / "metadata.yaml").exists() else "missing"
             console.print(f"  [bold cyan]{escape(alias):<24}[/] {escape(name):<34} [dim]{state}[/]")
         return
 
@@ -1297,18 +1336,35 @@ def install_ncbi_refseq(local_dir, force, no_link, verbose, parallel):
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--basedir", type=click.Path(), default=".", help="Where to create the links")
 def link(local_dir, basedir):
-    """Refresh the alias-named symlinks for everything installed locally.
+    """Refresh the alias-named symlinks for everything installed from here.
+
+    Reads ./accessions.txt for the (genome, alias) pairs this project installed -
+    the shared cache itself doesn't know what any project calls a given genome.
 
     Examples:
 
     \b
       leishref link
     """
+    accessions_path = Path.cwd() / ACCESSIONS_FILE
+    if not accessions_path.exists():
+        click.echo(f"No {ACCESSIONS_FILE} in the current directory; nothing to link", err=True)
+        click.echo("It's written by 'leishref install' as you install genomes.", err=True)
+        raise SystemExit(1)
+
+    local_dir = Path(local_dir)
+    entries = catalog()
     made, conflicts = [], []
-    for genome in local(Path(local_dir)):
-        paths = [p for _, p, _ in genome.file_paths() if p.exists()]
+    for name, alias in _read_accessions(accessions_path):
+        genome = find(entries, name)
+        key = cache_key(genome) if genome else name
+        cache_dir = local_dir / key
+        if not (cache_dir / "metadata.yaml").exists():
+            conflicts.append(f"{alias}: {name} is not installed ({cache_dir} missing)")
+            continue
+        paths = [p for _, p, _ in read_genome(cache_dir).file_paths() if p.exists()]
         try:
-            made.extend(link_paths(genome.identifier, paths, Path(basedir)))
+            made.extend(link_paths(alias, paths, Path(basedir)))
         except LinkConflict as exc:
             conflicts.append(str(exc))
 
@@ -1491,6 +1547,13 @@ def bundle(patterns, local_dir, basedir, output):
     """
     basedir = Path(basedir)
     installed = local(Path(local_dir))
+    # The shared cache is keyed by accession/identifier; prefer this project's own
+    # alias (./accessions.txt) as the archive folder name when there is one, since
+    # it's far more readable than a bare accession.
+    alias_for_id = {origin: alias for alias, origin in _local_alias_map().items()}
+
+    def display_name(genome):
+        return alias_for_id.get(genome.identifier, genome.identifier)
 
     files_to_bundle = []
 
@@ -1502,23 +1565,29 @@ def bundle(patterns, local_dir, basedir, output):
                 files_to_bundle.append((linkname, target))
         else:
             if is_glob(pattern):
-                matches = [g for g in installed if fnmatch.fnmatch(g.identifier.lower(), pattern.lower())]
+                pattern_lower = pattern.lower()
+                matches = [
+                    g
+                    for g in installed
+                    if fnmatch.fnmatch(g.identifier.lower(), pattern_lower)
+                    or fnmatch.fnmatch(display_name(g).lower(), pattern_lower)
+                ]
                 if not matches:
                     click.echo(f"No match for '{pattern}' (tried symlinks and genomes)", err=True)
                     raise SystemExit(1)
                 for genome in matches:
                     for kind, path, _ in genome.file_paths():
                         if path.exists():
-                            arcname = f"{genome.identifier}/{path.name}"
+                            arcname = f"{display_name(genome)}/{path.name}"
                             files_to_bundle.append((arcname, path))
             else:
-                genome = find(installed, pattern)
+                genome = _resolve_local(installed, pattern)
                 if genome is None:
                     click.echo(f"Not found: {pattern} (symlink or genome name)", err=True)
                     raise SystemExit(1)
                 for kind, path, _ in genome.file_paths():
                     if path.exists():
-                        arcname = f"{genome.identifier}/{path.name}"
+                        arcname = f"{display_name(genome)}/{path.name}"
                         files_to_bundle.append((arcname, path))
 
     if not files_to_bundle:
@@ -1714,7 +1783,7 @@ def fetch_genome(accession, alias, species, strain, molecule_type, catalog_dir, 
         click.echo(f"Catalog entry: {entry}")
 
         if alias:
-            installed = _install(genome, alias, [fasta, gff], Path(local_dir))
+            installed = _install(genome, cache_key(genome), [fasta, gff], Path(local_dir))
             click.echo(f"Installed into {installed}")
             _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
 
@@ -1789,7 +1858,7 @@ def fetch_nucleotide(accession, alias, species, strain, molecule_type, email, ca
         click.echo(f"Catalog entry: {entry}")
 
         if alias:
-            installed = _install(genome, alias, [fasta], Path(local_dir))
+            installed = _install(genome, cache_key(genome), [fasta], Path(local_dir))
             click.echo(f"Installed into {installed}")
             _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
 
@@ -1839,7 +1908,7 @@ def add(fasta, gff, alias, species, strain, technology, assembler, molecule_type
     write_genome(entry, genome)
     click.echo(f"Catalog entry: {entry}")
 
-    installed = _install(genome, alias, [fasta, gff], Path(local_dir))
+    installed = _install(genome, cache_key(genome), [fasta, gff], Path(local_dir))
     click.echo(f"Installed into {installed}")
     _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
 
@@ -1937,7 +2006,7 @@ def scaffold(query, reference, alias, clean, catalog_dir, local_dir, no_link):
         write_genome(entry, genome)
         click.echo(f"Catalog entry: {entry}")
 
-        installed = _install(genome, alias, [result, agp], local_root, move=True)
+        installed = _install(genome, cache_key(genome), [result, agp], local_root, move=True)
 
     click.echo(f"Installed into {installed}")
     _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
@@ -2002,7 +2071,7 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
       leishref dev publish Ltrop.flye
       leishref dev publish Ltrop.flye --confirm --version v1.0
     """
-    genome = _require(local(Path(local_dir)), name, "local database")
+    genome = _require_local(local(Path(local_dir)), name, "local database")
     payload = [p for _, p, _ in genome.file_paths() if p.exists()]
     agp = genome.provenance.get("agp_filename")
     if agp and (genome.path / agp).exists():
@@ -2074,7 +2143,7 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
     write_genome(genome.path, genome)
 
     root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
-    origin = genome.provenance.get("catalog_id") or genome.identifier
+    origin = genome.identifier
     shipped = find(catalog(Path(catalog_dir) if catalog_dir else None), origin)
     entry = shipped.path if shipped else catalog_entry_dir(root, genome)
     if (entry / "metadata.yaml").exists():

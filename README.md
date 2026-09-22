@@ -212,17 +212,20 @@ which it becomes retrievable by anyone else.
 
 ### Install a genome
 
-`--alias` is required. It is the name the genome takes on your machine: the directory
-under `data/`, and the symlink you will actually type.
+`--alias` is required. It names the symlink `install` leaves in the current
+directory -- it does **not** name where the genome is stored. The genome itself is
+cached under `~/.config/leishref/<accession>/`, shared across every project on the
+machine and keyed by accession, so installing the same genome under two different
+aliases (in this project or another) never downloads it twice.
 
 `--alias` is required, but leishref proposes one rather than leaving you to invent it:
 
 ```console
-$ leishref download GCA_000410715.1
---alias is required: it names this genome in your local database,
-becoming the directory under data/ and the symlink you will type.
+$ leishref install GCA_000410715.1
+--alias is required: it names the symlink in the current directory,
+not the cache itself (shared, under ~/.config/leishref/).
 
-  leishref download GCA_000410715.1 --alias Ltrop.ncbi.L590
+  leishref install GCA_000410715.1 --alias Ltrop.ncbi.L590
 ```
 
 The suggestion is `<Lspec>.<source>.<discriminator>`, where the discriminator is the
@@ -231,12 +234,12 @@ left the strain field empty -- and the accession otherwise. `leishref info <name
 it too. Take it or pick your own.
 
 ```console
-$ leishref download GCA_000410715.1 --alias Ltrop.L590
+$ leishref install GCA_000410715.1 --alias Ltrop.L590
 GCA_000410715.1 -> GCA_000410715.1 (NCBI)
-Installed into data/Ltrop.L590
+Installed into /home/you/.config/leishref/GCA_000410715.1
   md5 OK: GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna
-  Ltrop.L590.fna -> data/Ltrop.L590/GCA_000410715.1_..._genomic.fna
-  Ltrop.L590.gff -> data/Ltrop.L590/GCA_000410715.1_..._genomic.gff
+  Ltrop.L590.fna -> /home/you/.config/leishref/GCA_000410715.1/GCA_000410715.1_..._genomic.fna
+  Ltrop.L590.gff -> /home/you/.config/leishref/GCA_000410715.1/GCA_000410715.1_..._genomic.gff
 ```
 
 leishref prefers a Zenodo DOI where the catalog records one and falls back to the NCBI
@@ -247,13 +250,21 @@ a login; fetch those by hand and register them with `leishref dev add`.
 The result:
 
 ```
-data/Ltrop.L590/
-  metadata.yaml         # copied from the catalog, identifier rewritten to your alias
+~/.config/leishref/GCA_000410715.1/
+  metadata.yaml         # copied straight from the catalog entry, unmodified
   GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna
   GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.gff
-Ltrop.L590.fna -> /home/you/.config/leishref/Ltrop.L590/...    # absolute symlink
-Ltrop.L590.gff -> /home/you/.config/leishref/Ltrop.L590/...
+Ltrop.L590.fna -> /home/you/.config/leishref/GCA_000410715.1/...    # absolute symlink
+Ltrop.L590.gff -> /home/you/.config/leishref/GCA_000410715.1/...
 ```
+
+Reusing `Ltrop.L590` as the alias for a *different* genome later just repoints these
+two symlinks -- it's never a conflict, since the alias never names the cache itself.
+Rerunning `install` for the same genome (any alias) is always a safe no-op: it makes
+sure the symlink is in place and does nothing else. `--force` only forces a fresh
+download. `./accessions.txt` (in the current directory, not the cache) is what
+remembers which alias this project uses for which accession; `leishref restore` and
+`leishref link` replay it.
 
 FASTA symlinks are always named `.fna` regardless of the source file's own extension
 (`.fa`, `.fasta`). Links are absolute, since the target lives in the shared cache
