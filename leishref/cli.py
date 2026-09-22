@@ -21,6 +21,7 @@ from rich.markup import escape
 from rich.syntax import Syntax
 from tqdm import tqdm
 
+from leishref import __version__
 from leishref.checksums import genome_stats, md5_file
 from leishref.chromosomes import get_chromosome_info, rename_fasta_sequences
 from leishref.links import LinkConflict, link_paths
@@ -174,6 +175,7 @@ click.rich_click.OPTION_GROUPS = {
 
 
 @click.group()
+@click.version_option(version=__version__)
 def cli():
     """Leishmania reference genome database."""
 
@@ -512,7 +514,7 @@ def _record_download(local_root: Path, name: str, alias: str) -> Path:
     """
     path = Path.cwd() / ACCESSIONS_FILE
     header = [
-        "# Genomes installed with 'leishref install', most recent last.",
+        f"# Genomes installed with 'leishref install' (leishref {__version__}), most recent last.",
         "# Format: catalog-identifier<TAB>alias    Replay with 'leishref restore'.",
     ]
 
