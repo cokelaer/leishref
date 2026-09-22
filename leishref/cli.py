@@ -44,9 +44,11 @@ from leishref.prune import prune_fasta
 from leishref.scaffold import clean_scaffolded_fasta, ragtag_version, run_scaffold
 from leishref.visualize import (
     plot_chromosome_length_histogram,
+    plot_gc_content_by_species,
     plot_genome_size_histogram,
     plot_genome_sizes,
     plot_genome_stats,
+    plot_species_genome_count,
 )
 from leishref.zenodo import (
     ZenodoError,
@@ -106,7 +108,14 @@ click.rich_click.COMMAND_GROUPS = {
         },
         {
             "name": "Plotting",
-            "commands": ["plot-stats", "plot-sizes", "plot-histogram", "plot-chromosome-histogram"],
+            "commands": [
+                "plot-stats",
+                "plot-sizes",
+                "plot-histogram",
+                "plot-chromosome-histogram",
+                "plot-species-count",
+                "plot-gc-content",
+            ],
         },
     ],
     "leishref dev": [
@@ -1294,6 +1303,56 @@ def plot_histogram(catalog_dir, output, include_kinetoplast):
             Path(catalog_dir) if catalog_dir else None,
             Path(output) if output else None,
             include_kinetoplast=include_kinetoplast,
+        )
+        click.echo(f"Saved plot to {out}")
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+
+@cli.command("plot-species-count")
+@click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
+@click.option("--output", type=click.Path(), help="Save plot to this file")
+def plot_species_count(catalog_dir, output):
+    """Plot bar chart of genome count per species.
+
+    Shows how many genomes are available for each species in the catalog.
+
+    Examples:
+
+    
+      leishref plot-species-count
+      leishref plot-species-count --output species_count.png
+    """
+    try:
+        out = plot_species_genome_count(
+            Path(catalog_dir) if catalog_dir else None,
+            Path(output) if output else None,
+        )
+        click.echo(f"Saved plot to {out}")
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+
+@cli.command("plot-gc-content")
+@click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
+@click.option("--output", type=click.Path(), help="Save plot to this file")
+def plot_gc_content(catalog_dir, output):
+    """Plot GC content distribution by species.
+
+    Shows GC% distribution (violin plot) for each species.
+
+    Examples:
+
+    
+      leishref plot-gc-content
+      leishref plot-gc-content --output gc_distribution.png
+    """
+    try:
+        out = plot_gc_content_by_species(
+            Path(catalog_dir) if catalog_dir else None,
+            Path(output) if output else None,
         )
         click.echo(f"Saved plot to {out}")
     except ValueError as e:
