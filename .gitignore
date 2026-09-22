@@ -30,6 +30,7 @@ leishref/data/*/
 !leishref/data/scaffold/
 !leishref/data/tritrypdb/
 !leishref/data/zenodo/
+!leishref/data/custom/
 
 # Legacy working directories, kept out of the way.
 NCBI/
@@ -37,6 +38,11 @@ TriTryDB68/
 MyAssemblies/
 Scaffold/
 TEST/
+
+# `leishref dev add` stages a genome here for review before `dev publish`; it holds
+# real sequence data and is never itself committed - only the resulting
+# leishref/data/custom/ metadata.yaml is, as a pull request.
+/to_publish_on_zenodo/
 
 # AGP files describe layout but shouldn't be shipped with the package.
 AGP/

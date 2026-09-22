@@ -78,77 +78,90 @@ scaffold from it, from raw FASTA through to a published, installable entry.
     leishref install Ltrop.raw.scaffold.Ld1S --alias my-scaffold
 
 Adding a local file to the database and publishing it to Zenodo
---------------------------------------------------------------------
+---------------------------------------------------------------------
 
 The direct path, for a genome you already have as a FASTA - not derived by
 scaffolding anything (see the previous section if it is). Typical for a genome you
 assembled yourself, or downloaded from somewhere leishref doesn't fetch from
 automatically (e.g. TriTrypDB, which needs a login).
 
+``dev add`` only *stages* a genome for review; it doesn't touch the shipped catalog
+or your local install. ``dev publish`` is the step that actually deposits it on
+Zenodo and adds it to ``leishref/data/custom/``.
+
 Naming convention
 ^^^^^^^^^^^^^^^^^^^
 
-``dev add`` doesn't enforce an ``--alias`` format, but for anything other than a
-one-off, name it::
+The staged entry is named after the FASTA file itself, so name the file before
+running ``dev add``::
 
     <species>.<strain>.<molecule_type>.<assembler>
 
-e.g. ``Ltropica.CDC216-162.maxicircle.flye``. ``<assembler>`` is optional - drop it
-(and the trailing dot) if unknown or not meaningful, e.g. for a genome downloaded
-rather than assembled locally. ``<molecule_type>`` is one of:
+e.g. ``Ltropica.CDC216-162.maxicircle.flye.fasta``. ``<assembler>`` is optional -
+drop it (and the trailing dot) if unknown or not meaningful, e.g. for a genome
+downloaded rather than assembled locally. ``<molecule_type>`` is one of:
 
-- ``genome`` — whole nuclear genome, unassigned to chromosomes
-- ``chromosome`` — chromosome-level nuclear assembly
-- ``scaffold`` — nuclear assembly below chromosome level (contigs/scaffolds only)
-- ``maxicircle`` — kinetoplast maxicircle
-- ``minicircle`` — kinetoplast minicircle
+- ``genome`` -- whole nuclear genome, unassigned to chromosomes
+- ``chromosome`` -- chromosome-level nuclear assembly
+- ``scaffold`` -- nuclear assembly below chromosome level (contigs/scaffolds only)
+- ``maxicircle`` -- kinetoplast maxicircle
+- ``minicircle`` -- kinetoplast minicircle
 
-This is the *alias* convention (readable at a glance, sorts sensibly next to related
-entries); it's separate from the ``--molecule-type`` metadata field below, which
-tags a *kinetoplast* entry specifically (``kinetoplast,maxicircle`` or
-``kinetoplast,minicircle`` — see :doc:`metadata`) so it turns up in
-``leishref search kinetoplast``. An ordinary nuclear genome or chromosome alias
-needs no ``--molecule-type`` at all.
+This is the *filename* convention (readable at a glance, sorts sensibly next to
+related entries); it's separate from the ``--molecule-type`` metadata field below,
+which tags a *kinetoplast* entry specifically (``kinetoplast,maxicircle`` or
+``kinetoplast,minicircle`` -- see :doc:`metadata`) so it turns up in
+``leishref search kinetoplast``. An ordinary nuclear genome or chromosome needs no
+``--molecule-type`` at all.
 
 ::
 
-    # 1. Add it to both the catalog and your local database in one step
-    leishref dev add my_assembly.fasta --alias Ltropica.CDC216-162.genome.flye \
+    # 1. Stage it for review - writes to ./to_publish_on_zenodo/<fasta-stem>/,
+    #    nowhere else. --alias here is just a note in metadata.yaml, e.g. what you
+    #    called it in your own notes; it plays no structural role.
+    leishref dev add Ltropica.CDC216-162.genome.flye.fasta \
         --species "Leishmania tropica" --strain "CDC216-162" \
         --technology "PacBio RS II" --assembler Flye
 
     # A GFF, if you have one, goes right after the FASTA:
-    leishref dev add my_assembly.fasta my_assembly.gff --alias Ltropica.CDC216-162.genome.flye
+    leishref dev add Ltropica.CDC216-162.genome.flye.fasta assembly.gff
 
-    # A standalone kinetoplast/maxicircle instead of a nuclear genome? Tag it so it's
-    # searchable (see :doc:`metadata`):
-    leishref dev add kdna.fasta --alias Ltropica.CDC216-162.maxicircle.flye \
+    # A standalone kinetoplast/maxicircle instead of a nuclear genome? Tag it so
+    # it's searchable (see :doc:`metadata`):
+    leishref dev add Ltropica.CDC216-162.maxicircle.flye.fasta \
         --molecule-type kinetoplast,maxicircle
 
-    # 2. Sanity-check what was written
-    leishref info Ltropica.CDC216-162.genome.flye
-    leishref verify
+    # 2. Review what was staged
+    cat to_publish_on_zenodo/Ltropica.CDC216-162.genome.flye/metadata.yaml
 
     # 3. Set your Zenodo token (production or sandbox)
     export ZENODO_TOKEN=your-token                    # zenodo.org
     export ZENODO_SANDBOX_TOKEN=your-sandbox-token     # sandbox.zenodo.org, with --sandbox
 
     # 4. Publish - dry-run first, shows what would upload without touching Zenodo
-    leishref dev publish Ltropica.CDC216-162.genome.flye
-    leishref dev publish Ltropica.CDC216-162.genome.flye --confirm --version v1.0
+    leishref dev publish to_publish_on_zenodo/Ltropica.CDC216-162.genome.flye
+    leishref dev publish to_publish_on_zenodo/Ltropica.CDC216-162.genome.flye \
+        --confirm --version v1.0
 
     # Rehearse on the sandbox first if you're not sure: a sandbox DOI is deliberately
     # not recorded in the catalog, so it can't block the real publish afterwards.
-    leishref dev publish Ltropica.CDC216-162.genome.flye --confirm --sandbox
+    leishref dev publish to_publish_on_zenodo/Ltropica.CDC216-162.genome.flye \
+        --confirm --sandbox
 
-``dev publish`` takes the genome's identifier (what you gave ``--alias`` above), not
-a file path - it uploads whatever is already sitting in the local install it made in
-step 1. Once published, its catalog entry under ``leishref/data/local/`` records the
-DOI and the entry's ``source`` becomes ``Zenodo``, so from then on
+``dev publish`` takes a path to the staged directory (not the ``--alias``, and not a
+file path to the FASTA itself). Once published, a fresh entry appears under
+``leishref/data/custom/`` with the DOI recorded and ``source: Custom`` unchanged
+(staying in ``custom/`` per :doc:`catalog`'s placement rule, even though it now has
+a DOI) - so from then on
 ``leishref install Ltropica.CDC216-162.genome.flye --alias <anything>`` fetches it
-from Zenodo instead of needing your local file again - including for anyone else who
-pulls the catalog update. Commit that ``metadata.yaml`` change (only metadata - never
-the sequence itself) as a pull request; see :doc:`development`.
+from Zenodo instead of needing your local file again, including for anyone else who
+pulls the catalog update. Commit that ``metadata.yaml`` (only metadata - never the
+sequence itself, which stays out of source control) as a pull request; see
+:doc:`development`.
+
+The staged copy under ``to_publish_on_zenodo/`` is left in place afterwards (also
+updated with the DOI, for reference) - remove it yourself once you've confirmed the
+catalog entry looks right.
 
 Packaging genomes for offline sharing
 ----------------------------------------
