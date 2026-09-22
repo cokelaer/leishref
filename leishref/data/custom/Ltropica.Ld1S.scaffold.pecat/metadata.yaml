@@ -1,0 +1,34 @@
+identifier: Ltropica.Ld1S.scaffold.pecat
+source: Custom
+species: Leishmania tropica
+strain: CDC
+assembly_level: Scaffold
+files:
+  fasta: Ltropica.Ld1S.scaffold.pecat.fasta
+checksums:
+  fasta: 779a6fcf0ea8cbddbe6624630f0beb35
+stats:
+  num_bases: 34463892
+  num_ungapped: 34463092
+  num_scaffolds: 44
+  num_contigs: 52
+  gc_percent: 59.7
+  scaffold_n50: 1097016
+  scaffold_l50: 11
+  contig_n50: 940224
+  contig_l50: 11
+  num_ambiguous: 800
+  num_gaps: 8
+provenance:
+  zenodo_doi: 10.5281/zenodo.22710148
+  sequencing_technology: PacBio RS II
+  bioproject: PRJNA484340
+  raw_reads_accession: PRJNA484340
+  assembler: PECAT
+  pipeline: LORA 1.0.0
+  reads: raw
+scaffold:
+  reference_alias: Ld1S
+  tool_version: ragtag.py
+date_added: '2026-09-11'
+notes: 52 contigs before scaffolding; maxicircle 29614 bp
