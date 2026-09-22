@@ -5,7 +5,7 @@ import matplotlib.axes
 import pytest
 
 from leishref.metadata import Genome, write_genome
-from leishref.visualize import plot_chromosome_length_histogram, plot_genome_stats
+from leishref.visualize import plot_chromosome_length_histogram, plot_genome_completeness, plot_genome_stats
 
 
 def _write_genome_with_optional_fasta(
@@ -183,3 +183,84 @@ def test_plot_chromosome_length_histogram_falls_back_to_vert_boxplot(tmp_path, m
     assert out == output
     assert output.exists()
     assert output.stat().st_size > 0
+
+
+def test_plot_genome_completeness_creates_file(tmp_path):
+    directory = tmp_path / "ncbi" / "GCA_1"
+    directory.mkdir(parents=True, exist_ok=True)
+    write_genome(
+        directory,
+        Genome(
+            identifier="GCA_1",
+            source="NCBI",
+            accession="GCA_1",
+            species="Leishmania major",
+            assembly_level="Complete Genome",
+            stats={"num_bases": 32000000},
+        ),
+    )
+
+    directory = tmp_path / "ncbi" / "GCA_2"
+    directory.mkdir(parents=True, exist_ok=True)
+    write_genome(
+        directory,
+        Genome(
+            identifier="GCA_2",
+            source="NCBI",
+            accession="GCA_2",
+            species="Leishmania donovani",
+            assembly_level="Chromosome",
+            stats={"num_bases": 33000000},
+        ),
+    )
+
+    directory = tmp_path / "ncbi" / "GCA_3"
+    directory.mkdir(parents=True, exist_ok=True)
+    write_genome(
+        directory,
+        Genome(
+            identifier="GCA_3",
+            source="NCBI",
+            accession="GCA_3",
+            species="Leishmania infantum",
+            assembly_level="Scaffold",
+            stats={"num_bases": 31000000},
+        ),
+    )
+
+    output = tmp_path / "completeness.png"
+    out = plot_genome_completeness(tmp_path, output)
+
+    assert out == output
+    assert output.exists()
+    assert output.stat().st_size > 0
+
+
+def test_plot_genome_completeness_handles_all_levels(tmp_path):
+    levels = ["Complete Genome", "Chromosome", "Scaffold", "Contig", None]
+    for i, level in enumerate(levels):
+        directory = tmp_path / "ncbi" / f"GCA_{i}"
+        directory.mkdir(parents=True, exist_ok=True)
+        write_genome(
+            directory,
+            Genome(
+                identifier=f"GCA_{i}",
+                source="NCBI",
+                accession=f"GCA_{i}",
+                species="Leishmania major",
+                assembly_level=level,
+                stats={"num_bases": 32000000},
+            ),
+        )
+
+    output = tmp_path / "all_levels.png"
+    out = plot_genome_completeness(tmp_path, output)
+
+    assert out == output
+    assert output.exists()
+    assert output.stat().st_size > 0
+
+
+def test_plot_genome_completeness_requires_genomes(tmp_path):
+    with pytest.raises(ValueError, match="No genomes found"):
+        plot_genome_completeness(tmp_path, tmp_path / "empty.png")

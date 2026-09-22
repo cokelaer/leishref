@@ -48,6 +48,7 @@ from leishref.prune import prune_fasta
 from leishref.scaffold import clean_scaffolded_fasta, ragtag_version, run_scaffold
 from leishref.visualize import (
     plot_chromosome_length_histogram,
+    plot_genome_completeness,
     plot_genome_size_histogram,
     plot_genome_sizes,
     plot_genome_stats,
@@ -112,7 +113,13 @@ click.rich_click.COMMAND_GROUPS = {
         },
         {
             "name": "Plotting",
-            "commands": ["plot-stats", "plot-sizes", "plot-histogram", "plot-chromosome-histogram"],
+            "commands": [
+                "plot-stats",
+                "plot-sizes",
+                "plot-histogram",
+                "plot-chromosome-histogram",
+                "plot-completeness",
+            ],
         },
     ],
     "leishref dev": [
@@ -1501,30 +1508,33 @@ def plot_histogram(catalog_dir, output, include_kinetoplast):
         raise SystemExit(1)
 
 
-def _resolve_symlink_targets(pattern: str, basedir: Path = Path(".")) -> list[tuple[str, Path]]:
-    """Match files by pattern, resolve symlinks to actual files.
+@cli.command("plot-completeness")
+@click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
+@click.option("--output", type=click.Path(), help="Save plot to this file")
+def plot_completeness(catalog_dir, output):
+    """Plot pie chart of genome completeness (assembly_level breakdown).
 
-    Returns list of (arcname, resolved_path) tuples.
-    arcname is just the symlink name (for flat archive from current dir).
+    Shows the distribution of complete genomes, chromosomes, scaffolds,
+    and contigs in the catalog.
+
+    Examples:
+
+    \b
+      leishref plot-completeness
+      leishref plot-completeness --output completeness.png
     """
-    from glob import glob
+    try:
+        out = plot_genome_completeness(
+            Path(catalog_dir) if catalog_dir else None,
+            Path(output) if output else None,
+        )
+        click.echo(f"Saved plot to {out}")
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
 
-    basedir = Path(basedir)
-    results = []
-    matches = glob(pattern, root_dir=basedir)
 
-    if not matches:
-        return []
-
-    for filename in sorted(matches):
-        filepath = basedir / filename
-        if filepath.is_symlink():
-            target = filepath.resolve()
-            results.append((filepath.name, target))
-        elif filepath.is_file():
-            results.append((filepath.name, filepath))
-
-    return results
+# ------------------------------------------------------------------------ dev commands
 
 
 @cli.command()
