@@ -302,10 +302,27 @@ Options:
 leishref dev add
 ~~~~~~~~~~~~~~~~
 
-Add a local assembly::
+Stage a local assembly for review and publishing to Zenodo::
 
-    leishref dev add FASTA [--technology TECH]
-    leishref dev add kdna.fa --alias Lgu.kinetoplast --molecule-type kinetoplast,maxicircle
+    leishref dev add Ltropica.CDC216-162.genome.flye.fasta --technology pacbio
+    leishref dev add kdna.fa --molecule-type kinetoplast,maxicircle
+
+Writes a metadata.yaml plus the FASTA (and GFF, if given) to
+``<outdir>/<fasta-stem>/`` (default outdir ``to_publish_on_zenodo``) - nothing is
+installed or added to the shipped catalog by this command; that happens at
+``leishref dev publish``. The entry's identifier comes from the FASTA filename, not
+``--alias``, which is recorded only as an informal note in metadata.yaml. See
+:doc:`workflow` for the ``<species>.<strain>.<molecule_type>.<assembler>`` naming
+convention the filename should follow.
+
+Options:
+- ``--alias TEXT`` — Informal name, recorded in metadata.yaml only
+- ``--species TEXT`` — Species name
+- ``--strain TEXT`` — Strain name
+- ``--technology TEXT`` — Sequencing technology, e.g. 'PacBio RS II'
+- ``--assembler TEXT`` — Assembler used, e.g. Flye
+- ``--molecule-type TEXT`` — What this actually is when it isn't a nuclear assembly
+- ``--outdir PATH`` — Staging directory (default ``to_publish_on_zenodo``)
 
 leishref dev scaffold
 ~~~~~~~~~~~~~~~~~~~~~
@@ -329,23 +346,28 @@ chromosome-anchored contigs plus kinetoplast::
 leishref dev publish
 ~~~~~~~~~~~~~~~~~~~~
 
-Deposit an installed genome on Zenodo and record the DOI in the catalog. Requires
-``ZENODO_TOKEN`` (or ``ZENODO_SANDBOX_TOKEN`` with ``--sandbox``).
+Deposit a genome's files on Zenodo and record the DOI. Requires ``ZENODO_TOKEN``
+(or ``ZENODO_SANDBOX_TOKEN`` with ``--sandbox``).
 
-The command uploads all associated files: FASTA plus optional AGP (for scaffolds),
-and records the DOI so the genome appears in the catalog as ``Zenodo`` source::
+NAME is either a path to a staged ``dev add`` entry, or the identifier of a genome
+already installed locally (e.g. a scaffold from ``dev scaffold``)::
 
-    leishref dev publish LtrL590.scaffold.Ld1S
-    leishref dev publish LtrL590.scaffold.Ld1S --confirm --version v1.0
+    leishref dev publish to_publish_on_zenodo/Ltropica.CDC216-162.genome.flye
+    leishref dev publish to_publish_on_zenodo/Ltropica.CDC216-162.genome.flye --confirm --version v1.0
     leishref dev publish LtrL590.scaffold.Ld1S --sandbox  # test run
+
+A staged entry gets a fresh ``leishref/data/custom/`` catalog entry, with ``source:
+Custom`` left unchanged even after publishing (per :doc:`catalog`'s placement
+rule); an already-catalogued entry (scaffolds) has its existing record updated in
+place and its source flipped to ``Zenodo``. For scaffolds, both the FASTA and AGP
+files are uploaded.
 
 Options:
 - ``--confirm`` — Actually publish; without it, shows what would be uploaded (dry-run)
 - ``--version`` — Version tag (default ``v1.0``)
 - ``--sandbox`` — Publish to sandbox.zenodo.org for testing
-
-For scaffolds, both the FASTA and AGP files are uploaded. The ``--alias`` from
-``leishref download`` is used to locate the genome in the local database.
+- ``--local-dir`` — Where to look up NAME when it isn't a staged path
+- ``--catalog-dir`` — Write/update the catalog entry here instead
 
 leishref dev remove
 ~~~~~~~~~~~~~~~~~~~

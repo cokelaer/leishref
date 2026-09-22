@@ -19,13 +19,14 @@ Repository layout
 Contributing a genome
 -----------------------
 
-If you just want to add a genome to the catalog, you don't need to touch any code:
-run ``leishref dev fetch-genome`` (an NCBI GCA/GCF assembly), ``leishref dev
-fetch-nucleotide`` (a standalone NCBI nuccore record), or ``leishref dev add`` (a
-local assembly), check the resulting ``leishref/data/.../metadata.yaml``, run
-``leishref dev check-aliases`` to catch accidental duplicates, and open a pull
-request with the new entry. See :doc:`workflow` for the full add → scaffold →
-publish path, and :doc:`catalog` for where a new entry belongs.
+If you just want to add a genome to the catalog, you don't need to touch any code.
+For an NCBI GCA/GCF assembly or a standalone nuccore record, ``leishref dev
+fetch-genome``/``fetch-nucleotide`` write straight to ``leishref/data/``. For a
+local assembly, ``leishref dev add`` followed by ``leishref dev publish`` gets it
+onto Zenodo and into ``leishref/data/custom/`` (see :doc:`workflow` for the full
+walk-through). Either way, check the resulting ``leishref/data/.../metadata.yaml``,
+run ``leishref dev check-aliases`` to catch accidental duplicates, and open a pull
+request with the new entry - see :doc:`catalog` for where it belongs.
 
 Contributing code
 --------------------
@@ -75,16 +76,16 @@ Add NCBI genome assembly to catalog::
 
 Downloads metadata and FASTA/GFF from NCBI, creates ``leishref/data/ncbi/GCA_000227135.2/metadata.yaml``.
 
-Add local assembly to catalog::
+Stage a local assembly for review::
 
-    leishref dev add ~/my_assembly.fasta \
-        --alias Ltropica.CDC216-162.genome.flye --technology pacbio
+    leishref dev add Ltropica.CDC216-162.genome.flye.fasta --technology pacbio
 
-``--alias`` is required: it becomes both the catalog identifier and the local
-install name (unlike ``install``, where those two are separate). Adds the FASTA to
-``leishref/data/local/`` with metadata, and installs it locally in the same step.
-See :doc:`workflow` for the ``<species>.<strain>.<molecule_type>.<assembler>``
-naming convention this alias follows.
+Writes only to ``./to_publish_on_zenodo/<fasta-stem>/`` (a metadata.yaml plus the
+FASTA) - it doesn't touch the shipped catalog or your local install.
+``--alias`` is optional and purely informational, recorded in metadata.yaml; the
+entry's identifier comes from the FASTA filename instead, so name it
+``<species>.<strain>.<molecule_type>.<assembler>`` (see :doc:`workflow`) before
+running this.
 
 Scaffold assembly against reference::
 
@@ -92,12 +93,11 @@ Scaffold assembly against reference::
 
 Creates scaffolded assembly by aligning query to reference, adds to ``leishref/data/scaffolds/``.
 
-Publish a local genome to Zenodo::
+Publish a staged genome to Zenodo::
 
-    leishref dev publish Ltropica.CDC216-162.genome.flye
+    leishref dev publish to_publish_on_zenodo/Ltropica.CDC216-162.genome.flye
 
-Takes the genome's local/catalog identifier - not a file path - since it uploads
-whatever ``leishref install``-style install already produced for that name.
-Uploads its files to Zenodo and records the DOI in catalog metadata. See
-:doc:`workflow` for the full add → publish walk-through, including
-``--confirm``/dry-run and the sandbox.
+Takes a path to what ``dev add`` staged (or, for an already-installed genome such
+as a scaffold, its identifier). Uploads its files to Zenodo, records the DOI, and
+creates the ``leishref/data/custom/`` catalog entry. See :doc:`workflow` for the
+full add → publish walk-through, including ``--confirm``/dry-run and the sandbox.

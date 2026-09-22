@@ -130,7 +130,7 @@ click.rich_click.COMMAND_GROUPS = {
 # to the options that change what a command does, so they get their own panel.
 _LOCATION_OPTIONS = {
     "name": "Where to read and write",
-    "options": ["--local-dir", "--basedir", "--workdir", "--out"],
+    "options": ["--local-dir", "--basedir", "--workdir", "--out", "--outdir"],
 }
 
 click.rich_click.OPTION_GROUPS = {
@@ -150,14 +150,12 @@ click.rich_click.OPTION_GROUPS = {
         ],
         "leishref dev fetch-genome": ["--alias", "--species", "--strain", "--force", "--no-link", "--help"],
         "leishref dev add": [
-            "--fasta",
-            "--gff",
             "--alias",
             "--species",
             "--strain",
             "--technology",
             "--assembler",
-            "--no-link",
+            "--molecule-type",
             "--help",
         ],
         "leishref dev publish": ["--version", "--confirm", "--sandbox", "--help"],
@@ -1879,7 +1877,7 @@ def fetch_nucleotide(accession, alias, species, strain, molecule_type, email, ca
 @dev.command()
 @click.argument("fasta", type=click.Path(exists=True))
 @click.argument("gff", type=click.Path(exists=True), required=False)
-@click.option("--alias", required=True, help="Name for this genome, in the catalog and locally")
+@click.option("--alias", help="Informal name, recorded in metadata.yaml only - it does not name the directory")
 @click.option("--species", help="Species name")
 @click.option("--strain", help="Strain name")
 @click.option("--technology", help="Sequencing technology, e.g. 'PacBio RS II'")
@@ -1888,42 +1886,67 @@ def fetch_nucleotide(accession, alias, species, strain, molecule_type, email, ca
     "--molecule-type",
     help="What this actually is when it isn't a nuclear assembly, e.g. 'kinetoplast,maxicircle'",
 )
-@click.option("--catalog-dir", type=click.Path(), help="Write the entry here instead")
-@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
-def add(fasta, gff, alias, species, strain, technology, assembler, molecule_type, catalog_dir, local_dir, no_link):
-    """Add a local assembly to the catalog and install it locally.
+@click.option(
+    "--outdir",
+    type=click.Path(),
+    default="to_publish_on_zenodo",
+    show_default=True,
+    help="Staging directory for entries not yet published",
+)
+def add(fasta, gff, alias, species, strain, technology, assembler, molecule_type, outdir):
+    """Stage a local assembly for review and publishing to Zenodo.
+
+    Copies FASTA (and GFF, if given) plus a metadata.yaml into
+    <outdir>/<fasta-stem>/ - named after the input file, not --alias (which is only
+    recorded as an informal note; name the file itself
+    <species>.<strain>.<molecule_type>.<assembler> - see the workflow docs). This is
+    a working area outside the shipped catalog and outside your local install -
+    nothing is installed or symlinked by this command.
+
+    Review the staged metadata.yaml, then run
+    'leishref dev publish <outdir>/<fasta-stem>' to deposit it on Zenodo and add the
+    entry to leishref/data/custom/.
 
     Examples:
 
     \b
-      leishref dev add assembly.fa --alias Ltrop.flye --species "Leishmania tropica"
-      leishref dev add assembly.fa assembly.gff --alias Ltrop.flye
-      leishref dev add kdna.fa --alias Lgu.kinetoplast --molecule-type kinetoplast,maxicircle
+      leishref dev add Ltropica.CDC216-162.genome.flye.fasta \\
+          --species "Leishmania tropica" --strain CDC216-162 --assembler Flye
+      leishref dev add assembly.fa assembly.gff --alias "for the Sicilian hybrids paper"
+      leishref dev add kdna.fa --molecule-type kinetoplast,maxicircle
     """
     fasta, gff = Path(fasta), Path(gff) if gff else None
-    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
+    identifier = fasta.stem
+    target = Path(outdir) / identifier
+    if target.exists():
+        click.echo(f"Already staged: {target}", err=True)
+        click.echo("Remove it first, or rename the input FASTA, to stage again.", err=True)
+        raise SystemExit(1)
 
     genome = Genome(
-        identifier=alias,
-        source="Local",
+        identifier=identifier,
+        source="Custom",
         species=species,
         strain=strain,
         molecule_type=molecule_type,
         files={k: v.name for k, v in (("fasta", fasta), ("gff", gff)) if v},
         checksums={k: md5_file(v) for k, v in (("fasta", fasta), ("gff", gff)) if v},
         stats=genome_stats(fasta),
-        provenance={k: v for k, v in (("sequencing_technology", technology), ("assembler", assembler)) if v},
+        provenance={
+            k: v for k, v in (("sequencing_technology", technology), ("assembler", assembler), ("alias", alias)) if v
+        },
         date_added=today_iso(),
     )
 
-    entry = catalog_entry_dir(root, genome)
-    write_genome(entry, genome)
-    click.echo(f"Catalog entry: {entry}")
+    target.mkdir(parents=True)
+    shutil.copy2(fasta, target / fasta.name)
+    if gff:
+        shutil.copy2(gff, target / gff.name)
+    write_genome(target, genome)
 
-    installed = _install(genome, cache_key(genome), [fasta, gff], Path(local_dir))
-    click.echo(f"Installed into {installed}")
-    _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
+    click.echo(f"Staged: {target}")
+    click.echo(f"Review {target / 'metadata.yaml'}, then:")
+    click.echo(f"  leishref dev publish {target}")
 
 
 @dev.command()
@@ -2069,22 +2092,33 @@ def _zenodo_description(genome) -> str:
 @dev.command()
 @click.argument("name")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option("--catalog-dir", type=click.Path(), help="Update the entry here instead")
+@click.option("--catalog-dir", type=click.Path(), help="Write/update the entry here instead")
 @click.option("--version", help="Version tag, e.g. v1.0")
 @click.option("--confirm", is_flag=True, help="Actually publish, rather than dry-run")
 @click.option("--sandbox", is_flag=True, help="Publish to sandbox.zenodo.org")
 def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
-    """Deposit an installed genome's files on Zenodo and record the DOI.
+    """Deposit a genome's files on Zenodo and record the DOI.
+
+    NAME is either a path to a staged entry from 'leishref dev add' (e.g.
+    to_publish_on_zenodo/my_assembly) or the identifier of a genome already
+    installed locally (e.g. from 'leishref dev scaffold'). A staged entry gets a
+    fresh catalog entry under leishref/data/custom/ once published; an
+    already-catalogued one has its existing entry updated in place.
 
     Needs ZENODO_TOKEN, or ZENODO_SANDBOX_TOKEN with --sandbox.
 
     Examples:
 
     \b
-      leishref dev publish Ltrop.flye
-      leishref dev publish Ltrop.flye --confirm --version v1.0
+      leishref dev publish to_publish_on_zenodo/Ltropica.CDC216-162.genome.flye
+      leishref dev publish to_publish_on_zenodo/Ltropica.CDC216-162.genome.flye --confirm --version v1.0
+      leishref dev publish Ltrop.flye.scaffold.Ld1S --confirm
     """
-    genome = _require_local(local(Path(local_dir)), name, "local database")
+    staged = Path(name)
+    if staged.is_dir() and (staged / "metadata.yaml").exists():
+        genome = read_genome(staged)
+    else:
+        genome = _require_local(local(Path(local_dir)), name, "local database")
     payload = [p for _, p, _ in genome.file_paths() if p.exists()]
     agp = genome.provenance.get("agp_filename")
     if agp and (genome.path / agp).exists():
@@ -2150,21 +2184,28 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
         return
 
     genome.provenance["zenodo_doi"] = doi
-    genome.source = "Zenodo"
+    # A Custom entry stays Custom - and so in leishref/data/custom/ - even once
+    # published; only entries that started life some other way (scaffolds) flip to
+    # Zenodo. See CLAUDE.md's catalog placement rule.
+    if genome.source != "Custom":
+        genome.source = "Zenodo"
     if version:
         genome.release_version = version
     write_genome(genome.path, genome)
 
     root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
-    origin = genome.identifier
-    shipped = find(catalog(Path(catalog_dir) if catalog_dir else None), origin)
-    entry = shipped.path if shipped else catalog_entry_dir(root, genome)
-    if (entry / "metadata.yaml").exists():
+    entry = catalog_entry_dir(root, genome)
+    if entry.exists() and (entry / "metadata.yaml").exists():
+        # Already catalogued (e.g. a scaffold's shipped entry): update it in place.
         shipped = read_genome(entry)
         shipped.provenance["zenodo_doi"] = doi
-        shipped.source = "Zenodo"
+        if shipped.source != "Custom":
+            shipped.source = "Zenodo"
         write_genome(entry, shipped)
-        click.echo(f"Recorded DOI in {entry}")
+    else:
+        # A freshly staged entry has no shipped catalog record yet: create one.
+        write_genome(entry, genome)
+    click.echo(f"Recorded DOI in {entry}")
 
 
 @dev.command()

@@ -32,12 +32,12 @@ def installed(tmp_path):
     return tmp_path, fasta
 
 
-def run(args, cwd):
+def run(args, cwd, input=None):
     """Invoke the CLI as if it had been started from cwd."""
     previous = os.getcwd()
     os.chdir(cwd)
     try:
-        return CliRunner().invoke(cli, args)
+        return CliRunner().invoke(cli, args, input=input)
     finally:
         os.chdir(previous)
 
@@ -169,32 +169,173 @@ def test_search_minicircle_is_distinct_from_maxicircle(installed):
     assert "GCA_902369315.1" not in result.output
 
 
-def test_dev_add_records_molecule_type(tmp_path):
-    """dev add --molecule-type tags a local kinetoplast/maxicircle assembly."""
-    fasta = tmp_path / "kdna.fa"
-    fasta.write_text(">maxicircle\nACGTACGT\n")
+def test_dev_add_stages_without_installing_or_touching_the_catalog(tmp_path):
+    """dev add is a staging step, not an install: it writes only to --outdir, never
+    to the shipped catalog or the local install cache."""
+    fasta = tmp_path / "Ltropica.TEST.genome.flye.fasta"
+    fasta.write_text(">chr1\nACGTACGTACGT\n")
 
     result = run(
-        [
-            "dev",
-            "add",
-            str(fasta),
-            "--alias",
-            "Lgu.kinetoplast",
-            "--molecule-type",
-            "kinetoplast,maxicircle",
-            "--catalog-dir",
-            "catalog",
-            "--local-dir",
-            "data",
-        ],
+        ["dev", "add", str(fasta), "--species", "Leishmania tropica", "--strain", "TEST", "--assembler", "Flye"],
         tmp_path,
     )
     assert result.exit_code == 0
 
-    entry = read_genome(tmp_path / "catalog" / "local" / "Lgu.kinetoplast")
+    # Staged, named after the FASTA (no extension) - not any alias.
+    staged = tmp_path / "to_publish_on_zenodo" / "Ltropica.TEST.genome.flye"
+    entry = read_genome(staged)
+    assert entry.identifier == "Ltropica.TEST.genome.flye"
+    assert entry.source == "Custom"
+    assert (staged / "Ltropica.TEST.genome.flye.fasta").exists()
+
+    # Nothing installed, nothing added to the shipped catalog.
+    assert not (tmp_path / "data").exists()
+    from leishref.metadata import CATALOG_DIR
+
+    assert not (CATALOG_DIR / "custom" / "Ltropica.TEST.genome.flye").exists()
+
+
+def test_dev_add_records_molecule_type(tmp_path):
+    """dev add --molecule-type tags a local kinetoplast/maxicircle assembly."""
+    fasta = tmp_path / "Lgu.TEST.maxicircle.fasta"
+    fasta.write_text(">maxicircle\nACGTACGT\n")
+
+    result = run(["dev", "add", str(fasta), "--molecule-type", "kinetoplast,maxicircle"], tmp_path)
+    assert result.exit_code == 0
+
+    entry = read_genome(tmp_path / "to_publish_on_zenodo" / "Lgu.TEST.maxicircle")
     assert entry.molecule_type == "kinetoplast,maxicircle"
     assert entry.matches(["kinetoplast"])
+
+
+def test_dev_add_records_alias_as_an_informal_note_only(tmp_path):
+    """--alias is metadata, not identity: it never names the staging directory or
+    becomes the identifier."""
+    fasta = tmp_path / "Ltropica.TEST.genome.flye.fasta"
+    fasta.write_text(">chr1\nACGT\n")
+
+    result = run(["dev", "add", str(fasta), "--alias", "for the Sicilian hybrids paper"], tmp_path)
+    assert result.exit_code == 0
+
+    entry = read_genome(tmp_path / "to_publish_on_zenodo" / "Ltropica.TEST.genome.flye")
+    assert entry.identifier == "Ltropica.TEST.genome.flye"
+    assert entry.provenance["alias"] == "for the Sicilian hybrids paper"
+
+
+def test_dev_add_refuses_to_restage_over_an_existing_entry(tmp_path):
+    fasta = tmp_path / "Ltropica.TEST.genome.flye.fasta"
+    fasta.write_text(">chr1\nACGT\n")
+
+    run(["dev", "add", str(fasta)], tmp_path)
+    result = run(["dev", "add", str(fasta)], tmp_path)
+
+    assert result.exit_code == 1
+    assert "Already staged" in result.output
+
+
+def _fake_zenodo(monkeypatch, doi="10.5281/zenodo.999"):
+    """Patch every Zenodo call dev publish makes, so tests never hit the network."""
+    import leishref.cli as cli_module
+
+    monkeypatch.setattr(
+        cli_module,
+        "create_deposition",
+        lambda title, description, creators, sandbox=False: {
+            "id": 1,
+            "metadata": {"title": title, "creators": [{"name": c} for c in creators]},
+        },
+    )
+    monkeypatch.setattr(cli_module, "upload_file", lambda dep_id, path, sandbox=False: {})
+    monkeypatch.setattr(cli_module, "update_metadata", lambda dep_id, payload, sandbox=False: {})
+    monkeypatch.setattr(cli_module, "publish_deposition", lambda dep_id, sandbox=False: {"doi": doi})
+
+
+def test_dev_publish_dry_run_from_a_staged_path(tmp_path):
+    fasta = tmp_path / "Ltropica.TEST.genome.flye.fasta"
+    fasta.write_text(">chr1\nACGT\n")
+    run(["dev", "add", str(fasta)], tmp_path)
+
+    staged = tmp_path / "to_publish_on_zenodo" / "Ltropica.TEST.genome.flye"
+    result = run(["dev", "publish", str(staged)], tmp_path)
+
+    assert result.exit_code == 0
+    assert "Dry-run: would publish" in result.output
+    assert "Add --confirm to publish" in result.output
+
+
+def test_dev_publish_creates_a_custom_catalog_entry_from_a_staged_path(tmp_path, monkeypatch):
+    """Publishing a staged dev-add entry creates a fresh custom/ catalog entry and
+    records the DOI, while leaving source: Custom alone (not flipped to Zenodo) -
+    per CLAUDE.md's catalog placement rule."""
+    fasta = tmp_path / "Ltropica.TEST.genome.flye.fasta"
+    fasta.write_text(">chr1\nACGT\n")
+    run(["dev", "add", str(fasta)], tmp_path)
+    _fake_zenodo(monkeypatch)
+
+    staged = tmp_path / "to_publish_on_zenodo" / "Ltropica.TEST.genome.flye"
+    catalog_dir = tmp_path / "catalog"
+    result = run(
+        ["dev", "publish", str(staged), "--confirm", "--catalog-dir", str(catalog_dir)],
+        tmp_path,
+        input="Test Author\n",
+    )
+
+    assert result.exit_code == 0
+    assert "Published: 10.5281/zenodo.999" in result.output
+
+    entry = read_genome(catalog_dir / "custom" / "Ltropica.TEST.genome.flye")
+    assert entry.zenodo_doi == "10.5281/zenodo.999"
+    assert entry.source == "Custom"
+
+    # The staged copy is kept in sync too, for reference.
+    assert read_genome(staged).zenodo_doi == "10.5281/zenodo.999"
+
+
+def test_dev_publish_updates_an_existing_catalog_entry_by_name(tmp_path, monkeypatch):
+    """Publishing by NAME (an already-installed, already-catalogued genome, e.g. a
+    scaffold from `leishref dev scaffold`) updates its existing entry in place and
+    flips source to Zenodo, since it wasn't Custom to begin with."""
+    local_dir = tmp_path / "data"
+    genome_dir = local_dir / "Ltrop.scaf"
+    genome_dir.mkdir(parents=True)
+    fasta = genome_dir / "assembly.fna"
+    fasta.write_text(">c1\nACGT\n")
+    write_genome(
+        genome_dir,
+        Genome(
+            identifier="Ltrop.scaf",
+            source="Leishref scaffold",
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+            scaffold={"tool": "RagTag"},
+        ),
+    )
+
+    catalog_dir = tmp_path / "catalog"
+    shipped_dir = catalog_dir / "scaffolds" / "Ltrop.scaf"
+    write_genome(shipped_dir, Genome(identifier="Ltrop.scaf", source="Leishref scaffold", scaffold={"tool": "RagTag"}))
+
+    _fake_zenodo(monkeypatch, doi="10.5281/zenodo.888")
+
+    result = run(
+        [
+            "dev",
+            "publish",
+            "Ltrop.scaf",
+            "--confirm",
+            "--local-dir",
+            str(local_dir),
+            "--catalog-dir",
+            str(catalog_dir),
+        ],
+        tmp_path,
+        input="Test Author\n",
+    )
+
+    assert result.exit_code == 0
+    entry = read_genome(shipped_dir)
+    assert entry.zenodo_doi == "10.5281/zenodo.888"
+    assert entry.source == "Zenodo"
 
 
 def test_search_without_a_match_exits_nonzero(installed):
