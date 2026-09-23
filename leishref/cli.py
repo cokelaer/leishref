@@ -886,9 +886,16 @@ def search(terms, local_dir, installed, long_form):
 
     # A cached genome can be flagged as present; the display alias prefers what this
     # project calls it (./accessions.txt) over the cache's own accession/identifier.
+    # Keyed by the genome's real catalog origin (accession, or the pre-rework
+    # provenance.catalog_id for a cache entry from before it, or its own identifier
+    # when that already is the catalog id) - never by the cached copy's own local
+    # identifier, which for an aliased entry is not what any catalog genome is called.
     local_aliases = _local_alias_map()
     alias_for_id = {origin: alias for alias, origin in local_aliases.items()}
-    by_origin = {genome.identifier: alias_for_id.get(genome.identifier, genome.identifier) for genome in here}
+    by_origin = {}
+    for genome in here:
+        origin = genome.provenance.get("catalog_id") or genome.accession or genome.identifier
+        by_origin[origin] = alias_for_id.get(origin, genome.identifier)
 
     # Load aliases for matching
     aliases = load_aliases()
@@ -1042,18 +1049,10 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir):
       leishref rename-sequences LtropCDCnew.fna --flavor kraken
     """
     genomes = local(Path(local_dir))
-    genome = find(genomes, name)
-    if not genome:
-        accessions_file = Path.cwd() / "accessions.txt"
-        if accessions_file.exists():
-            name_stem = Path(name).stem  # strip extension to match alias from accessions.txt
-            for line in accessions_file.read_text().strip().split("\n"):
-                if line.strip() and not line.startswith("#"):
-                    parts = line.split()
-                    if len(parts) >= 2 and parts[1] == name_stem:
-                        genome = find(genomes, parts[0])
-                        break
-    if not genome:
+    # NAME is also accepted as a bare filename (e.g. 'LtropCDCnew.fna'): fall back to
+    # the accessions.txt alias with the extension stripped before giving up.
+    genome = _resolve_local(genomes, name) or _resolve_local(genomes, Path(name).stem)
+    if genome is None:
         click.echo(f"Not in cached database: {name}", err=True)
         click.echo("Run 'leishref info' to see what is available", err=True)
         raise SystemExit(1)
@@ -1214,12 +1213,19 @@ def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verb
     if from_installed:
         # The shared cache is keyed by accession/identifier, not by alias, so this can
         # only recover *what's installed*, not what any particular project used to
-        # call it - that mapping only ever lived in accessions.txt itself. Every
-        # entry is recorded under its own identifier as both name and alias; rename
-        # the alias column by hand afterwards if you want nicer local names.
+        # call it - that mapping only ever lived in accessions.txt itself. A cache
+        # entry from before this rework may still carry the old alias as its
+        # identifier, with the real catalog id stashed under provenance.catalog_id;
+        # prefer that when present. Anything that traces back to no catalog entry at
+        # all cannot be replayed, so it is skipped rather than recorded.
+        entries = catalog()
         written = 0
         for genome in _by_organism(local(Path(local_dir))):
-            _record_download(Path(local_dir), genome.identifier, genome.identifier)
+            origin = genome.provenance.get("catalog_id") or genome.accession or genome.identifier
+            if find(entries, origin) is None:
+                click.echo(f"{genome.identifier}: no catalog origin recorded, skipping", err=True)
+                continue
+            _record_download(Path(local_dir), origin, genome.identifier)
             written += 1
         click.echo(f"Recorded {written} genome{'s' if written != 1 else ''} in {path}")
         return
