@@ -64,8 +64,14 @@ def detect_sequences_from_fasta(fasta_path: Path) -> list[dict]:
             "name": seq_id,
             "index": index,
         }
-        # Mark sequence 37 as maxicircle (kinetoplast DNA)
-        if index == 37:
+        # Maxicircle (kinetoplast DNA): detect by name, or fall back to the
+        # conventional position (37th sequence, after 36 nuclear chromosomes)
+        # for standard NCBI accessions. Never trust the position for contig_*
+        # style IDs from custom scaffolds, where chromosome count can vary and
+        # the 37th sequence is just an ordinary contig.
+        if re.fullmatch(r"(?i)maxi(circle)?", seq_id):
+            entry["type"] = "maxicircle"
+        elif index == 37 and not seq_id.startswith("contig_"):
             entry["type"] = "maxicircle"
         sequences.append(entry)
 
