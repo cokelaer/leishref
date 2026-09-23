@@ -458,4 +458,4 @@ Ltrop.flye:
 - accession: c1
   index: 1
   name: c1
-  new_name: I
+  new_name: c1|kraken:taxid|5661

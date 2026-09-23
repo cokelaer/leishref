@@ -1011,13 +1011,14 @@ def verify(local_dir, quick):
 @click.argument("name")
 @click.option(
     "--flavor",
-    type=click.Choice(["chr", "number", "roman", "name"]),
+    type=click.Choice(["chr", "number", "roman", "name", "kraken"]),
     default="number",
     show_default=True,
     help="Naming scheme for renamed sequences",
 )
+@click.option("--taxid", type=int, default=None, help="NCBI taxon ID (required for 'kraken' flavor)")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-def rename_sequences_cmd(name, flavor, local_dir):
+def rename_sequences_cmd(name, flavor, taxid, local_dir):
     """Rename sequences in a cached genome using chromosome database.
 
     NAME is the local alias of the genome to transform.
@@ -1027,6 +1028,7 @@ def rename_sequences_cmd(name, flavor, local_dir):
     - number: '1', '2', '3', ... (default)
     - roman: 'I', 'II', 'III', ...
     - name: use names from chromosome database
+    - kraken: 'name|kraken:taxid|<TAXID>' format for Kraken classification
 
     Examples:
 
@@ -1034,6 +1036,7 @@ def rename_sequences_cmd(name, flavor, local_dir):
       leishref rename-sequences Ld1S
       leishref rename-sequences Ld1S --flavor number
       leishref rename-sequences Ld1S --flavor roman
+      leishref rename-sequences Ld1S --flavor kraken --taxid 5661
     """
     genome = _require_local(local(Path(local_dir)), name, "cached database")
 
@@ -1052,8 +1055,16 @@ def rename_sequences_cmd(name, flavor, local_dir):
     # Use accession or identifier as the chromosome map key
     chrom_key = genome.accession or genome.identifier
 
+    # For kraken flavor, use provided taxid or get from genome metadata
+    if flavor == "kraken":
+        if not taxid:
+            taxid = genome.taxon_id
+        if not taxid:
+            click.echo(f"Kraken flavor requires --taxid or genome metadata with taxon_id", err=True)
+            raise SystemExit(1)
+
     click.echo(f"Renaming sequences in {fasta_path.name} ({flavor} flavor)...")
-    renamed, name_map, error = rename_fasta_sequences(fasta_path, chrom_key, flavor, None)
+    renamed, name_map, error = rename_fasta_sequences(fasta_path, chrom_key, flavor, None, taxid)
 
     if error:
         click.echo(f"Warning: {error}", err=True)
