@@ -179,7 +179,6 @@ click.rich_click.OPTION_GROUPS = {
             "--molecule-type",
             "--help",
         ],
-        "leishref dev import": ["--from-tsv", "--overwrite", "--dry-run", "--help"],
         "leishref dev publish": ["--version", "--confirm", "--sandbox", "--help"],
         "leishref dev scaffold": [
             "--query",

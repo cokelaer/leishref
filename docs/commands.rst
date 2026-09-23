@@ -182,8 +182,8 @@ Options:
 - ``--format {json,yaml,tsv}`` — Output format (default ``json``)
 - ``--output PATH, -o PATH`` — Write to a file instead of stdout
 
-leishref plot-stats / plot-sizes / plot-histogram / plot-chromosome-histogram
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+leishref plot-stats / plot-sizes / plot-histogram / plot-chromosome-histogram / ...
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Plotting utilities for publications, built from catalog statistics and (for the
 chromosome histogram) locally available FASTA files::
@@ -192,34 +192,56 @@ chromosome histogram) locally available FASTA files::
     leishref plot-sizes --species donovani --species major
     leishref plot-histogram --include-kinetoplast
     leishref plot-chromosome-histogram --species tropica
+    leishref plot-completeness
+    leishref plot-technology
+    leishref plot-assembly-by-technology
+    leishref plot-species-count
+    leishref plot-gc-content
 
 - ``plot-stats`` — genome size, scaffold count, contig count, scaffold N50
 - ``plot-sizes`` — genome sizes by species
 - ``plot-histogram`` — distribution of genome sizes
 - ``plot-chromosome-histogram`` — chromosome/sequence length distribution (requires
   the FASTA locally; sequences below 1 kb are excluded)
+- ``plot-completeness`` — pie chart of ``assembly_level`` breakdown (Complete Genome,
+  Chromosome, Scaffold, Contig)
+- ``plot-technology`` — pie chart of sequencing technology (Illumina, Oxford
+  Nanopore, PacBio, hybrid, legacy, unknown)
+- ``plot-assembly-by-technology`` — assembly level vs. sequencing technology
+- ``plot-species-count`` — bar chart of genome count per species
+- ``plot-gc-content`` — GC content distribution by species
 
-All four accept ``--catalog-dir`` and ``--output``; ``plot-sizes`` and
-``plot-histogram`` also accept ``--include-kinetoplast`` to include kinetoplast-only
-genomes (excluded by default as outliers).
+All accept ``--catalog-dir`` and ``--output``; ``plot-sizes`` and ``plot-histogram``
+also accept ``--include-kinetoplast`` to include kinetoplast-only genomes (excluded
+by default as outliers).
 
 leishref rename-sequences
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Rename sequences in an installed genome using chromosome database::
+Rename sequences in a cached genome::
 
     leishref rename-sequences Ld1S
     leishref rename-sequences Ld1S --flavor number
-    leishref rename-sequences Ld1S --flavor roman
+    leishref rename-sequences Ld1S --flavor kraken --taxid 5661
 
 Flavors:
-- ``chr`` — Rename to 'chromosome I', 'chromosome II', etc.
-- ``number`` (default) — Rename to '1', '2', '3', etc. (numeric index)
-- ``roman`` — Rename to 'I', 'II', 'III', etc. (Roman numerals)
-- ``name`` — Use names from local chromosome database
 
-Requires chromosome info in local database (populated during ``leishref dev fetch-genome`` from NCBI).
-Rewrites FASTA file in-place and updates stored checksum.
+- ``number`` (default) — Rename to '1', '2', '3', etc. (numeric index)
+- ``name`` — Use names from the chromosome database
+- ``kraken`` — ``name|kraken:taxid|<TAXID>``, for Kraken classification (needs a
+  taxon ID, from ``--taxid`` or the genome's own ``taxon_id`` metadata)
+
+NAME also accepts a bare FASTA filename (e.g. ``LtropCDCnew.fna``), resolved against
+``accessions.txt`` with the extension stripped. Chromosome info is auto-detected and
+cached in ``chromosome_map.yaml`` on first use if not already there - no separate
+population step needed. The renamed FASTA is written to ``--output-dir`` (default:
+current directory), never into the shared cache; its name is the original stem with
+the flavor appended (e.g. ``assembly.fa`` -> ``assembly.number.fa``).
+
+Options:
+- ``--flavor {number,name,kraken}`` — Naming scheme (default ``number``)
+- ``--taxid INTEGER`` — NCBI taxon ID (required for ``kraken`` flavor if not on the genome)
+- ``--output-dir PATH`` — Where to write the renamed FASTA (default ``.``)
 
 leishref prune-scaffold
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -258,7 +280,7 @@ All maintainer commands are under ``leishref dev``::
 leishref dev fetch-genome
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Add a genome *assembly* from NCBI (GCA_/GCF_ accession, via the ``datasets`` CLI)::
+Add a genome *assembly* from NCBI (a GCA\_ or GCF\_ accession, via the ``datasets`` CLI)::
 
     leishref dev fetch-genome GCA_000227135.2
     leishref dev fetch-genome GCA_000227135.2 --alias Ld1S
@@ -369,6 +391,39 @@ Options:
 - ``--local-dir`` — Where to look up NAME when it isn't a staged path
 - ``--catalog-dir`` — Write/update the catalog entry here instead
 
+leishref dev status
+~~~~~~~~~~~~~~~~~~~
+
+Audit catalog metadata for completeness and consistency::
+
+    leishref dev status
+    leishref dev status --catalog-dir /path/to/catalog
+
+Checks: ``taxon_id`` presence (needed for the ``kraken`` rename-sequences flavor),
+required fields (``identifier``, ``source``, ``species``, ``assembly_level``), file
+checksums matching what's on disk, valid ``assembly_level`` values, kinetoplast
+entries carrying ``molecule_type``, duplicate identifiers/accessions, and orphaned
+catalog directories with no ``metadata.yaml``. Exits non-zero if any errors (not
+warnings) are found.
+
+Options:
+- ``--catalog-dir PATH`` — Check entries here instead
+
+leishref dev check-aliases
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Check for duplicate accessions and aliases::
+
+    leishref dev check-aliases
+
+Catches two classes of catalog corruption that are otherwise easy to introduce by
+hand-editing ``metadata.yaml``/``aliases.txt``: the same accession under two catalog
+identifiers, and the same alias mapped to two different accessions in
+``leishref/data/aliases.txt``. Exits non-zero if either is found.
+
+Options:
+- ``--catalog-dir PATH`` — Check this catalog instead
+
 leishref dev remove
 ~~~~~~~~~~~~~~~~~~~
 
@@ -383,10 +438,3 @@ Useful for removing invalid, duplicate, or superceded entries.
 Options:
 - ``--force`` — Skip confirmation prompt
 - ``--catalog-dir`` — Remove from alternate catalog location
-
-leishref dev derive-agp
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Derive an AGP from two assemblies::
-
-    leishref dev derive-agp --parent PARENT.fa --query QUERY.fa
