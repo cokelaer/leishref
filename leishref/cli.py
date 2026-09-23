@@ -4,13 +4,11 @@ Top-level commands are for using the database. Maintaining the shipped catalog i
 different job with different risks, so those commands live under ``leishref dev``.
 """
 
-import concurrent.futures
 import contextlib
 import fnmatch
 import io
 import os
 import shutil
-import tarfile
 import tempfile
 import textwrap
 from pathlib import Path
@@ -21,7 +19,6 @@ from rich.markup import escape
 from rich.syntax import Syntax
 from tqdm import tqdm
 
-from leishref import __version__
 from leishref.checksums import genome_stats, md5_file
 from leishref.chromosomes import get_chromosome_info, rename_fasta_sequences
 from leishref.links import LinkConflict, link_paths
@@ -42,20 +39,14 @@ from leishref.metadata import (
     write_genome,
 )
 from leishref.naming import suggest_alias
-from leishref.ncbi import fetch_fasta_gff, fetch_metadata, species_from_organism
-from leishref.nuccore import NuccoreError, fetch_nucleotide_fasta, fetch_nucleotide_metadata
+from leishref.ncbi import fetch_fasta_gff, fetch_metadata, fetch_metadata_many, species_from_organism
 from leishref.prune import prune_fasta
 from leishref.scaffold import clean_scaffolded_fasta, ragtag_version, run_scaffold
 from leishref.visualize import (
-    plot_assembly_level_by_technology,
     plot_chromosome_length_histogram,
-    plot_gc_content_by_species,
-    plot_genome_completeness,
     plot_genome_size_histogram,
     plot_genome_sizes,
     plot_genome_stats,
-    plot_sequencing_technology,
-    plot_species_genome_count,
 )
 from leishref.zenodo import (
     ZenodoError,
@@ -107,8 +98,6 @@ click.rich_click.COMMAND_GROUPS = {
                 "verify",
                 "rename-sequences",
                 "prune-scaffold",
-                "bundle",
-                "export",
             ],
         },
         {
@@ -117,27 +106,17 @@ click.rich_click.COMMAND_GROUPS = {
         },
         {
             "name": "Plotting",
-            "commands": [
-                "plot-stats",
-                "plot-sizes",
-                "plot-histogram",
-                "plot-chromosome-histogram",
-                "plot-completeness",
-                "plot-technology",
-                "plot-assembly-by-technology",
-                "plot-species-count",
-                "plot-gc-content",
-            ],
+            "commands": ["plot-stats", "plot-sizes", "plot-histogram", "plot-chromosome-histogram"],
         },
     ],
     "leishref dev": [
         {
             "name": "Adding genomes",
-            "commands": ["fetch-genome", "fetch-nucleotide", "add", "scaffold", "derive-agp"],
+            "commands": ["fetch", "add", "import", "scaffold", "derive-agp"],
         },
         {
             "name": "Publishing and managing",
-            "commands": ["publish", "remove"],
+            "commands": ["publish", "checksum", "remove"],
         },
     ],
 }
@@ -146,7 +125,7 @@ click.rich_click.COMMAND_GROUPS = {
 # to the options that change what a command does, so they get their own panel.
 _LOCATION_OPTIONS = {
     "name": "Where to read and write",
-    "options": ["--local-dir", "--basedir", "--workdir", "--out", "--outdir"],
+    "options": ["--local-dir", "--basedir", "--workdir", "--out"],
 }
 
 click.rich_click.OPTION_GROUPS = {
@@ -164,14 +143,16 @@ click.rich_click.OPTION_GROUPS = {
             "--verbose",
             "--help",
         ],
-        "leishref dev fetch-genome": ["--alias", "--species", "--strain", "--force", "--no-link", "--help"],
+        "leishref dev fetch": ["--alias", "--species", "--strain", "--force", "--no-link", "--help"],
         "leishref dev add": [
+            "--fasta",
+            "--gff",
             "--alias",
             "--species",
             "--strain",
             "--technology",
             "--assembler",
-            "--molecule-type",
+            "--no-link",
             "--help",
         ],
         "leishref dev publish": ["--version", "--confirm", "--sandbox", "--help"],
@@ -185,60 +166,14 @@ click.rich_click.OPTION_GROUPS = {
             "--no-link",
             "--help",
         ],
+        "leishref dev import": ["--from-tsv", "--overwrite", "--dry-run", "--help"],
     }.items()
 }
 
 
 @click.group()
-@click.version_option(version=__version__)
 def cli():
     """Leishmania reference genome database."""
-
-
-@cli.command("plot-species-count")
-@click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
-@click.option("--output", type=click.Path(), help="Save plot to this file")
-def plot_species_count(catalog_dir, output):
-    """Plot bar chart of genome count per species.
-
-    Examples:
-
-    
-      leishref plot-species-count
-      leishref plot-species-count --output species_count.png
-    """
-    try:
-        out = plot_species_genome_count(
-            Path(catalog_dir) if catalog_dir else None,
-            Path(output) if output else None,
-        )
-        click.echo(f"Saved plot to {out}")
-    except ValueError as e:
-        click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1)
-
-
-@cli.command("plot-gc-content")
-@click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
-@click.option("--output", type=click.Path(), help="Save plot to this file")
-def plot_gc_content(catalog_dir, output):
-    """Plot GC content distribution by species.
-
-    Examples:
-
-    
-      leishref plot-gc-content
-      leishref plot-gc-content --output gc_distribution.png
-    """
-    try:
-        out = plot_gc_content_by_species(
-            Path(catalog_dir) if catalog_dir else None,
-            Path(output) if output else None,
-        )
-        click.echo(f"Saved plot to {out}")
-    except ValueError as e:
-        click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1)
 
 
 @cli.group()
@@ -277,7 +212,6 @@ SOURCE_STYLES = {
     "TriTrypDB": "yellow",
     "Local": "dim",
     "Scaffold": "blue",
-    "NCBI-Nucleotide": "cyan",
 }
 
 
@@ -333,7 +267,7 @@ def _resolve_assembly(value, local_root: Path, cat_root, what: str):
         return as_path, None
 
     # Try local first
-    genome = _resolve_local(local(local_root), value)
+    genome = find(local(local_root), value, cat_root)
     if genome and genome.path and genome.fasta and (genome.path / genome.fasta).exists():
         return genome.path / genome.fasta, genome
 
@@ -380,7 +314,7 @@ def _parent_record(path: Path, genome) -> dict:
     record = {"file": path.name, "md5": md5_file(path)}
     if genome is None:
         return record
-    record["name"] = genome.accession or genome.identifier
+    record["name"] = genome.provenance.get("catalog_id") or genome.accession or genome.identifier
     for field in ("species", "strain", "assembly_level"):
         value = getattr(genome, field, None)
         if value:
@@ -416,29 +350,21 @@ def _link(alias: str, paths, no_link: bool) -> None:
         click.echo(f"  not linked: {exc}", err=True)
 
 
-def cache_key(genome: Genome) -> str:
-    """The shared cache's own name for this genome: its accession, or its catalog
-    identifier when there isn't one (scaffolds, local/custom entries).
+def _install(genome: Genome, alias: str, sources, local_root: Path, move: bool = False) -> Path:
+    """Put a genome into the local database at data/<alias>/, metadata and files together.
 
-    Never a user-chosen alias. The cache is shared across every project on the
-    machine, so it's keyed by what a genome *is*, not by what any one project calls
-    it - two aliases (or two projects) for the same accession share one download
-    instead of duplicating it, and an alias can never collide with a different
-    genome's cached copy.
+    The installed copy takes the alias as its identifier, since locally the directory
+    name is the name. Where it came from is kept under provenance so the link back to
+    the catalog entry survives.
     """
-    return genome.accession or genome.identifier
-
-
-def _install(genome: Genome, key: str, sources, local_root: Path, move: bool = False) -> Path:
-    """Put a genome into the shared cache at <local_root>/<key>/, metadata and files
-    together. `key` is the cache key (see cache_key()), not a user-chosen alias - the
-    genome's own identifier is left untouched, so the same cache entry stays correct
-    however many different local aliases end up pointing at it.
-    """
-    target = Path(local_root) / key
+    target = Path(local_root) / alias
     target.mkdir(parents=True, exist_ok=True)
 
     genome = Genome.from_dict(genome.to_dict())
+    if genome.identifier and genome.identifier != alias:
+        genome.provenance = dict(genome.provenance)
+        genome.provenance["catalog_id"] = genome.identifier
+    genome.identifier = alias
 
     # Entries imported from NCBI's summary carry no filenames, because nothing was
     # downloaded to name. Record what actually arrived so verify and link can see it.
@@ -462,92 +388,6 @@ def _install(genome: Genome, key: str, sources, local_root: Path, move: bool = F
     return target
 
 
-def _fetch_genome_files(genome: Genome, name: str, tmp: Path) -> tuple[list, str]:
-    """Download a genome's files into tmp, without any click I/O.
-
-    Thread-safe: NCBI's datasets CLI runs as a subprocess and Zenodo downloads go
-    through `requests` directly to a per-call directory, so concurrent callers with
-    distinct tmp dirs don't interfere. Returns (written_paths, error_message); exactly
-    one of the two is truthy.
-    """
-    doi = genome.zenodo_doi
-    accession = genome.accession
-    if doi:
-        written = download_record_files(record_id_from_doi(doi), tmp, sandbox=is_sandbox_doi(doi))
-        return written, "" if written else "Zenodo record has no files"
-    if accession and genome.source == "NCBI-Nucleotide":
-        try:
-            fasta = fetch_nucleotide_fasta(accession, tmp)
-        except NuccoreError as exc:
-            return [], str(exc)
-        return [fasta], ""
-    if accession:
-        fasta, gff = fetch_fasta_gff(accession, tmp)
-        if not fasta:
-            return [], f"NCBI has no data for {accession}"
-        return [p for p in (fasta, gff) if p], ""
-    if genome.fasta and genome.path and (genome.path / genome.fasta).exists():
-        written = [genome.path / genome.fasta]
-        if genome.gff and (genome.path / genome.gff).exists():
-            written.append(genome.path / genome.gff)
-        return written, ""
-    return [], f"{name} records neither a Zenodo DOI nor an NCBI accession"
-
-
-def _install_many_parallel(pairs, local_dir: Path, force: bool, no_link: bool, workers: int, echo) -> list:
-    """Download PAIRS of (genome, alias) concurrently, install sequentially as each lands.
-
-    Network fetch is the slow part and is safe to parallelize (see _fetch_genome_files);
-    the local install (file copy, metadata write, linking) stays on the main thread since
-    it's fast and keeps output and accessions.txt writes race-free. Returns aliases that
-    failed.
-    """
-    local_dir = Path(local_dir)
-    todo = []
-    for genome, alias in pairs:
-        key = cache_key(genome)
-        target = local_dir / key
-        if (target / "metadata.yaml").exists() and not force:
-            echo(f"Already installed: {alias}")
-            _link(alias, [p for _, p, _ in read_genome(target).file_paths() if p.exists()], no_link)
-            _record_download(local_dir, genome.identifier, alias)
-        else:
-            todo.append((genome, alias))
-
-    failed = []
-    if not todo:
-        return failed
-
-    with tempfile.TemporaryDirectory() as scratch:
-        scratch = Path(scratch)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-            future_to_pair = {}
-            for genome, alias in todo:
-                tmp = scratch / alias
-                tmp.mkdir(parents=True, exist_ok=True)
-                future = pool.submit(_fetch_genome_files, genome, alias, tmp)
-                future_to_pair[future] = (genome, alias)
-
-            for future in concurrent.futures.as_completed(future_to_pair):
-                genome, alias = future_to_pair[future]
-                try:
-                    written, error = future.result()
-                except Exception as exc:  # a network hiccup on one genome must not sink the batch
-                    written, error = [], str(exc)
-
-                if error:
-                    echo(f"  {alias}: {error}")
-                    failed.append(alias)
-                    continue
-
-                installed = _install(genome, cache_key(genome), written, local_dir)
-                echo(f"  {alias}: installed into {installed}")
-                _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
-                _record_download(local_dir, genome.identifier, alias)
-
-    return failed
-
-
 ACCESSIONS_FILE = "accessions.txt"
 
 #: Catalog sections in 'info', in reading order: the upstream archives first, then what
@@ -555,7 +395,6 @@ ACCESSIONS_FILE = "accessions.txt"
 #: Zenodo and local entries are everything else.
 INFO_SECTIONS = {
     "ncbi": "NCBI",
-    "ncbi_nucleotide": "NCBI Nucleotide",
     "tritrypdb": "TriTrypDB",
     "scaffolds": "Scaffolds",
     "custom": "Custom",
@@ -575,7 +414,7 @@ def _record_download(local_root: Path, name: str, alias: str) -> Path:
     """
     path = Path.cwd() / ACCESSIONS_FILE
     header = [
-        f"# Genomes installed with 'leishref install' (leishref {__version__}), most recent last.",
+        "# Genomes installed with 'leishref install', most recent last.",
         "# Format: catalog-identifier<TAB>alias    Replay with 'leishref restore'.",
     ]
 
@@ -614,38 +453,6 @@ def _require(genomes, key, what, catalog_root=None):
     return genome
 
 
-def _local_alias_map() -> dict:
-    """alias -> catalog identifier, from ./accessions.txt in the current directory.
-
-    This is the only place a local alias is recorded now that the shared cache is
-    keyed by accession/identifier rather than by alias - the cache entry itself no
-    longer carries what any particular project called it.
-    """
-    path = Path.cwd() / ACCESSIONS_FILE
-    if not path.exists():
-        return {}
-    return {alias: name for name, alias in _read_accessions(path)}
-
-
-def _resolve_local(genomes, name: str):
-    """Find a locally cached genome by its own identity, or by the alias it was
-    installed under in this project (./accessions.txt)."""
-    genome = find(genomes, name)
-    if genome is not None:
-        return genome
-    origin = _local_alias_map().get(name)
-    return find(genomes, origin) if origin else None
-
-
-def _require_local(genomes, name, what):
-    genome = _resolve_local(genomes, name)
-    if genome is None:
-        click.echo(f"Not in {what}: {name}", err=True)
-        click.echo("Run 'leishref info' to see what is available", err=True)
-        raise SystemExit(1)
-    return genome
-
-
 # ----------------------------------------------------------------------- user commands
 
 
@@ -659,20 +466,15 @@ def _require_local(genomes, name, what):
     show_default=True,
     help="Cache directory for downloaded genomes",
 )
-@click.option("--force", is_flag=True, help="Re-download even though the cache already has this genome")
+@click.option("--force", is_flag=True, help="Install again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
 def install(name, alias, local_dir, force, no_link):
-    """Download a catalog genome and cache it, with a symlink named ALIAS.
+    """Download a catalog genome and cache it with ALIAS.
 
-    NAME picks the genome out of the catalog by accession or catalog id. The genome
-    itself is cached under ~/.config/leishref/<accession>/, shared across every
-    project on this machine; ALIAS only names the symlink this command leaves in the
-    current directory, so it's yours to choose and required. Recorded in
-    ./accessions.txt so 'leishref restore' can rebuild this later.
-
-    Because the cache is shared and keyed by accession, re-running install for the
-    same NAME - under any ALIAS - is always a safe no-op that just makes sure the
-    symlink is in place; --force only forces a fresh download.
+    NAME picks the genome out of the catalog by accession or catalog id. ALIAS is the
+    name for the cached copy: becomes the directory under ~/.config/leishref/ and the
+    symlink name, so it is yours to choose and required. Recorded in ./accessions.txt
+    so 'leishref restore' can rebuild this later.
 
     Examples:
 
@@ -684,23 +486,19 @@ def install(name, alias, local_dir, force, no_link):
     genome = _require(entries, name, "catalog")
 
     if not alias:
-        click.echo("--alias is required: it names the symlink in the current directory,", err=True)
-        click.echo("not the cache itself (shared, under ~/.config/leishref/).\n", err=True)
+        click.echo("--alias is required: it names the cached genome,", err=True)
+        click.echo("becoming the directory under ~/.config/leishref/ and the symlink name.\n", err=True)
         aliases = load_aliases()
         suggested = aliases.get(genome.identifier) or get_catalog_alias(genome.accession or "") or suggest_alias(genome)
         click.echo(f"  leishref install {name} --alias {suggested}", err=True)
         raise SystemExit(2)
 
-    key = cache_key(genome)
-    target = Path(local_dir) / key
+    target = Path(local_dir) / alias
     if (target / "metadata.yaml").exists() and not force:
-        existing = read_genome(target)
-        # Cache is keyed by accession/identifier, so if it's here at all it's
-        # deterministically this genome - nothing worth re-downloading. Quiet
-        # unless the symlink itself needed fixing.
         click.echo(f"Already installed: {target}")
-        _link(alias, [p for _, p, _ in existing.file_paths() if p.exists()], no_link)
-        _record_download(Path(local_dir), genome.identifier, alias)
+        _link(alias, [p for _, p, _ in read_genome(target).file_paths() if p.exists()], no_link)
+        _record_download(Path(local_dir), genome.identifier or name, alias)
+        click.echo("Use --force to install again")
         return
 
     doi = genome.zenodo_doi
@@ -711,6 +509,7 @@ def install(name, alias, local_dir, force, no_link):
     click.echo(f"Installing {source_name} → {target}")
 
     # Check if files already exist locally with correct checksums
+    target = Path(local_dir) / alias
     if not force and target.exists() and genome.checksums:
         local_checksums = {}
         for kind, path, _ in genome.file_paths():
@@ -727,13 +526,6 @@ def install(name, alias, local_dir, force, no_link):
         if doi:
             click.echo(f"{name} -> {doi} (Zenodo)")
             written = download_record_files(record_id_from_doi(doi), tmp, sandbox=is_sandbox_doi(doi))
-        elif accession and genome.source == "NCBI-Nucleotide":
-            click.echo(f"{name} -> {accession} (NCBI nuccore)")
-            try:
-                written = [fetch_nucleotide_fasta(accession, tmp)]
-            except NuccoreError as exc:
-                click.echo(str(exc), err=True)
-                raise SystemExit(1)
         elif accession:
             click.echo(f"{name} -> {accession} (NCBI)")
             fasta, gff = fetch_fasta_gff(accession, tmp)
@@ -754,7 +546,7 @@ def install(name, alias, local_dir, force, no_link):
                 click.echo("TriTrypDB needs a login; get the file manually, then 'leishref dev add'", err=True)
             raise SystemExit(1)
 
-        installed = _install(genome, key, written, Path(local_dir))
+        installed = _install(genome, alias, written, Path(local_dir))
 
     click.echo(f"Installed into {installed}")
 
@@ -781,7 +573,7 @@ def install(name, alias, local_dir, force, no_link):
         write_genome(installed, local_genome)
 
     _link(alias, [p for _, p, _ in local_genome.file_paths() if p.exists()], no_link)
-    recorded_in = _record_download(Path(local_dir), genome.identifier, alias)
+    recorded_in = _record_download(Path(local_dir), genome.identifier or name, alias)
     click.echo(f"  recorded in {recorded_in}")
     if bad:
         raise SystemExit(1)
@@ -803,7 +595,7 @@ def info(name, local_dir):
     installed = local(Path(local_dir))
 
     if name:
-        genome = _resolve_local(installed, name) or _require(entries, name, "catalog")
+        genome = find(installed, name) or _require(entries, name, "catalog")
         import yaml
 
         console = _console()
@@ -817,7 +609,7 @@ def info(name, local_dir):
         )
         if genome.path:
             console.print(f"\npath: [cyan]{escape(str(genome.path))}[/]")
-        if _resolve_local(installed, name) is None:
+        if find(installed, name) is None:
             console.print(f"suggested alias: [bold cyan]{escape(suggest_alias(genome))}[/]")
         return
 
@@ -845,13 +637,12 @@ def info(name, local_dir):
             )
 
     console.print(f"\n[bold]Cached:[/] [bold]{len(installed)}[/] installed  [dim]({Path(local_dir)})[/]")
-    alias_for_id = {}
-    for alias, origin in _local_alias_map().items():
-        alias_for_id.setdefault(origin, []).append(alias)
     for genome in _by_organism(installed):
-        aliases_here = ", ".join(alias_for_id.get(genome.identifier, []))
-        alias_txt = f" [dim](alias: {escape(aliases_here)})[/]" if aliases_here else ""
-        console.print(f"  [bold cyan]{escape(genome.identifier):<38}[/] {escape(_organism(genome)):<50}{alias_txt}")
+        source_ref = genome.provenance.get("catalog_id") or genome.accession or ""
+        console.print(
+            f"  [bold cyan]{escape(genome.identifier):<38}[/] {escape(_organism(genome)):<50}"
+            f" [dim]{escape(source_ref)}[/]"
+        )
     if not installed:
         console.print("  [dim](nothing yet -- 'leishref install <name> --alias <alias>')[/]")
 
@@ -884,11 +675,11 @@ def search(terms, local_dir, installed, long_form):
     entries = catalog()
     here = local(Path(local_dir))
 
-    # A cached genome can be flagged as present; the display alias prefers what this
-    # project calls it (./accessions.txt) over the cache's own accession/identifier.
-    local_aliases = _local_alias_map()
-    alias_for_id = {origin: alias for alias, origin in local_aliases.items()}
-    by_origin = {genome.identifier: alias_for_id.get(genome.identifier, genome.identifier) for genome in here}
+    # A cached install records where it came from, so matches can be flagged as present.
+    by_origin = {}
+    for genome in here:
+        origin = genome.provenance.get("catalog_id") or genome.identifier
+        by_origin[origin] = genome.identifier
 
     # Load aliases for matching
     aliases = load_aliases()
@@ -943,14 +734,11 @@ def search(terms, local_dir, installed, long_form):
         contiguity = f"N50 {n50 / 1e6:.1f}M" if n50 and n50 >= 1e6 else (f"N50 {n50 / 1e3:.0f}k" if n50 else "")
 
         suffixes = []
-        if genome.molecule_type:
-            suffixes.append(genome.molecule_type)
         alias = get_catalog_alias(genome.accession or genome.identifier)
         if alias:
             suffixes.append(f"alias: {alias}")
-        installed_as = by_origin.get(genome.identifier)
-        if installed_as and installed_as != alias:
-            suffixes.append(f"installed as {installed_as}")
+        if genome.identifier in by_origin:
+            suffixes.append(f"installed as {by_origin[genome.identifier]}")
         suffix = "  [" + ", ".join(suffixes) + "]" if suffixes else ""
 
         source = _source_label(genome)
@@ -1011,26 +799,22 @@ def verify(local_dir, quick):
 @click.argument("name")
 @click.option(
     "--flavor",
-    type=click.Choice(["chr", "number", "roman", "name", "kraken"]),
+    type=click.Choice(["chr", "number", "roman", "name"]),
     default="number",
     show_default=True,
     help="Naming scheme for renamed sequences",
 )
-@click.option("--taxid", type=int, default=None, help="NCBI taxon ID (required for 'kraken' flavor)")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-def rename_sequences_cmd(name, flavor, taxid, local_dir):
+def rename_sequences_cmd(name, flavor, local_dir):
     """Rename sequences in a cached genome using chromosome database.
 
-    NAME is the genome alias or accessions.txt entry to transform (resolves via
-    local accessions.txt or genome identifier).
+    NAME is the local alias of the genome to transform.
 
     Flavors:
     - chr: 'chromosome I', 'chromosome II', ...
     - number: '1', '2', '3', ... (default)
     - roman: 'I', 'II', 'III', ...
     - name: use names from chromosome database
-    - kraken: 'name|kraken:taxid|<TAXID>' format for Kraken classification
-              (requires NCBI taxon ID from --taxid or genome metadata)
 
     Examples:
 
@@ -1038,10 +822,8 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir):
       leishref rename-sequences Ld1S
       leishref rename-sequences Ld1S --flavor number
       leishref rename-sequences Ld1S --flavor roman
-      leishref rename-sequences Ld1S --flavor kraken --taxid 5661
-      leishref rename-sequences LtropCDCnew.fna --flavor kraken
     """
-    genome = _require_local(local(Path(local_dir)), name, "cached database")
+    genome = _require(local(Path(local_dir)), name, "cached database")
 
     fasta_path = None
     for kind, path, _ in genome.file_paths():
@@ -1058,21 +840,8 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir):
     # Use accession or identifier as the chromosome map key
     chrom_key = genome.accession or genome.identifier
 
-    # For kraken flavor, use provided taxid or get from genome metadata
-    if flavor == "kraken":
-        if not taxid:
-            taxid = genome.taxon_id
-        if not taxid:
-            click.echo(
-                f"Kraken flavor requires NCBI taxon ID. Provide it with:\n"
-                f"  --taxid <TAXID>  (override)\n"
-                f"  OR add taxon_id to {genome.identifier}'s metadata.yaml",
-                err=True,
-            )
-            raise SystemExit(1)
-
     click.echo(f"Renaming sequences in {fasta_path.name} ({flavor} flavor)...")
-    renamed, name_map, error = rename_fasta_sequences(fasta_path, chrom_key, flavor, None, taxid)
+    renamed, name_map, error = rename_fasta_sequences(fasta_path, chrom_key, flavor, None)
 
     if error:
         click.echo(f"Warning: {error}", err=True)
@@ -1123,7 +892,7 @@ def prune_scaffold_cmd(name, local_dir):
     \b
       leishref prune-scaffold Ld1S
     """
-    genome = _require_local(local(Path(local_dir)), name, "cached database")
+    genome = _require(local(Path(local_dir)), name, "cached database")
 
     if not genome.accession:
         click.echo(f"Genome {name} has no accession; cannot look up chromosome info", err=True)
@@ -1133,7 +902,7 @@ def prune_scaffold_cmd(name, local_dir):
 
     if not chrom_info:
         click.echo(f"No chromosome info found for {genome.accession}", err=True)
-        click.echo("Populate chromosome database using 'leishref dev fetch-genome'", err=True)
+        click.echo("Populate chromosome database using 'leishref dev fetch'", err=True)
         raise SystemExit(1)
 
     fasta_path = None
@@ -1175,8 +944,7 @@ def prune_scaffold_cmd(name, local_dir):
 @click.option("--dry-run", is_flag=True, help="List what would be downloaded and stop")
 @click.option("--from-installed", is_flag=True, help="Write the file from what is already installed, then stop")
 @click.option("--verbose", is_flag=True, help="Show each download in full instead of a progress bar")
-@click.option("--parallel", type=int, default=1, show_default=True, help="Concurrent downloads")
-def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verbose, parallel):
+def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verbose):
     """Re-download every genome listed in accessions.txt in the current directory.
 
     'leishref install' records what it installed under which alias to accessions.txt,
@@ -1192,19 +960,20 @@ def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verb
       leishref restore --from-installed
       leishref restore --file ../other-project/accessions.txt
       leishref restore --verbose
-      leishref restore --parallel 8
     """
     path = Path(accessions) if accessions else Path.cwd() / ACCESSIONS_FILE
 
     if from_installed:
-        # The shared cache is keyed by accession/identifier, not by alias, so this can
-        # only recover *what's installed*, not what any particular project used to
-        # call it - that mapping only ever lived in accessions.txt itself. Every
-        # entry is recorded under its own identifier as both name and alias; rename
-        # the alias column by hand afterwards if you want nicer local names.
+        # A database built before this file existed can still describe itself: every
+        # cached genome remembers the catalog entry it came from under provenance.
         written = 0
         for genome in _by_organism(local(Path(local_dir))):
-            _record_download(Path(local_dir), genome.identifier, genome.identifier)
+            origin = genome.provenance.get("catalog_id") or genome.accession
+            if not origin:
+                click.echo(f"  no catalog origin recorded, skipping: {genome.identifier}", err=True)
+                continue
+            alias = genome.path.name  # Cached directory name is the alias
+            _record_download(Path(local_dir), origin, alias)
             written += 1
         click.echo(f"Recorded {written} genome{'s' if written != 1 else ''} in {path}")
         return
@@ -1222,63 +991,47 @@ def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verb
     console.print(f"[bold]{len(pairs)}[/] genome{'s' if len(pairs) > 1 else ''} listed in [cyan]{escape(str(path))}[/]")
 
     if dry_run:
-        entries = catalog()
         for name, alias in pairs:
-            genome = find(entries, name)
-            key = cache_key(genome) if genome else name
-            state = "installed" if (Path(local_dir) / key / "metadata.yaml").exists() else "missing"
+            state = "installed" if (Path(local_dir) / alias / "metadata.yaml").exists() else "missing"
             console.print(f"  [bold cyan]{escape(alias):<24}[/] {escape(name):<34} [dim]{state}[/]")
         return
 
     failed = []
+    # Restoring a whole database is a long, mostly uninteresting wait, so the per-genome
+    # chatter of 'download' is swallowed and only a progress bar is shown. What was
+    # swallowed is printed for the genomes that failed, where it is the diagnosis.
+    # disable=None leaves the bar off when stderr is not a terminal, so a piped or
+    # redirected restore stays clean.
+    bar = tqdm(pairs, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
+    for name, alias in bar:
+        if not verbose:
+            bar.set_description_str(alias[:28], refresh=True)
+        else:
+            console.print(f"\n[bold]{escape(alias)}[/] <- {escape(name)}")
 
-    if parallel > 1:
-        entries = catalog()
-        genome_pairs = []
-        for name, alias in pairs:
-            genome = find(entries, name)
-            if genome is None:
-                click.echo(f"failed: {alias} <- {name} (not in catalog)", err=True)
+        captured = io.StringIO()
+        try:
+            with contextlib.ExitStack() as stack:
+                if not verbose:
+                    stack.enter_context(contextlib.redirect_stdout(captured))
+                    stack.enter_context(contextlib.redirect_stderr(captured))
+                click.get_current_context().invoke(
+                    install,
+                    name=name,
+                    alias=alias,
+                    local_dir=local_dir,
+                    force=force,
+                    no_link=no_link,
+                )
+        except SystemExit as exc:
+            # One unavailable genome should not abandon the rest of the database.
+            if exc.code:
                 failed.append(alias)
-                continue
-            genome_pairs.append((genome, alias))
-        failed.extend(_install_many_parallel(genome_pairs, Path(local_dir), force, no_link, parallel, click.echo))
-    else:
-        # Restoring a whole database is a long, mostly uninteresting wait, so the
-        # per-genome chatter of 'download' is swallowed and only a progress bar is
-        # shown. What was swallowed is printed for the genomes that failed, where it
-        # is the diagnosis. disable=None leaves the bar off when stderr is not a
-        # terminal, so a piped or redirected restore stays clean.
-        bar = tqdm(pairs, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
-        for name, alias in bar:
-            if not verbose:
-                bar.set_description_str(alias[:28], refresh=True)
-            else:
-                console.print(f"\n[bold]{escape(alias)}[/] <- {escape(name)}")
-
-            captured = io.StringIO()
-            try:
-                with contextlib.ExitStack() as stack:
-                    if not verbose:
-                        stack.enter_context(contextlib.redirect_stdout(captured))
-                        stack.enter_context(contextlib.redirect_stderr(captured))
-                    click.get_current_context().invoke(
-                        install,
-                        name=name,
-                        alias=alias,
-                        local_dir=local_dir,
-                        force=force,
-                        no_link=no_link,
-                    )
-            except SystemExit as exc:
-                # One unavailable genome should not abandon the rest of the database.
-                if exc.code:
-                    failed.append(alias)
-                    message = captured.getvalue().strip()
-                    tqdm.write(f"failed: {alias} <- {name}")
-                    if message:
-                        tqdm.write(textwrap.indent(message, "  "))
-        bar.close()
+                message = captured.getvalue().strip()
+                tqdm.write(f"failed: {alias} <- {name}")
+                if message:
+                    tqdm.write(textwrap.indent(message, "  "))
+    bar.close()
 
     console.print(f"Restored [bold]{len(pairs) - len(failed)}[/]/{len(pairs)} into [cyan]{escape(str(local_dir))}[/]")
     if failed:
@@ -1286,21 +1039,12 @@ def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verb
         raise SystemExit(1)
 
 
-def _ncbi_install_alias(genome_for_alias) -> str:
-    """Catalog alias for an NCBI accession (Ld1S, LdBPK), or a sanitized suggested one."""
-    alias = get_catalog_alias(genome_for_alias.accession) if genome_for_alias.accession else None
-    if not alias:
-        alias = suggest_alias(genome_for_alias).replace("/", "_")
-    return alias
-
-
 @cli.command("install-ncbi")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--force", is_flag=True, help="Install again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlinks")
 @click.option("--verbose", is_flag=True, help="Show each install details instead of progress bar")
-@click.option("--parallel", type=int, default=1, show_default=True, help="Concurrent downloads")
-def install_ncbi(local_dir, force, no_link, verbose, parallel):
+def install_ncbi(local_dir, force, no_link, verbose):
     """Install all NCBI entries from the catalog.
 
     Examples:
@@ -1308,7 +1052,6 @@ def install_ncbi(local_dir, force, no_link, verbose, parallel):
     \b
       leishref install-ncbi
       leishref install-ncbi --force
-      leishref install-ncbi --parallel 8
     """
     entries = catalog()
     ncbi_genomes = [g for g in entries if g.source == "NCBI" and g.accession]
@@ -1318,38 +1061,36 @@ def install_ncbi(local_dir, force, no_link, verbose, parallel):
         return
 
     click.echo(f"Installing {len(ncbi_genomes)} NCBI genomes...")
+    bar = tqdm(ncbi_genomes, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
+    failed = []
 
-    if parallel > 1:
-        pairs = [(g, _ncbi_install_alias(g)) for g in ncbi_genomes]
-        failed = _install_many_parallel(pairs, Path(local_dir), force, no_link, parallel, click.echo)
-    else:
-        bar = tqdm(ncbi_genomes, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
-        failed = []
+    for genome in bar:
+        # Prefer catalog alias (Ld1S, LdBPK), fall back to suggest_alias
+        alias = get_catalog_alias(genome.accession) if genome.accession else None
+        if not alias:
+            alias = suggest_alias(genome)
+            alias = alias.replace("/", "_")  # Sanitize path separators
+        bar.set_description_str(alias[:28], refresh=True)
 
-        for genome in bar:
-            # Prefer catalog alias (Ld1S, LdBPK), fall back to suggest_alias
-            alias = _ncbi_install_alias(genome)
-            bar.set_description_str(alias[:28], refresh=True)
-
-            captured = io.StringIO()
-            try:
-                with contextlib.ExitStack() as stack:
-                    if not verbose:
-                        stack.enter_context(contextlib.redirect_stdout(captured))
-                        stack.enter_context(contextlib.redirect_stderr(captured))
-                    click.get_current_context().invoke(
-                        install,
-                        name=genome.accession,
-                        alias=alias,
-                        local_dir=local_dir,
-                        force=force,
-                        no_link=no_link,
-                    )
-            except SystemExit as exc:
-                if exc.code:
-                    failed.append(alias)
-                    if verbose:
-                        click.echo(f"  Failed: {alias}", err=True)
+        captured = io.StringIO()
+        try:
+            with contextlib.ExitStack() as stack:
+                if not verbose:
+                    stack.enter_context(contextlib.redirect_stdout(captured))
+                    stack.enter_context(contextlib.redirect_stderr(captured))
+                click.get_current_context().invoke(
+                    install,
+                    name=genome.accession,
+                    alias=alias,
+                    local_dir=local_dir,
+                    force=force,
+                    no_link=no_link,
+                )
+        except SystemExit as exc:
+            if exc.code:
+                failed.append(alias)
+                if verbose:
+                    click.echo(f"  Failed: {alias}", err=True)
 
     if failed:
         click.echo(f"\nFailed: {len(failed)}/{len(ncbi_genomes)}", err=True)
@@ -1365,8 +1106,7 @@ def install_ncbi(local_dir, force, no_link, verbose, parallel):
 @click.option("--force", is_flag=True, help="Install again even if already installed")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlinks")
 @click.option("--verbose", is_flag=True, help="Show each install details instead of progress bar")
-@click.option("--parallel", type=int, default=1, show_default=True, help="Concurrent downloads")
-def install_ncbi_refseq(local_dir, force, no_link, verbose, parallel):
+def install_ncbi_refseq(local_dir, force, no_link, verbose):
     """Install all RefSeq (GCF) NCBI entries from the catalog.
 
     Examples:
@@ -1374,7 +1114,6 @@ def install_ncbi_refseq(local_dir, force, no_link, verbose, parallel):
     \b
       leishref install-ncbi-refseq
       leishref install-ncbi-refseq --force
-      leishref install-ncbi-refseq --parallel 8
     """
     entries = catalog()
     ncbi_genomes = [g for g in entries if g.source == "NCBI" and g.accession and g.accession.startswith("GCF_")]
@@ -1384,37 +1123,35 @@ def install_ncbi_refseq(local_dir, force, no_link, verbose, parallel):
         return
 
     click.echo(f"Installing {len(ncbi_genomes)} RefSeq genomes...")
+    bar = tqdm(ncbi_genomes, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
+    failed = []
 
-    if parallel > 1:
-        pairs = [(g, _ncbi_install_alias(g)) for g in ncbi_genomes]
-        failed = _install_many_parallel(pairs, Path(local_dir), force, no_link, parallel, click.echo)
-    else:
-        bar = tqdm(ncbi_genomes, unit="genome", disable=True if verbose else None, dynamic_ncols=True)
-        failed = []
+    for genome in bar:
+        alias = get_catalog_alias(genome.accession) if genome.accession else None
+        if not alias:
+            alias = suggest_alias(genome)
+            alias = alias.replace("/", "_")
+        bar.set_description_str(alias[:28], refresh=True)
 
-        for genome in bar:
-            alias = _ncbi_install_alias(genome)
-            bar.set_description_str(alias[:28], refresh=True)
-
-            captured = io.StringIO()
-            try:
-                with contextlib.ExitStack() as stack:
-                    if not verbose:
-                        stack.enter_context(contextlib.redirect_stdout(captured))
-                        stack.enter_context(contextlib.redirect_stderr(captured))
-                    click.get_current_context().invoke(
-                        install,
-                        name=genome.accession,
-                        alias=alias,
-                        local_dir=local_dir,
-                        force=force,
-                        no_link=no_link,
-                    )
-            except SystemExit as exc:
-                if exc.code:
-                    failed.append(alias)
-                    if verbose:
-                        click.echo(f"  Failed: {alias}", err=True)
+        captured = io.StringIO()
+        try:
+            with contextlib.ExitStack() as stack:
+                if not verbose:
+                    stack.enter_context(contextlib.redirect_stdout(captured))
+                    stack.enter_context(contextlib.redirect_stderr(captured))
+                click.get_current_context().invoke(
+                    install,
+                    name=genome.accession,
+                    alias=alias,
+                    local_dir=local_dir,
+                    force=force,
+                    no_link=no_link,
+                )
+        except SystemExit as exc:
+            if exc.code:
+                failed.append(alias)
+                if verbose:
+                    click.echo(f"  Failed: {alias}", err=True)
 
     if failed:
         click.echo(f"\nFailed: {len(failed)}/{len(ncbi_genomes)}", err=True)
@@ -1429,35 +1166,18 @@ def install_ncbi_refseq(local_dir, force, no_link, verbose, parallel):
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--basedir", type=click.Path(), default=".", help="Where to create the links")
 def link(local_dir, basedir):
-    """Refresh the alias-named symlinks for everything installed from here.
-
-    Reads ./accessions.txt for the (genome, alias) pairs this project installed -
-    the shared cache itself doesn't know what any project calls a given genome.
+    """Refresh the alias-named symlinks for everything installed locally.
 
     Examples:
 
     \b
       leishref link
     """
-    accessions_path = Path.cwd() / ACCESSIONS_FILE
-    if not accessions_path.exists():
-        click.echo(f"No {ACCESSIONS_FILE} in the current directory; nothing to link", err=True)
-        click.echo("It's written by 'leishref install' as you install genomes.", err=True)
-        raise SystemExit(1)
-
-    local_dir = Path(local_dir)
-    entries = catalog()
     made, conflicts = [], []
-    for name, alias in _read_accessions(accessions_path):
-        genome = find(entries, name)
-        key = cache_key(genome) if genome else name
-        cache_dir = local_dir / key
-        if not (cache_dir / "metadata.yaml").exists():
-            conflicts.append(f"{alias}: {name} is not installed ({cache_dir} missing)")
-            continue
-        paths = [p for _, p, _ in read_genome(cache_dir).file_paths() if p.exists()]
+    for genome in local(Path(local_dir)):
+        paths = [p for _, p, _ in genome.file_paths() if p.exists()]
         try:
-            made.extend(link_paths(alias, paths, Path(basedir)))
+            made.extend(link_paths(genome.identifier, paths, Path(basedir)))
         except LinkConflict as exc:
             conflicts.append(str(exc))
 
@@ -1581,308 +1301,29 @@ def plot_histogram(catalog_dir, output, include_kinetoplast):
         raise SystemExit(1)
 
 
-@cli.command("plot-completeness")
-@click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
-@click.option("--output", type=click.Path(), help="Save plot to this file")
-def plot_completeness(catalog_dir, output):
-    """Plot pie chart of genome completeness (assembly_level breakdown).
-
-    Shows the distribution of complete genomes, chromosomes, scaffolds,
-    and contigs in the catalog.
-
-    Examples:
-
-    \b
-      leishref plot-completeness
-      leishref plot-completeness --output completeness.png
-    """
-    try:
-        out = plot_genome_completeness(
-            Path(catalog_dir) if catalog_dir else None,
-            Path(output) if output else None,
-        )
-        click.echo(f"Saved plot to {out}")
-    except ValueError as e:
-        click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1)
-
-
-@cli.command("plot-technology")
-@click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
-@click.option("--output", type=click.Path(), help="Save plot to this file")
-def plot_technology(catalog_dir, output):
-    """Plot pie chart of sequencing technology distribution.
-
-    Shows breakdown by Illumina, Oxford Nanopore, PacBio, hybrid, legacy,
-    and unknown technologies.
-
-    Examples:
-
-    
-      leishref plot-technology
-      leishref plot-technology --output technology.png
-    """
-    try:
-        out = plot_sequencing_technology(
-            Path(catalog_dir) if catalog_dir else None,
-            Path(output) if output else None,
-        )
-        click.echo(f"Saved plot to {out}")
-    except ValueError as e:
-        click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1)
-
-
-@cli.command("plot-assembly-by-technology")
-@click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
-@click.option("--output", type=click.Path(), help="Save plot to this file")
-def plot_assembly_by_technology(catalog_dir, output):
-    """Plot assembly level (quality) vs sequencing technology.
-
-    Shows how assembly completeness (Complete Genome, Chromosome, Scaffold, Contig)
-    varies across different sequencing technologies.
-
-    Examples:
-
-    
-      leishref plot-assembly-by-technology
-      leishref plot-assembly-by-technology --output quality_vs_tech.png
-    """
-    try:
-        out = plot_assembly_level_by_technology(
-            Path(catalog_dir) if catalog_dir else None,
-            Path(output) if output else None,
-        )
-        click.echo(f"Saved plot to {out}")
-    except ValueError as e:
-        click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1)
-
-
 # ------------------------------------------------------------------------ dev commands
 
 
-@cli.command()
-@click.argument("patterns", nargs=-1, required=True)
-@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option("--basedir", type=click.Path(), default=".", help="Directory to search for symlinks")
-@click.option("--output", "-o", type=click.Path(), help="Output tarball path (default: bundle.tar.gz)")
-def bundle(patterns, local_dir, basedir, output):
-    """Pack genomes into a tarball: from symlinks or by genome name.
-
-    Supports two modes:
-
-    1. FILE PATTERNS (symlinks in current dir):
-       leishref bundle '*.fna'
-       leishref bundle 'Ld*.fna' 'Ltrop*.gff'
-       Resolves symlinks to actual files in ~/.config/leishref
-
-    2. GENOME NAMES (from database):
-       leishref bundle Ld1S LdBPK
-       leishref bundle 'Ld*'
-       Uses genome identifiers with wildcard support
-
-    Creates a .tar.gz with all files, preserving relative paths. Useful for
-    offline sharing or backup.
-
-    Examples:
-
-    \b
-      leishref bundle '*.fna'
-      leishref bundle 'Ld*.fna' -o ld-genomes.tar.gz
-      leishref bundle Ld1S LdBPK
-      leishref bundle 'Ld*' -o ld-all.tar.gz
-    """
-    basedir = Path(basedir)
-    installed = local(Path(local_dir))
-    # The shared cache is keyed by accession/identifier; prefer this project's own
-    # alias (./accessions.txt) as the archive folder name when there is one, since
-    # it's far more readable than a bare accession.
-    alias_for_id = {origin: alias for alias, origin in _local_alias_map().items()}
-
-    def display_name(genome):
-        return alias_for_id.get(genome.identifier, genome.identifier)
-
-    files_to_bundle = []
-
-    for pattern in patterns:
-        symlink_matches = _resolve_symlink_targets(pattern, basedir)
-
-        if symlink_matches:
-            for linkname, target in symlink_matches:
-                files_to_bundle.append((linkname, target))
-        else:
-            if is_glob(pattern):
-                pattern_lower = pattern.lower()
-                matches = [
-                    g
-                    for g in installed
-                    if fnmatch.fnmatch(g.identifier.lower(), pattern_lower)
-                    or fnmatch.fnmatch(display_name(g).lower(), pattern_lower)
-                ]
-                if not matches:
-                    click.echo(f"No match for '{pattern}' (tried symlinks and genomes)", err=True)
-                    raise SystemExit(1)
-                for genome in matches:
-                    for kind, path, _ in genome.file_paths():
-                        if path.exists():
-                            arcname = f"{display_name(genome)}/{path.name}"
-                            files_to_bundle.append((arcname, path))
-            else:
-                genome = _resolve_local(installed, pattern)
-                if genome is None:
-                    click.echo(f"Not found: {pattern} (symlink or genome name)", err=True)
-                    raise SystemExit(1)
-                for kind, path, _ in genome.file_paths():
-                    if path.exists():
-                        arcname = f"{display_name(genome)}/{path.name}"
-                        files_to_bundle.append((arcname, path))
-
-    if not files_to_bundle:
-        click.echo("No files to bundle", err=True)
-        raise SystemExit(1)
-
-    if not output:
-        output = "bundle.tar.gz"
-
-    output_path = Path(output)
-    click.echo(f"Bundling {len(files_to_bundle)} file{'s' if len(files_to_bundle) != 1 else ''} into {output_path}")
-
-    with tarfile.open(output_path, "w:gz") as tar:
-        for arcname, filepath in files_to_bundle:
-            click.echo(f"  {arcname}")
-            tar.add(filepath, arcname=arcname)
-
-    click.echo(f"\nBundled to {output_path} ({output_path.stat().st_size / 1e6:.1f} MB)")
-
-
-def _flatten_dict(d: dict, prefix: str = "") -> dict:
-    """Nested dict to dot-separated flat dict, for tabular formats."""
-    items = {}
-    for key, value in d.items():
-        flat_key = f"{prefix}.{key}" if prefix else key
-        if isinstance(value, dict):
-            items.update(_flatten_dict(value, flat_key))
-        else:
-            items[flat_key] = value
-    return items
-
-
-def _records_to_tsv(records: list) -> str:
-    """Flatten records and render as TSV, column union across all rows."""
-    import csv
-    import io
-
-    flattened = [_flatten_dict(r) for r in records]
-    columns = []
-    seen = set()
-    for row in flattened:
-        for key in row:
-            if key not in seen:
-                seen.add(key)
-                columns.append(key)
-
-    buf = io.StringIO()
-    writer = csv.DictWriter(buf, fieldnames=columns, delimiter="\t", extrasaction="ignore")
-    writer.writeheader()
-    writer.writerows(flattened)
-    return buf.getvalue()
-
-
-@cli.command()
-@click.option("--catalog-dir", type=click.Path(), help="Catalog directory")
-@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option(
-    "--source",
-    type=click.Choice(["catalog", "local", "both"]),
-    default="catalog",
-    show_default=True,
-    help="Which genomes to export",
-)
-@click.option(
-    "--format",
-    "fmt",
-    type=click.Choice(["json", "yaml", "tsv"]),
-    default="json",
-    show_default=True,
-    help="Output format",
-)
-@click.option("--output", "-o", type=click.Path(), help="Write to file instead of stdout")
-def export(catalog_dir, local_dir, source, fmt, output):
-    """Export genome metadata as JSON, YAML, or TSV.
-
-    Exports the catalog by default; pass --source local or --source both to include
-    the cached database. TSV flattens nested fields with dot notation (e.g.
-    stats.num_scaffolds), with a column union across all exported genomes.
-
-    Examples:
-
-    \b
-      leishref export --format json
-      leishref export --format tsv -o catalog.tsv
-      leishref export --source both --format yaml -o everything.yaml
-    """
-    cat_root = Path(catalog_dir) if catalog_dir else None
-
-    genomes = []
-    if source in ("catalog", "both"):
-        genomes.extend(catalog(cat_root))
-    if source in ("local", "both"):
-        genomes.extend(local(Path(local_dir)))
-
-    records = [g.to_dict() for g in genomes]
-
-    if fmt == "json":
-        import json
-
-        text = json.dumps(records, indent=2, default=str)
-    elif fmt == "yaml":
-        import yaml
-
-        text = yaml.safe_dump(records, sort_keys=False, default_flow_style=False)
-    else:
-        text = _records_to_tsv(records)
-
-    if output:
-        Path(output).write_text(text)
-        click.echo(f"Exported {len(records)} genome{'s' if len(records) != 1 else ''} to {output}")
-    else:
-        click.echo(text)
-
-
-# ------------------------------------------------------------------------ dev commands
-
-
-@dev.command("fetch-genome")
+@dev.command()
 @click.argument("accession")
 @click.option("--alias", help="Also install into the local database under this name")
 @click.option("--species", help="Override the species reported by NCBI")
 @click.option("--strain", help="Override the strain reported by NCBI")
-@click.option(
-    "--molecule-type",
-    help="What this actually is when it isn't a nuclear assembly, e.g. 'kinetoplast,maxicircle'",
-)
 @click.option("--catalog-dir", type=click.Path(), help="Write the entry here instead")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
 @click.option("--force", is_flag=True, help="Replace an existing catalog entry")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
-def fetch_genome(accession, alias, species, strain, molecule_type, catalog_dir, local_dir, force, no_link):
-    """Add an NCBI genome assembly to the catalog.
+def fetch(accession, alias, species, strain, catalog_dir, local_dir, force, no_link):
+    """Add an NCBI genome to the catalog.
 
     Downloads the assembly to record its checksums and statistics. Pass --alias to keep
     the files in the local database rather than discarding them.
 
-    NCBI's own assembly_level doesn't flag a lone kinetoplast/maxicircle sequence
-    submitted as a "genome assembly" - it still comes back as e.g. "Chromosome" - so
-    pass --molecule-type by hand when you know that's what it actually is; otherwise
-    it won't turn up in `leishref search kinetoplast`.
-
     Examples:
 
     \b
-      leishref dev fetch-genome GCA_000410715.1
-      leishref dev fetch-genome GCA_000410715.1 --alias Ltrop.L590
-      leishref dev fetch-genome GCA_902369315.1 --molecule-type kinetoplast,maxicircle
+      leishref dev fetch GCA_000410715.1
+      leishref dev fetch GCA_000410715.1 --alias Ltrop.L590
     """
     root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
     entry = root / "ncbi" / accession
@@ -1909,7 +1350,6 @@ def fetch_genome(accession, alias, species, strain, molecule_type, catalog_dir, 
             strain=strain or meta.get("strain"),
             assembly_name=meta.get("assembly_name"),
             assembly_level=meta.get("assembly_level"),
-            molecule_type=molecule_type,
             release_date=meta.get("release_date"),
             files={k: v.name for k, v in (("fasta", fasta), ("gff", gff)) if v},
             checksums={k: md5_file(v) for k, v in (("fasta", fasta), ("gff", gff)) if v},
@@ -1931,82 +1371,7 @@ def fetch_genome(accession, alias, species, strain, molecule_type, catalog_dir, 
         click.echo(f"Catalog entry: {entry}")
 
         if alias:
-            installed = _install(genome, cache_key(genome), [fasta, gff], Path(local_dir))
-            click.echo(f"Installed into {installed}")
-            _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
-
-
-@dev.command("fetch-nucleotide")
-@click.argument("accession")
-@click.option("--alias", help="Also install into the local database under this name")
-@click.option("--species", help="Override the organism reported by NCBI")
-@click.option("--strain", help="Override the strain reported by NCBI")
-@click.option(
-    "--molecule-type",
-    default="kinetoplast",
-    show_default=True,
-    help="What this is, e.g. 'kinetoplast,maxicircle'. Pass '' to leave unset.",
-)
-@click.option("--email", help="Contact email for NCBI EUtils (recommended; avoids rate-limit warnings)")
-@click.option("--catalog-dir", type=click.Path(), help="Write the entry here instead")
-@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option("--force", is_flag=True, help="Replace an existing catalog entry")
-@click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
-def fetch_nucleotide(accession, alias, species, strain, molecule_type, email, catalog_dir, local_dir, force, no_link):
-    """Add a standalone NCBI nucleotide (nuccore) record to the catalog.
-
-    For a single sequence that isn't part of a GCA/GCF assembly - e.g. a lone
-    kinetoplast or maxicircle deposited on its own. Fetched via NCBI EUtils
-    (bioservices), not the `datasets` CLI used for assemblies.
-
-    A standalone nuccore record is a kinetoplast/maxicircle far more often than
-    anything else, so --molecule-type defaults to "kinetoplast" here (unlike
-    fetch-genome, where it defaults unset); override it if this one is different.
-
-    Examples:
-
-    \b
-      leishref dev fetch-nucleotide BK010877.1
-      leishref dev fetch-nucleotide BK010877.1 --alias LiJPCM5.kinetoplast
-      leishref dev fetch-nucleotide BK010877.1 --molecule-type kinetoplast,maxicircle
-    """
-    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
-    entry = root / "ncbi_nucleotide" / accession
-    if (entry / "metadata.yaml").exists() and not force:
-        click.echo(f"Already in the catalog: {entry}", err=True)
-        click.echo("Use --force to replace it", err=True)
-        raise SystemExit(1)
-
-    click.echo(f"Fetching {accession} from NCBI nuccore...")
-    with tempfile.TemporaryDirectory() as tmp:
-        try:
-            fasta = fetch_nucleotide_fasta(accession, Path(tmp), email=email)
-            meta = fetch_nucleotide_metadata(accession, email=email)
-        except NuccoreError as exc:
-            click.echo(str(exc), err=True)
-            raise SystemExit(1)
-
-        genome = Genome(
-            identifier=accession,
-            source="NCBI-Nucleotide",
-            accession=accession,
-            taxon_id=meta.get("taxon_id"),
-            species=species or meta.get("organism"),
-            strain=strain or meta.get("strain"),
-            molecule_type=molecule_type or None,
-            release_date=meta.get("release_date"),
-            files={"fasta": fasta.name},
-            checksums={"fasta": md5_file(fasta)},
-            stats=genome_stats(fasta),
-            notes=meta.get("title"),
-            date_added=today_iso(),
-        )
-
-        write_genome(entry, genome)
-        click.echo(f"Catalog entry: {entry}")
-
-        if alias:
-            installed = _install(genome, cache_key(genome), [fasta], Path(local_dir))
+            installed = _install(genome, alias, [fasta, gff], Path(local_dir))
             click.echo(f"Installed into {installed}")
             _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
 
@@ -2014,76 +1379,45 @@ def fetch_nucleotide(accession, alias, species, strain, molecule_type, email, ca
 @dev.command()
 @click.argument("fasta", type=click.Path(exists=True))
 @click.argument("gff", type=click.Path(exists=True), required=False)
-@click.option("--alias", help="Informal name, recorded in metadata.yaml only - it does not name the directory")
+@click.option("--alias", required=True, help="Name for this genome, in the catalog and locally")
 @click.option("--species", help="Species name")
 @click.option("--strain", help="Strain name")
 @click.option("--technology", help="Sequencing technology, e.g. 'PacBio RS II'")
 @click.option("--assembler", help="Assembler used, e.g. Flye")
-@click.option(
-    "--molecule-type",
-    help="What this actually is when it isn't a nuclear assembly, e.g. 'kinetoplast,maxicircle'",
-)
-@click.option(
-    "--outdir",
-    type=click.Path(),
-    default="to_publish_on_zenodo",
-    show_default=True,
-    help="Staging directory for entries not yet published",
-)
-def add(fasta, gff, alias, species, strain, technology, assembler, molecule_type, outdir):
-    """Stage a local assembly for review and publishing to Zenodo.
-
-    Copies FASTA (and GFF, if given) plus a metadata.yaml into
-    <outdir>/<fasta-stem>/ - named after the input file, not --alias (which is only
-    recorded as an informal note; name the file itself
-    <species>.<strain>.<molecule_type>.<assembler> - see the workflow docs). This is
-    a working area outside the shipped catalog and outside your local install -
-    nothing is installed or symlinked by this command.
-
-    Review the staged metadata.yaml, then run
-    'leishref dev publish <outdir>/<fasta-stem>' to deposit it on Zenodo and add the
-    entry to leishref/data/custom/.
+@click.option("--catalog-dir", type=click.Path(), help="Write the entry here instead")
+@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
+@click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
+def add(fasta, gff, alias, species, strain, technology, assembler, catalog_dir, local_dir, no_link):
+    """Add a local assembly to the catalog and install it locally.
 
     Examples:
 
     \b
-      leishref dev add Ltropica.CDC216-162.genome.flye.fasta \\
-          --species "Leishmania tropica" --strain CDC216-162 --assembler Flye
-      leishref dev add assembly.fa assembly.gff --alias "for the Sicilian hybrids paper"
-      leishref dev add kdna.fa --molecule-type kinetoplast,maxicircle
+      leishref dev add assembly.fa --alias Ltrop.flye --species "Leishmania tropica"
+      leishref dev add assembly.fa assembly.gff --alias Ltrop.flye
     """
     fasta, gff = Path(fasta), Path(gff) if gff else None
-    identifier = fasta.stem
-    target = Path(outdir) / identifier
-    if target.exists():
-        click.echo(f"Already staged: {target}", err=True)
-        click.echo("Remove it first, or rename the input FASTA, to stage again.", err=True)
-        raise SystemExit(1)
+    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
 
     genome = Genome(
-        identifier=identifier,
-        source="Custom",
+        identifier=alias,
+        source="Local",
         species=species,
         strain=strain,
-        molecule_type=molecule_type,
         files={k: v.name for k, v in (("fasta", fasta), ("gff", gff)) if v},
         checksums={k: md5_file(v) for k, v in (("fasta", fasta), ("gff", gff)) if v},
         stats=genome_stats(fasta),
-        provenance={
-            k: v for k, v in (("sequencing_technology", technology), ("assembler", assembler), ("alias", alias)) if v
-        },
+        provenance={k: v for k, v in (("sequencing_technology", technology), ("assembler", assembler)) if v},
         date_added=today_iso(),
     )
 
-    target.mkdir(parents=True)
-    shutil.copy2(fasta, target / fasta.name)
-    if gff:
-        shutil.copy2(gff, target / gff.name)
-    write_genome(target, genome)
+    entry = catalog_entry_dir(root, genome)
+    write_genome(entry, genome)
+    click.echo(f"Catalog entry: {entry}")
 
-    click.echo(f"Staged: {target}")
-    click.echo(f"Review {target / 'metadata.yaml'}, then:")
-    click.echo(f"  leishref dev publish {target}")
+    installed = _install(genome, alias, [fasta, gff], Path(local_dir))
+    click.echo(f"Installed into {installed}")
+    _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
 
 
 @dev.command()
@@ -2179,7 +1513,7 @@ def scaffold(query, reference, alias, clean, catalog_dir, local_dir, no_link):
         write_genome(entry, genome)
         click.echo(f"Catalog entry: {entry}")
 
-        installed = _install(genome, cache_key(genome), [result, agp], local_root, move=True)
+        installed = _install(genome, alias, [result, agp], local_root, move=True)
 
     click.echo(f"Installed into {installed}")
     _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
@@ -2229,36 +1563,22 @@ def _zenodo_description(genome) -> str:
 @dev.command()
 @click.argument("name")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-@click.option("--catalog-dir", type=click.Path(), help="Write/update the entry here instead")
+@click.option("--catalog-dir", type=click.Path(), help="Update the entry here instead")
 @click.option("--version", help="Version tag, e.g. v1.0")
 @click.option("--confirm", is_flag=True, help="Actually publish, rather than dry-run")
 @click.option("--sandbox", is_flag=True, help="Publish to sandbox.zenodo.org")
 def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
-    """Deposit a genome's files on Zenodo and record the DOI.
-
-    NAME is either a path to a staged entry from 'leishref dev add' (e.g.
-    to_publish_on_zenodo/my_assembly) or the identifier of a genome already
-    installed locally (e.g. from 'leishref dev scaffold'). A staged entry gets a
-    fresh catalog entry under leishref/data/custom/ once published; an
-    already-catalogued one has its existing entry updated in place.
+    """Deposit an installed genome's files on Zenodo and record the DOI.
 
     Needs ZENODO_TOKEN, or ZENODO_SANDBOX_TOKEN with --sandbox.
-
-    With --confirm, prompts for author name and optional additional notes to be
-    included in the Zenodo description and metadata.
 
     Examples:
 
     \b
-      leishref dev publish to_publish_on_zenodo/Ltropica.CDC216-162.genome.flye
-      leishref dev publish to_publish_on_zenodo/Ltropica.CDC216-162.genome.flye --confirm --version v1.0
-      leishref dev publish Ltrop.flye.scaffold.Ld1S --confirm
+      leishref dev publish Ltrop.flye
+      leishref dev publish Ltrop.flye --confirm --version v1.0
     """
-    staged = Path(name)
-    if staged.is_dir() and (staged / "metadata.yaml").exists():
-        genome = read_genome(staged)
-    else:
-        genome = _require_local(local(Path(local_dir)), name, "local database")
+    genome = _require(local(Path(local_dir)), name, "local database")
     payload = [p for _, p, _ in genome.file_paths() if p.exists()]
     agp = genome.provenance.get("agp_filename")
     if agp and (genome.path / agp).exists():
@@ -2274,12 +1594,9 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
         return
 
     author = click.prompt("Author name")
-    notes = click.prompt("Additional notes (optional)", default="", show_default=False)
     try:
         title = f"Leishmania genome: {genome.identifier}"
         description = _zenodo_description(genome)
-        if notes:
-            description += f"\n\n<p><strong>Additional notes:</strong><br/>{notes}</p>"
         creators = ["LeishRef"]
         if author:
             creators.append(author)
@@ -2327,32 +1644,21 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
         return
 
     genome.provenance["zenodo_doi"] = doi
-    if notes:
-        genome.provenance["zenodo_notes"] = notes
-    # A Custom entry stays Custom - and so in leishref/data/custom/ - even once
-    # published; only entries that started life some other way (scaffolds) flip to
-    # Zenodo. See CLAUDE.md's catalog placement rule.
-    if genome.source != "Custom":
-        genome.source = "Zenodo"
+    genome.source = "Zenodo"
     if version:
         genome.release_version = version
     write_genome(genome.path, genome)
 
     root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
-    entry = catalog_entry_dir(root, genome)
-    if entry.exists() and (entry / "metadata.yaml").exists():
-        # Already catalogued (e.g. a scaffold's shipped entry): update it in place.
+    origin = genome.provenance.get("catalog_id") or genome.identifier
+    shipped = find(catalog(Path(catalog_dir) if catalog_dir else None), origin)
+    entry = shipped.path if shipped else catalog_entry_dir(root, genome)
+    if (entry / "metadata.yaml").exists():
         shipped = read_genome(entry)
         shipped.provenance["zenodo_doi"] = doi
-        if notes:
-            shipped.provenance["zenodo_notes"] = notes
-        if shipped.source != "Custom":
-            shipped.source = "Zenodo"
+        shipped.source = "Zenodo"
         write_genome(entry, shipped)
-    else:
-        # A freshly staged entry has no shipped catalog record yet: create one.
-        write_genome(entry, genome)
-    click.echo(f"Recorded DOI in {entry}")
+        click.echo(f"Recorded DOI in {entry}")
 
 
 @dev.command()
@@ -2384,6 +1690,101 @@ def remove(identifier, catalog_dir, force):
 
     shutil.rmtree(entry_path, ignore_errors=False)
     click.echo(f"Removed {entry_path}")
+
+
+def _genome_from_ncbi(accession: str, meta: dict) -> Genome:
+    """Build a catalog entry from a `datasets summary` record."""
+    return Genome(
+        identifier=accession,
+        source="NCBI",
+        accession=accession,
+        taxon_id=meta.get("taxon_id"),
+        species=species_from_organism(meta.get("organism_name")) or None,
+        strain=meta.get("strain"),
+        assembly_name=meta.get("assembly_name"),
+        assembly_level=meta.get("assembly_level"),
+        release_date=meta.get("release_date"),
+        stats=meta.get("stats") or {},
+        provenance={
+            k: v
+            for k, v in (
+                ("bioproject", meta.get("bioproject")),
+                ("biosample", meta.get("biosample")),
+                ("sequencing_technology", meta.get("sequencing_technology")),
+                ("assembler", meta.get("assembler")),
+            )
+            if v
+        },
+        date_added=today_iso(),
+    )
+
+
+def _accessions_from_tsv(path: Path) -> list:
+    """Accessions from an NCBI Datasets table export."""
+    import csv
+
+    with open(path, newline="") as handle:
+        rows = list(csv.DictReader(handle, delimiter="\t"))
+    column = next((c for c in (rows[0] if rows else {}) if c.strip().lower() == "assembly accession"), None)
+    if column is None:
+        raise click.ClickException(f"No 'Assembly Accession' column in {path}")
+    return [r[column].strip() for r in rows if r.get(column, "").strip()]
+
+
+@dev.command("import")
+@click.argument("accessions", nargs=-1)
+@click.option("--from-tsv", type=click.Path(exists=True), help="NCBI Datasets TSV export to read accessions from")
+@click.option("--catalog-dir", type=click.Path(), help="Write entries here instead")
+@click.option("--overwrite", is_flag=True, help="Replace entries that already exist")
+@click.option("--dry-run", is_flag=True, help="Report what would be added without writing")
+def import_cmd(accessions, from_tsv, catalog_dir, overwrite, dry_run):
+    """Add catalog entries from NCBI without downloading any sequence.
+
+    NCBI's summary already carries the assembly statistics, and they agree with computing
+    them from the FASTA, so a catalog entry needs no download. Only the md5 checksums are
+    missing; `leishref dev checksum` fills those in.
+
+    Examples:
+
+    \b
+      leishref dev import GCA_000227135.2 GCA_000410715.1
+      leishref dev import --from-tsv ~/Downloads/ncbi_dataset.tsv
+      leishref dev import --from-tsv ncbi_dataset.tsv --dry-run
+    """
+    wanted = list(accessions) + (_accessions_from_tsv(Path(from_tsv)) if from_tsv else [])
+    if not wanted:
+        raise click.ClickException("Give accessions, or --from-tsv")
+
+    # Preserve order while removing the duplicates a TSV export often carries.
+    seen = set()
+    wanted = [a for a in wanted if not (a in seen or seen.add(a))]
+
+    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
+    existing = {d.name for d in root.iterdir() if (d / "metadata.yaml").is_file()} if root.is_dir() else set()
+
+    todo = wanted if overwrite else [a for a in wanted if a not in existing]
+    click.echo(f"{len(wanted)} accessions, {len(wanted) - len(todo)} already in the catalog, {len(todo)} to add")
+    if not todo:
+        return
+
+    if dry_run:
+        for accession in todo:
+            click.echo(f"  would add {accession}")
+        return
+
+    added = skipped = 0
+    with click.progressbar(fetch_metadata_many(todo), length=len(todo), label="Querying NCBI") as stream:
+        for accession, meta in stream:
+            if not meta:
+                skipped += 1
+                continue
+            write_genome(root / "ncbi" / accession, _genome_from_ncbi(accession, meta))
+            added += 1
+
+    click.echo(f"Added {added} entries to {root}")
+    if skipped:
+        click.echo(f"{skipped} accessions returned nothing from NCBI", err=True)
+    click.echo("Checksums are still missing; run 'leishref dev checksum' to fill them in")
 
 
 @dev.command("check-aliases")
@@ -2438,6 +1839,190 @@ def check_aliases(catalog_dir):
             click.echo(f"✓ No duplicate aliases ({len(aliases)} total)")
 
     click.echo("✓ All checks passed")
+
+
+@dev.command()
+@click.option("--catalog-dir", type=click.Path(), help="Update entries here instead")
+@click.option("--workdir", type=click.Path(), default="NCBI", show_default=True, help="Where downloads land")
+@click.option("--keep", is_flag=True, help="Keep the downloaded files instead of discarding them")
+@click.option("--limit", type=int, help="Stop after this many genomes")
+def checksum(catalog_dir, workdir, keep, limit):
+    """Download genomes that have no checksum yet and record md5 and gap counts.
+
+    Entries added by `dev import` carry NCBI's statistics but no md5, because that needs
+    the sequence itself. This fetches each one, records the checksum, and recomputes the
+    statistics locally, which also fills in num_gaps.
+
+    Examples:
+
+    \b
+      leishref dev checksum
+      leishref dev checksum --limit 10
+      leishref dev checksum --keep
+    """
+    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
+    workdir = Path(workdir)
+
+    pending = [g for g in catalog(root) if g.accession and not g.checksums.get("fasta")]
+    if limit:
+        pending = pending[:limit]
+
+    if not pending:
+        click.echo("Every catalog entry already has a checksum")
+        return
+
+    click.echo(f"{len(pending)} entries without a checksum")
+    done = failed = 0
+
+    for genome in pending:
+        scratch = None if keep else tempfile.TemporaryDirectory()
+        destination = workdir if keep else Path(scratch.name)
+        try:
+            fasta, gff = fetch_fasta_gff(genome.accession, destination)
+            if not fasta:
+                click.echo(f"  {genome.accession}: nothing on NCBI", err=True)
+                failed += 1
+                continue
+
+            genome.files = {k: v.name for k, v in (("fasta", fasta), ("gff", gff)) if v}
+            genome.checksums = {k: md5_file(v) for k, v in (("fasta", fasta), ("gff", gff)) if v}
+            genome.stats = genome_stats(fasta)
+            write_genome(genome.path or catalog_entry_dir(root, genome), genome)
+            done += 1
+            click.echo(f"  {genome.accession}: {genome.stats['num_scaffolds']} scaffolds, md5 recorded")
+        except Exception as exc:  # one bad genome must not end the batch
+            click.echo(f"  {genome.accession}: {exc}", err=True)
+            failed += 1
+        finally:
+            if scratch is not None:
+                scratch.cleanup()
+
+    click.echo(f"\nRecorded {done} checksums, {failed} failed")
+
+
+@dev.command()
+@click.option("--catalog-dir", type=click.Path(), help="Check entries here instead")
+def status(catalog_dir):
+    """Audit catalog metadata for completeness and consistency.
+
+    Checks:
+    - taxon_id presence (required for kraken flavor)
+    - Required fields: identifier, source, species, assembly_level
+    - File checksums match actual files
+    - Valid assembly_level values
+    - Kinetoplast entries have molecule_type
+    - No duplicate identifiers or accessions
+    - No orphaned directories without metadata.yaml
+
+    Examples:
+
+    \b
+      leishref dev status
+      leishref dev status --catalog-dir /path/to/catalog
+    """
+    import hashlib
+
+    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
+    entries = catalog(root)
+
+    errors = []
+    warnings = []
+    seen_ids = {}
+    seen_accessions = {}
+    valid_levels = {"Contig", "Scaffold", "Chromosome", "Complete Genome", "Unknown"}
+
+    # Check each genome entry
+    for genome in entries:
+        prefix = f"[{genome.identifier}]"
+
+        # 1. Check taxon_id presence
+        if not genome.taxon_id:
+            warnings.append(f"{prefix} Missing taxon_id (needed for kraken flavor)")
+
+        # 2. Check required fields
+        for field in ("identifier", "source", "species", "assembly_level"):
+            val = getattr(genome, field, None)
+            if not val:
+                errors.append(f"{prefix} Missing required field: {field}")
+
+        # 3. Check file checksums
+        for file_kind, checksum in genome.checksums.items():
+            file_path = None
+            if file_kind == "fasta" and genome.files.get("fasta"):
+                file_path = (genome.path or catalog_entry_dir(root, genome)) / genome.files["fasta"]
+            elif file_kind == "gff" and genome.files.get("gff"):
+                file_path = (genome.path or catalog_entry_dir(root, genome)) / genome.files["gff"]
+
+            if file_path and file_path.exists():
+                actual = hashlib.md5(file_path.read_bytes()).hexdigest()
+                if actual != checksum:
+                    errors.append(f"{prefix} {file_kind} checksum mismatch: {checksum} != {actual}")
+            elif file_path:
+                warnings.append(f"{prefix} {file_kind} file missing: {file_path.name}")
+
+        # 4. Check valid assembly_level
+        if genome.assembly_level and genome.assembly_level not in valid_levels:
+            errors.append(
+                f"{prefix} Invalid assembly_level: {genome.assembly_level} "
+                f"(must be one of: {', '.join(valid_levels)})"
+            )
+
+        # 5. Check kinetoplast entries have molecule_type
+        if genome.source == "NCBI-Nucleotide" and not genome.molecule_type:
+            warnings.append(f"{prefix} NCBI-Nucleotide entry missing molecule_type")
+
+        # 6. Track duplicates
+        if genome.identifier in seen_ids:
+            errors.append(f"{prefix} Duplicate identifier: already seen in {seen_ids[genome.identifier]}")
+        else:
+            seen_ids[genome.identifier] = str(genome.path or catalog_entry_dir(root, genome))
+
+        if genome.accession:
+            if genome.accession in seen_accessions:
+                errors.append(
+                    f"{prefix} Duplicate accession {genome.accession}: already seen in {seen_accessions[genome.accession]}"
+                )
+            else:
+                seen_accessions[genome.accession] = genome.identifier
+
+    # 7. Check for orphaned directories
+    for data_subdir in (
+        root / "ncbi",
+        root / "ncbi_nucleotide",
+        root / "scaffolds",
+        root / "custom",
+        root / "tritrypdb",
+    ):
+        if data_subdir.exists():
+            for entry_dir in data_subdir.iterdir():
+                if entry_dir.is_dir() and not (entry_dir / "metadata.yaml").exists():
+                    errors.append(f"Orphaned directory (no metadata.yaml): {entry_dir.name}")
+
+    # Report results
+    click.echo(f"\nCatalog status ({len(entries)} genomes)")
+    click.echo("=" * 60)
+
+    if errors:
+        click.echo(f"\n[ERROR] {len(errors)} issues found:", err=True)
+        for msg in errors[:20]:
+            click.echo(f"  ✗ {msg}", err=True)
+        if len(errors) > 20:
+            click.echo(f"  ... and {len(errors) - 20} more", err=True)
+
+    if warnings:
+        click.echo(f"\n[WARNING] {len(warnings)} items need attention:")
+        for msg in warnings[:20]:
+            click.echo(f"  ⚠ {msg}")
+        if len(warnings) > 20:
+            click.echo(f"  ... and {len(warnings) - 20} more")
+
+    if not errors and not warnings:
+        click.echo("\n✓ Catalog is clean")
+
+    click.echo(f"\nSummary: {len(entries)} genomes, {len(errors)} errors, {len(warnings)} warnings")
+
+    if errors:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
