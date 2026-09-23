@@ -3,7 +3,7 @@ source: Custom
 taxon_id: 5666
 species: Leishmania tropica
 strain: CDC216-162
-assembly_level: scaffold
+assembly_level: Scaffold
 files:
   fasta: Ltropica.Ld1S.scaffold.pecat.fasta
 checksums:
