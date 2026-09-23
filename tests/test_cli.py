@@ -1,7 +1,6 @@
 """Command-line behaviour that does not need the network."""
 
 import os
-from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
@@ -32,12 +31,12 @@ def installed(tmp_path):
     return tmp_path, fasta
 
 
-def run(args, cwd, input=None):
+def run(args, cwd):
     """Invoke the CLI as if it had been started from cwd."""
     previous = os.getcwd()
     os.chdir(cwd)
     try:
-        return CliRunner().invoke(cli, args, input=input)
+        return CliRunner().invoke(cli, args)
     finally:
         os.chdir(previous)
 
@@ -55,20 +54,8 @@ def test_user_and_dev_commands_are_separated():
     assert "publish" not in result.output, "maintainer commands belong under dev"
 
     dev = CliRunner().invoke(cli, ["dev", "--help"])
-    for command in ("fetch-genome", "add", "scaffold", "publish"):
+    for command in ("fetch", "add", "scaffold", "publish"):
         assert command in dev.output
-
-
-def test_import_and_checksum_commands_are_removed():
-    """Bulk metadata-only import + backfill-checksum was a one-time bootstrap path,
-    superseded now that fetch-genome/fetch-nucleotide/add/scaffold always
-    download and checksum in one step."""
-    dev = CliRunner().invoke(cli, ["dev", "--help"])
-    assert "import" not in dev.output
-    assert "checksum" not in dev.output
-
-    assert CliRunner().invoke(cli, ["dev", "import"]).exit_code != 0
-    assert CliRunner().invoke(cli, ["dev", "checksum"]).exit_code != 0
 
 
 def test_verify_passes_on_an_intact_database(installed):
@@ -98,20 +85,12 @@ def test_verify_reports_a_missing_file(installed):
 
 def test_link_creates_alias_named_symlinks(installed):
     base, _ = installed
-    (base / "accessions.txt").write_text("Ltrop.flye\tLtrop.flye\n")
     result = run(["link", "--local-dir", "data"], base)
 
     link = base / "Ltrop.flye.fna"
     assert result.exit_code == 0
     assert link.is_symlink()
     assert link.read_text() == ">c1\nACGTACGT\n"
-
-
-def test_link_requires_accessions_file(installed):
-    base, _ = installed
-    result = run(["link", "--local-dir", "data"], base)
-    assert result.exit_code == 1
-    assert "No accessions.txt" in result.output
 
 
 def test_info_lists_catalog_and_local(installed):
@@ -147,238 +126,6 @@ def test_search_matches_taxon_id(installed):
     assert "donovani" in result.output
 
 
-def test_search_finds_catalog_entries_tagged_as_kinetoplast(installed):
-    """Genomes that are actually a lone kinetoplast/maxicircle carry molecule_type,
-    so 'guyanensis Lgu' (a mislabeled kinetoplast) turns up under 'kinetoplast'."""
-    base, _ = installed
-    result = run(["search", "kinetoplast", "--local-dir", "data"], base)
-    assert result.exit_code == 0
-    assert "GCA_902369315.1" in result.output
-    assert "BK010877.1" in result.output
-    assert "kinetoplast,maxicircle" in result.output
-
-
-def test_search_minicircle_is_distinct_from_maxicircle(installed):
-    """GCA_902498725.1 (Lma_mini, 4 short contigs) is a minicircle assembly, not a
-    maxicircle - the two are different kDNA molecule classes and shouldn't be
-    conflated under one search term."""
-    base, _ = installed
-    result = run(["search", "minicircle", "--local-dir", "data"], base)
-    assert result.exit_code == 0
-    assert "GCA_902498725.1" in result.output
-    assert "GCA_902369315.1" not in result.output
-
-
-def test_dev_add_stages_without_installing_or_touching_the_catalog(tmp_path):
-    """dev add is a staging step, not an install: it writes only to --outdir, never
-    to the shipped catalog or the local install cache."""
-    fasta = tmp_path / "Ltropica.TEST.genome.flye.fasta"
-    fasta.write_text(">chr1\nACGTACGTACGT\n")
-
-    result = run(
-        ["dev", "add", str(fasta), "--species", "Leishmania tropica", "--strain", "TEST", "--assembler", "Flye"],
-        tmp_path,
-    )
-    assert result.exit_code == 0
-
-    # Staged, named after the FASTA (no extension) - not any alias.
-    staged = tmp_path / "to_publish_on_zenodo" / "Ltropica.TEST.genome.flye"
-    entry = read_genome(staged)
-    assert entry.identifier == "Ltropica.TEST.genome.flye"
-    assert entry.source == "Custom"
-    assert (staged / "Ltropica.TEST.genome.flye.fasta").exists()
-
-    # Nothing installed, nothing added to the shipped catalog.
-    assert not (tmp_path / "data").exists()
-    from leishref.metadata import CATALOG_DIR
-
-    assert not (CATALOG_DIR / "custom" / "Ltropica.TEST.genome.flye").exists()
-
-
-def test_dev_add_records_molecule_type(tmp_path):
-    """dev add --molecule-type tags a local kinetoplast/maxicircle assembly."""
-    fasta = tmp_path / "Lgu.TEST.maxicircle.fasta"
-    fasta.write_text(">maxicircle\nACGTACGT\n")
-
-    result = run(["dev", "add", str(fasta), "--molecule-type", "kinetoplast,maxicircle"], tmp_path)
-    assert result.exit_code == 0
-
-    entry = read_genome(tmp_path / "to_publish_on_zenodo" / "Lgu.TEST.maxicircle")
-    assert entry.molecule_type == "kinetoplast,maxicircle"
-    assert entry.matches(["kinetoplast"])
-
-
-def test_dev_add_records_alias_as_an_informal_note_only(tmp_path):
-    """--alias is metadata, not identity: it never names the staging directory or
-    becomes the identifier."""
-    fasta = tmp_path / "Ltropica.TEST.genome.flye.fasta"
-    fasta.write_text(">chr1\nACGT\n")
-
-    result = run(["dev", "add", str(fasta), "--alias", "for the Sicilian hybrids paper"], tmp_path)
-    assert result.exit_code == 0
-
-    entry = read_genome(tmp_path / "to_publish_on_zenodo" / "Ltropica.TEST.genome.flye")
-    assert entry.identifier == "Ltropica.TEST.genome.flye"
-    assert entry.provenance["alias"] == "for the Sicilian hybrids paper"
-
-
-def test_dev_add_refuses_to_restage_over_an_existing_entry(tmp_path):
-    fasta = tmp_path / "Ltropica.TEST.genome.flye.fasta"
-    fasta.write_text(">chr1\nACGT\n")
-
-    run(["dev", "add", str(fasta)], tmp_path)
-    result = run(["dev", "add", str(fasta)], tmp_path)
-
-    assert result.exit_code == 1
-    assert "Already staged" in result.output
-
-
-def _fake_zenodo(monkeypatch, doi="10.5281/zenodo.999"):
-    """Patch every Zenodo call dev publish makes, so tests never hit the network."""
-    import leishref.cli as cli_module
-
-    monkeypatch.setattr(
-        cli_module,
-        "create_deposition",
-        lambda title, description, creators, sandbox=False: {
-            "id": 1,
-            "metadata": {"title": title, "creators": [{"name": c} for c in creators]},
-        },
-    )
-    monkeypatch.setattr(cli_module, "upload_file", lambda dep_id, path, sandbox=False: {})
-    monkeypatch.setattr(cli_module, "update_metadata", lambda dep_id, payload, sandbox=False: {})
-    monkeypatch.setattr(cli_module, "publish_deposition", lambda dep_id, sandbox=False: {"doi": doi})
-
-
-def test_dev_publish_dry_run_from_a_staged_path(tmp_path):
-    fasta = tmp_path / "Ltropica.TEST.genome.flye.fasta"
-    fasta.write_text(">chr1\nACGT\n")
-    run(["dev", "add", str(fasta)], tmp_path)
-
-    staged = tmp_path / "to_publish_on_zenodo" / "Ltropica.TEST.genome.flye"
-    result = run(["dev", "publish", str(staged)], tmp_path)
-
-    assert result.exit_code == 0
-    assert "Dry-run: would publish" in result.output
-    assert "Add --confirm to publish" in result.output
-
-
-def test_dev_publish_creates_a_custom_catalog_entry_from_a_staged_path(tmp_path, monkeypatch):
-    """Publishing a staged dev-add entry creates a fresh custom/ catalog entry and
-    records the DOI, while leaving source: Custom alone (not flipped to Zenodo) -
-    per CLAUDE.md's catalog placement rule."""
-    fasta = tmp_path / "Ltropica.TEST.genome.flye.fasta"
-    fasta.write_text(">chr1\nACGT\n")
-    run(["dev", "add", str(fasta)], tmp_path)
-    _fake_zenodo(monkeypatch)
-
-    staged = tmp_path / "to_publish_on_zenodo" / "Ltropica.TEST.genome.flye"
-    catalog_dir = tmp_path / "catalog"
-    result = run(
-        ["dev", "publish", str(staged), "--confirm", "--catalog-dir", str(catalog_dir)],
-        tmp_path,
-        input="Test Author\n\n",
-    )
-
-    assert result.exit_code == 0
-    assert "Published: 10.5281/zenodo.999" in result.output
-
-    entry = read_genome(catalog_dir / "custom" / "Ltropica.TEST.genome.flye")
-    assert entry.zenodo_doi == "10.5281/zenodo.999"
-    assert entry.source == "Custom"
-
-    # The staged copy is kept in sync too, for reference.
-    assert read_genome(staged).zenodo_doi == "10.5281/zenodo.999"
-
-
-def test_dev_publish_updates_an_existing_catalog_entry_by_name(tmp_path, monkeypatch):
-    """Publishing by NAME (an already-installed, already-catalogued genome, e.g. a
-    scaffold from `leishref dev scaffold`) updates its existing entry in place and
-    flips source to Zenodo, since it wasn't Custom to begin with."""
-    local_dir = tmp_path / "data"
-    genome_dir = local_dir / "Ltrop.scaf"
-    genome_dir.mkdir(parents=True)
-    fasta = genome_dir / "assembly.fna"
-    fasta.write_text(">c1\nACGT\n")
-    write_genome(
-        genome_dir,
-        Genome(
-            identifier="Ltrop.scaf",
-            source="Leishref scaffold",
-            files={"fasta": fasta.name},
-            checksums={"fasta": md5_file(fasta)},
-            scaffold={"tool": "RagTag"},
-        ),
-    )
-
-    catalog_dir = tmp_path / "catalog"
-    shipped_dir = catalog_dir / "scaffolds" / "Ltrop.scaf"
-    write_genome(shipped_dir, Genome(identifier="Ltrop.scaf", source="Leishref scaffold", scaffold={"tool": "RagTag"}))
-
-    _fake_zenodo(monkeypatch, doi="10.5281/zenodo.888")
-
-    result = run(
-        [
-            "dev",
-            "publish",
-            "Ltrop.scaf",
-            "--confirm",
-            "--local-dir",
-            str(local_dir),
-            "--catalog-dir",
-            str(catalog_dir),
-        ],
-        tmp_path,
-        input="Test Author\n\n",
-    )
-
-    assert result.exit_code == 0
-    entry = read_genome(shipped_dir)
-    assert entry.zenodo_doi == "10.5281/zenodo.888"
-    assert entry.source == "Zenodo"
-
-
-def test_dev_publish_accepts_and_records_optional_notes(tmp_path, monkeypatch):
-    """Publishing prompts for optional notes, adds them to the Zenodo description,
-    and archives them in metadata.yaml provenance."""
-    fasta = tmp_path / "Ltropica.TEST.genome.flye.fasta"
-    fasta.write_text(">chr1\nACGT\n")
-    run(["dev", "add", str(fasta)], tmp_path)
-    _fake_zenodo(monkeypatch)
-
-    staged = tmp_path / "to_publish_on_zenodo" / "Ltropica.TEST.genome.flye"
-    catalog_dir = tmp_path / "catalog"
-
-    # Capture the description passed to update_metadata
-    captured_description = None
-
-    def capture_update_metadata(dep_id, payload, sandbox=False):
-        nonlocal captured_description
-        captured_description = payload["metadata"]["description"]
-
-    import leishref.cli as cli_module
-
-    monkeypatch.setattr(
-        cli_module, "create_deposition", lambda *args, **kwargs: {"id": 1, "metadata": {"title": "", "creators": []}}
-    )
-    monkeypatch.setattr(cli_module, "upload_file", lambda *args, **kwargs: {})
-    monkeypatch.setattr(cli_module, "update_metadata", capture_update_metadata)
-    monkeypatch.setattr(cli_module, "publish_deposition", lambda *args, **kwargs: {"doi": "10.5281/zenodo.999"})
-
-    result = run(
-        ["dev", "publish", str(staged), "--confirm", "--catalog-dir", str(catalog_dir)],
-        tmp_path,
-        input="Test Author\nAssembled with latest tools and verified\n",
-    )
-
-    assert result.exit_code == 0
-    assert "Additional notes:" in captured_description
-    assert "Assembled with latest tools and verified" in captured_description
-
-    entry = read_genome(catalog_dir / "custom" / "Ltropica.TEST.genome.flye")
-    assert entry.provenance.get("zenodo_notes") == "Assembled with latest tools and verified"
-
-
 def test_search_without_a_match_exits_nonzero(installed):
     base, _ = installed
     result = run(["search", "xyzzy", "--local-dir", "data"], base)
@@ -393,37 +140,21 @@ def test_search_requires_a_term(installed):
 
 
 def test_search_flags_installed_genomes(tmp_path):
-    """A cached genome (keyed by its own identity) shows the local alias for it
-    recorded in ./accessions.txt, so search can say it is already present."""
+    """A cached install records its origin, so search can say it is already present."""
     from leishref.metadata import catalog as read_catalog
 
     origin = read_catalog()[0]
-    directory = tmp_path / "data" / origin.identifier
+    directory = tmp_path / "data" / "mine"
     directory.mkdir(parents=True)
-    genome = Genome(identifier=origin.identifier, species=origin.species)
+    genome = Genome(
+        identifier="mine",
+        species=origin.species,
+        provenance={"catalog_id": origin.identifier},
+    )
     write_genome(directory, genome)
-    (tmp_path / "accessions.txt").write_text(f"{origin.identifier}\tmine\n")
 
     result = run(["search", origin.identifier, "--local-dir", "data"], tmp_path)
     assert "installed as mine" in result.output
-
-
-def test_search_does_not_repeat_installed_as_when_it_matches_the_alias(tmp_path, monkeypatch):
-    """If the local install alias is the same string as the catalog alias, showing
-    both 'alias: X' and 'installed as X' is pure repetition."""
-    from leishref.metadata import catalog as read_catalog
-
-    origin = read_catalog()[0]
-    monkeypatch.setattr("leishref.cli.get_catalog_alias", lambda accession, catalog_root=None: "Shortname")
-
-    directory = tmp_path / "data" / origin.identifier
-    directory.mkdir(parents=True)
-    write_genome(directory, Genome(identifier=origin.identifier, species=origin.species))
-    (tmp_path / "accessions.txt").write_text(f"{origin.identifier}\tShortname\n")
-
-    result = run(["search", origin.identifier, "--local-dir", "data"], tmp_path)
-    assert "alias: Shortname" in result.output
-    assert "installed as" not in result.output
 
 
 def test_install_without_an_alias_suggests_one(tmp_path):
@@ -441,92 +172,6 @@ def test_install_by_catalog_alias_uses_aliases_txt(tmp_path):
     assert result.exit_code == 2
     assert "--alias is required" in result.output
     assert "--alias LtrL590" in result.output
-
-
-def test_install_is_a_quiet_noop_when_the_same_genome_is_already_installed(tmp_path):
-    """Re-running install for the same NAME (regardless of ALIAS) shouldn't nag about
-    --force: the cache is keyed by accession, so it's deterministically the same
-    genome whenever the cache directory exists at all."""
-    genome_dir = tmp_path / "data" / "GCA_000410715.1"
-    genome_dir.mkdir(parents=True)
-    fasta = genome_dir / "assembly.fna"
-    fasta.write_text(">c1\nACGT\n")
-    write_genome(
-        genome_dir,
-        Genome(
-            identifier="GCA_000410715.1",
-            source="NCBI",
-            accession="GCA_000410715.1",
-            files={"fasta": fasta.name},
-            checksums={"fasta": md5_file(fasta)},
-        ),
-    )
-
-    result = run(["install", "GCA_000410715.1", "--alias", "Ld1S", "--local-dir", "data", "--no-link"], tmp_path)
-    assert result.exit_code == 0
-    assert "Already installed" in result.output
-    assert "force" not in result.output.lower()
-
-
-def test_install_reusing_an_alias_for_a_different_genome_just_repoints_it(tmp_path):
-    """The cache is keyed by accession, not by alias, so an alias can never collide
-    with a different genome's cached copy - reusing one just repoints the symlink,
-    with no --force needed and no risk of clobbering the wrong cache entry."""
-    for accession in ("GCA_000410715.1", "GCA_000002725.2"):
-        genome_dir = tmp_path / "data" / accession
-        genome_dir.mkdir(parents=True)
-        fasta = genome_dir / "assembly.fna"
-        fasta.write_text(f">seq_{accession}\nACGT\n")
-        write_genome(
-            genome_dir,
-            Genome(
-                identifier=accession,
-                source="NCBI",
-                accession=accession,
-                files={"fasta": fasta.name},
-                checksums={"fasta": md5_file(fasta)},
-            ),
-        )
-
-    run(["install", "GCA_000410715.1", "--alias", "Ld1S", "--local-dir", "data"], tmp_path)
-    result = run(["install", "GCA_000002725.2", "--alias", "Ld1S", "--local-dir", "data"], tmp_path)
-
-    assert result.exit_code == 0
-    link = tmp_path / "Ld1S.fna"
-    assert link.read_text() == ">seq_GCA_000002725.2\nACGT\n"
-    # Both cache entries survive untouched; nothing was clobbered.
-    assert (tmp_path / "data" / "GCA_000410715.1" / "metadata.yaml").exists()
-    assert (tmp_path / "data" / "GCA_000002725.2" / "metadata.yaml").exists()
-
-
-def test_install_uses_nuccore_fetch_for_ncbi_nucleotide_entries(tmp_path, monkeypatch):
-    """A standalone nuccore record (source: NCBI-Nucleotide, e.g. BK010877.1) isn't a
-    GCA/GCF assembly, so `install` must not send it through the datasets-CLI path -
-    that always fails for these with "NCBI has no data for <accession>"."""
-    import leishref.cli as cli_module
-
-    calls = []
-
-    def fake_datasets_fetch(accession, outdir):
-        calls.append(("datasets", accession))
-        return None, None  # would fail for a real nuccore accession
-
-    def fake_nuccore_fetch(accession, outdir):
-        calls.append(("nuccore", accession))
-        fasta = Path(outdir) / f"{accession}.fasta"
-        fasta.write_text(f">seq_{accession}\nACGT\n")
-        return fasta
-
-    catalog_entry = Genome(identifier="BK010877.1", source="NCBI-Nucleotide", accession="BK010877.1")
-    monkeypatch.setattr(cli_module, "catalog", lambda: [catalog_entry])
-    monkeypatch.setattr(cli_module, "fetch_fasta_gff", fake_datasets_fetch)
-    monkeypatch.setattr(cli_module, "fetch_nucleotide_fasta", fake_nuccore_fetch)
-
-    result = run(["install", "BK010877.1", "--alias", "Linf_maxi", "--local-dir", "data"], tmp_path)
-
-    assert result.exit_code == 0
-    assert calls == [("nuccore", "BK010877.1")]
-    assert (tmp_path / "data" / "BK010877.1" / "metadata.yaml").exists()
 
 
 def test_install_rejects_an_unknown_name_before_asking_for_an_alias(tmp_path):
@@ -613,22 +258,12 @@ def test_install_records_the_files_it_wrote(tmp_path):
     catalog_entry = Genome(identifier="GCA_9.1", source="NCBI", accession="GCA_9.1")
     assert catalog_entry.files == {}
 
-    target = _install(catalog_entry, "GCA_9.1", [source, gff], tmp_path / "data")
+    target = _install(catalog_entry, "mine", [source, gff], tmp_path / "data")
     written = read_genome(target)
 
     assert written.files == {"fasta": "GCA_9_genomic.fna", "gff": "GCA_9_genomic.gff"}
-    # The genome's own identity is left alone: the cache key names the directory, it
-    # doesn't rename what's inside it.
-    assert written.identifier == "GCA_9.1"
-
-
-def test_cache_key_prefers_accession_over_identifier():
-    from leishref.cli import cache_key
-
-    assert cache_key(Genome(identifier="Ld1S", accession="GCA_9.1")) == "GCA_9.1"
-    # No accession (scaffolds, local/custom entries): falls back to the identifier,
-    # which for these is already the stable name chosen at creation time.
-    assert cache_key(Genome(identifier="Ltrop.flye")) == "Ltrop.flye"
+    assert written.identifier == "mine"
+    assert written.provenance["catalog_id"] == "GCA_9.1"
 
 
 def test_organism_does_not_repeat_a_strain_already_in_the_species():
@@ -644,9 +279,12 @@ def recorded(tmp_path):
     from leishref.metadata import catalog as read_catalog
 
     origin = read_catalog()[0]
-    directory = tmp_path / "data" / origin.identifier
+    directory = tmp_path / "data" / "mine"
     directory.mkdir(parents=True)
-    write_genome(directory, Genome(identifier=origin.identifier, species=origin.species))
+    write_genome(
+        directory,
+        Genome(identifier="mine", species=origin.species, provenance={"catalog_id": origin.identifier}),
+    )
     return tmp_path, origin.identifier
 
 
@@ -679,10 +317,10 @@ def test_restore_lists_what_it_would_do(recorded):
 
 
 def test_restore_reports_a_genome_that_is_no_longer_there(recorded):
-    """A recorded alias whose cache entry was deleted shows up as missing."""
+    """A recorded alias whose directory was deleted shows up as missing."""
     base, name = recorded
     run(["install", name, "--alias", "mine", "--local-dir", "data", "--no-link"], base)
-    (base / "data" / name / "metadata.yaml").unlink()
+    (base / "data" / "mine" / "metadata.yaml").unlink()
 
     result = run(["restore", "--local-dir", "data", "--dry-run"], base)
     assert "missing" in result.output
@@ -715,15 +353,22 @@ def test_a_malformed_accessions_line_is_skipped(recorded):
 
 
 def test_from_installed_describes_an_existing_database(recorded):
-    """A database built before accessions.txt existed can still write its own recipe -
-    though since the cache no longer carries a per-project alias, the best it can do
-    is record each entry under its own identifier as both name and alias."""
+    """A database built before accessions.txt existed can still write its own recipe."""
     base, name = recorded
     result = run(["restore", "--from-installed", "--local-dir", "data"], base)
 
     assert result.exit_code == 0
-    assert f"{name}\t{name}" in (base / "accessions.txt").read_text()
-    assert "Recorded 1 genome" in result.output
+    assert f"{name}\tmine" in (base / "accessions.txt").read_text()
+
+
+def test_from_installed_skips_a_genome_with_no_origin(tmp_path):
+    directory = tmp_path / "data" / "orphan"
+    directory.mkdir(parents=True)
+    write_genome(directory, Genome(identifier="orphan", source="Local"))
+
+    result = run(["restore", "--from-installed", "--local-dir", "data"], tmp_path)
+    assert "no catalog origin recorded" in result.output
+    assert "Recorded 0 genomes" in result.output
 
 
 def test_restore_is_quiet_about_the_genomes_that_worked(recorded):
@@ -923,307 +568,84 @@ def test_rename_sequences_with_roman_flavor(installed):
     assert ">c1" not in content
 
 
-def test_bundle_creates_tarball_with_fasta_files(installed):
-    """Bundle command creates tarball with FASTA files from installed genomes."""
-    import tarfile
+def test_rename_sequences_with_kraken_flavor(tmp_path):
+    """Rename-sequences with kraken flavor appends |kraken:taxid|<TAXID>."""
+    directory = tmp_path / "data" / "Ltrop.flye"
+    directory.mkdir(parents=True)
+    fasta = directory / "assembly.fa"
+    fasta.write_text(">c1\nACGTACGT\n")
 
-    base, _ = installed
-    output = base / "bundle.tar.gz"
-
-    result = run(["bundle", "Ltrop.flye", "--local-dir", "data", "--output", str(output)], base)
-    assert result.exit_code == 0
-    assert output.exists()
-    assert "Bundled to" in result.output
-
-    with tarfile.open(output, "r:gz") as tar:
-        members = tar.getnames()
-        assert "Ltrop.flye/assembly.fa" in members
-        assert len(members) == 1
-
-
-def test_bundle_fails_on_missing_genome(installed):
-    """Bundle fails if genome is not installed."""
-    base, _ = installed
-
-    result = run(["bundle", "NonExistent", "--local-dir", "data"], base)
-    assert result.exit_code == 1
-    assert "Not found" in result.output
-
-
-def test_bundle_multiple_genomes(tmp_path):
-    """Bundle can pack multiple genomes into one tarball."""
-    import tarfile
-
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
-
-    # Create two genomes
-    for name in ("Ld1S", "Ltrop.L590"):
-        genome_dir = data_dir / name
-        genome_dir.mkdir()
-        fasta = genome_dir / "assembly.fa"
-        fasta.write_text(f">seq_{name}\nACGT\n")
-
-        write_genome(
-            genome_dir,
-            Genome(
-                identifier=name,
-                source="Local",
-                files={"fasta": fasta.name},
-                checksums={"fasta": md5_file(fasta)},
-            ),
-        )
-
-    output = tmp_path / "multi.tar.gz"
-    result = run(["bundle", "Ld1S", "Ltrop.L590", "--local-dir", "data", "--output", str(output)], tmp_path)
-    assert result.exit_code == 0
-    assert output.exists()
-
-    with tarfile.open(output, "r:gz") as tar:
-        members = tar.getnames()
-        assert "Ld1S/assembly.fa" in members
-        assert "Ltrop.L590/assembly.fa" in members
-        assert len(members) == 2
-
-
-def test_bundle_from_symlinks(tmp_path):
-    """Bundle can resolve and pack files from symlinks in current directory."""
-    import tarfile
-
-    # Setup local database
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
-    for name in ("Ld1S", "LdBPK"):
-        genome_dir = data_dir / name
-        genome_dir.mkdir()
-        fasta = genome_dir / "assembly.fa"
-        fasta.write_text(f">seq_{name}\nACGT\n")
-
-        write_genome(
-            genome_dir,
-            Genome(
-                identifier=name,
-                source="Local",
-                files={"fasta": fasta.name},
-                checksums={"fasta": md5_file(fasta)},
-            ),
-        )
-
-    # Create symlinks in work directory
-    work_dir = tmp_path / "work"
-    work_dir.mkdir()
-    (work_dir / "Ld1S.fna").symlink_to(data_dir / "Ld1S" / "assembly.fa")
-    (work_dir / "LdBPK.fna").symlink_to(data_dir / "LdBPK" / "assembly.fa")
-
-    output = work_dir / "genomes.tar.gz"
-    result = run(
-        ["bundle", "*.fna", "--local-dir", str(data_dir), "--basedir", str(work_dir), "--output", str(output)],
-        work_dir,
-    )
-    assert result.exit_code == 0
-    assert output.exists()
-
-    # Verify tarball contains actual files, not symlinks
-    with tarfile.open(output, "r:gz") as tar:
-        members = tar.getnames()
-        assert "Ld1S.fna" in members
-        assert "LdBPK.fna" in members
-        # Check files are extracted correctly
-        content = tar.extractfile("Ld1S.fna").read().decode()
-        assert ">seq_Ld1S" in content
-
-
-def test_export_local_as_json(installed):
-    """Export --source local --format json writes valid JSON with genome records."""
-    import json
-
-    base, _ = installed
-    result = run(["export", "--source", "local", "--local-dir", "data", "--format", "json"], base)
-    assert result.exit_code == 0
-
-    records = json.loads(result.output)
-    assert len(records) == 1
-    assert records[0]["identifier"] == "Ltrop.flye"
-    assert records[0]["files"]["fasta"] == "assembly.fa"
-
-
-def test_export_local_as_yaml(installed):
-    """Export --format yaml writes valid YAML with genome records."""
-    import yaml
-
-    base, _ = installed
-    result = run(["export", "--source", "local", "--local-dir", "data", "--format", "yaml"], base)
-    assert result.exit_code == 0
-
-    records = yaml.safe_load(result.output)
-    assert len(records) == 1
-    assert records[0]["identifier"] == "Ltrop.flye"
-
-
-def test_export_local_as_tsv(installed):
-    """Export --format tsv flattens nested fields with dot notation."""
-    base, _ = installed
-    result = run(["export", "--source", "local", "--local-dir", "data", "--format", "tsv"], base)
-    assert result.exit_code == 0
-
-    lines = result.output.strip().splitlines()
-    header = lines[0].split("\t")
-    assert "identifier" in header
-    assert "files.fasta" in header
-    assert "checksums.fasta" in header
-
-    row = dict(zip(header, lines[1].split("\t")))
-    assert row["identifier"] == "Ltrop.flye"
-    assert row["files.fasta"] == "assembly.fa"
-
-
-def test_export_writes_to_file(installed):
-    """Export --output writes to a file instead of stdout."""
-    base, _ = installed
-    output = base / "export.json"
-
-    result = run(
-        ["export", "--source", "local", "--local-dir", "data", "--format", "json", "--output", str(output)], base
-    )
-    assert result.exit_code == 0
-    assert output.exists()
-    assert "Exported 1 genome" in result.output
-
-    import json
-
-    records = json.loads(output.read_text())
-    assert records[0]["identifier"] == "Ltrop.flye"
-
-
-def test_install_many_parallel_installs_all_genomes(tmp_path, monkeypatch):
-    """_install_many_parallel fetches concurrently and installs each genome."""
-    import leishref.cli as cli_module
-
-    monkeypatch.chdir(tmp_path)  # _record_download writes accessions.txt to cwd
-
-    def fake_fetch(accession, outdir):
-        fasta = Path(outdir) / f"{accession}.fna"
-        fasta.write_text(f">seq_{accession}\nACGT\n")
-        return fasta, None
-
-    monkeypatch.setattr(cli_module, "fetch_fasta_gff", fake_fetch)
-
-    genomes = [Genome(identifier=f"GCA_{i}", source="NCBI", accession=f"GCA_{i}") for i in range(1, 4)]
-    pairs = [(g, f"alias{i}") for i, g in enumerate(genomes, start=1)]
-
-    local_dir = tmp_path / "data"
-    messages = []
-    failed = cli_module._install_many_parallel(
-        pairs, local_dir, force=False, no_link=True, workers=3, echo=messages.append
-    )
-
-    assert failed == []
-    for i in range(1, 4):
-        genome_dir = local_dir / f"GCA_{i}"
-        assert (genome_dir / "metadata.yaml").exists()
-        assert (genome_dir / f"GCA_{i}.fna").exists()
-
-
-def test_install_many_parallel_uses_nuccore_fetch_for_ncbi_nucleotide(tmp_path, monkeypatch):
-    """The parallel path has the same datasets-vs-EUtils split as install() - a
-    standalone nuccore record must go through fetch_nucleotide_fasta, not
-    fetch_fasta_gff (the assembly-only datasets CLI wrapper)."""
-    import leishref.cli as cli_module
-
-    monkeypatch.chdir(tmp_path)
-    calls = []
-
-    def fake_datasets_fetch(accession, outdir):
-        calls.append(("datasets", accession))
-        return None, None
-
-    def fake_nuccore_fetch(accession, outdir):
-        calls.append(("nuccore", accession))
-        fasta = Path(outdir) / f"{accession}.fasta"
-        fasta.write_text(f">seq_{accession}\nACGT\n")
-        return fasta
-
-    monkeypatch.setattr(cli_module, "fetch_fasta_gff", fake_datasets_fetch)
-    monkeypatch.setattr(cli_module, "fetch_nucleotide_fasta", fake_nuccore_fetch)
-
-    genome = Genome(identifier="BK010877.1", source="NCBI-Nucleotide", accession="BK010877.1")
-    local_dir = tmp_path / "data"
-    failed = cli_module._install_many_parallel(
-        [(genome, "Linf_maxi")], local_dir, force=False, no_link=True, workers=1, echo=lambda m: None
-    )
-
-    assert failed == []
-    assert calls == [("nuccore", "BK010877.1")]
-    assert (local_dir / "BK010877.1" / "metadata.yaml").exists()
-
-
-def test_install_many_parallel_reports_failures(tmp_path, monkeypatch):
-    """_install_many_parallel collects failures without aborting the whole batch."""
-    import leishref.cli as cli_module
-
-    monkeypatch.chdir(tmp_path)  # _record_download writes accessions.txt to cwd
-
-    def fake_fetch(accession, outdir):
-        if accession == "GCA_bad":
-            return None, None
-        fasta = Path(outdir) / f"{accession}.fna"
-        fasta.write_text(f">seq_{accession}\nACGT\n")
-        return fasta, None
-
-    monkeypatch.setattr(cli_module, "fetch_fasta_gff", fake_fetch)
-
-    genomes = [
-        Genome(identifier="GCA_good", source="NCBI", accession="GCA_good"),
-        Genome(identifier="GCA_bad", source="NCBI", accession="GCA_bad"),
-    ]
-    pairs = [(genomes[0], "good"), (genomes[1], "bad")]
-
-    local_dir = tmp_path / "data"
-    failed = cli_module._install_many_parallel(
-        pairs, local_dir, force=False, no_link=True, workers=2, echo=lambda m: None
-    )
-
-    assert failed == ["bad"]
-    assert (local_dir / "GCA_good" / "metadata.yaml").exists()
-    assert not (local_dir / "GCA_bad").exists()
-
-
-def test_install_many_parallel_skips_already_installed(tmp_path, monkeypatch):
-    """_install_many_parallel does not re-fetch a genome already on disk."""
-    import leishref.cli as cli_module
-
-    monkeypatch.chdir(tmp_path)  # _record_download writes accessions.txt to cwd
-
-    calls = []
-
-    def fake_fetch(accession, outdir):
-        calls.append(accession)
-        fasta = Path(outdir) / f"{accession}.fna"
-        fasta.write_text(f">seq_{accession}\nACGT\n")
-        return fasta, None
-
-    monkeypatch.setattr(cli_module, "fetch_fasta_gff", fake_fetch)
-
-    local_dir = tmp_path / "data"
-    genome_dir = local_dir / "GCA_x"
-    genome_dir.mkdir(parents=True)
-    fasta = genome_dir / "assembly.fna"
-    fasta.write_text(">seq\nACGT\n")
     write_genome(
-        genome_dir,
+        directory,
         Genome(
-            identifier="GCA_x",
-            source="NCBI",
-            accession="GCA_x",
-            files={"fasta": "assembly.fna"},
+            identifier="Ltrop.flye",
+            source="Local",
+            species="Leishmania tropica",
+            taxon_id=5666,
+            files={"fasta": fasta.name},
             checksums={"fasta": md5_file(fasta)},
         ),
     )
 
-    genome = Genome(identifier="GCA_x", source="NCBI", accession="GCA_x")
-    failed = cli_module._install_many_parallel(
-        [(genome, "already")], local_dir, force=False, no_link=True, workers=1, echo=lambda m: None
+    result = run(["rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--local-dir", "data"], tmp_path)
+    assert result.exit_code == 0
+
+    output_file = fasta.parent / f"{fasta.stem}.kraken{fasta.suffix}"
+    assert output_file.exists()
+
+    # Check that sequence was renamed with kraken format
+    content = output_file.read_text()
+    assert ">c1|kraken:taxid|5666\n" in content
+    assert ">c1\n" not in content
+
+
+def test_rename_sequences_kraken_flavor_requires_taxid(tmp_path):
+    """Rename-sequences kraken flavor requires --taxid if genome has no taxon_id."""
+    directory = tmp_path / "data" / "Ltrop.flye"
+    directory.mkdir(parents=True)
+    fasta = directory / "assembly.fa"
+    fasta.write_text(">c1\nACGTACGT\n")
+
+    write_genome(
+        directory,
+        Genome(
+            identifier="Ltrop.flye",
+            source="Local",
+            species="Leishmania tropica",
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+        ),
     )
 
-    assert failed == []
-    assert calls == []
+    result = run(["rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--local-dir", "data"], tmp_path)
+    assert result.exit_code != 0
+    assert "taxid" in result.output.lower()
+
+
+def test_rename_sequences_kraken_flavor_uses_explicit_taxid(tmp_path):
+    """Rename-sequences kraken flavor accepts --taxid parameter."""
+    directory = tmp_path / "data" / "Ltrop.flye"
+    directory.mkdir(parents=True)
+    fasta = directory / "assembly.fa"
+    fasta.write_text(">c1\nACGTACGT\n")
+
+    write_genome(
+        directory,
+        Genome(
+            identifier="Ltrop.flye",
+            source="Local",
+            species="Leishmania tropica",
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+        ),
+    )
+
+    result = run(
+        ["rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--taxid", "5661", "--local-dir", "data"],
+        tmp_path,
+    )
+    assert result.exit_code == 0
+
+    output_file = fasta.parent / f"{fasta.stem}.kraken{fasta.suffix}"
+    content = output_file.read_text()
+    assert ">c1|kraken:taxid|5661\n" in content
