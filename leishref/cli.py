@@ -829,7 +829,7 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir):
       leishref rename-sequences Ld1S --flavor kraken --taxid 5661
       leishref rename-sequences LtropCDCnew.fna --flavor kraken
     """
-    genome = _require_local(local(Path(local_dir)), name, "cached database")
+    genome = _require(local(Path(local_dir)), name, "cached database")
 
     fasta_path = None
     for kind, path, _ in genome.file_paths():
