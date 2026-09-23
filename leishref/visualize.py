@@ -635,7 +635,7 @@ def plot_gc_content_by_species(
     gc_data = [species_gc[sp] for sp, _ in sorted_sp]
 
     fig, ax = plt.subplots(figsize=(14, 8))
-    parts = ax.violinplot(gc_data, positions=range(len(species_labels)), widths=0.7, showmeans=True, showmedians=True)
+    ax.violinplot(gc_data, positions=range(len(species_labels)), widths=0.7, showmeans=True, showmedians=True)
 
     ax.set_xticks(range(len(species_labels)))
     ax.set_xticklabels(species_labels, rotation=45, ha="right", fontsize=9)
