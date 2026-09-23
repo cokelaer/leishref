@@ -31,12 +31,16 @@ def installed(tmp_path):
     return tmp_path, fasta
 
 
-def run(args, cwd):
-    """Invoke the CLI as if it had been started from cwd."""
+def run(args, cwd, input=None):
+    """Invoke the CLI as if it had been started from cwd.
+
+    NO_COLOR keeps rich's output plain regardless of the calling terminal (e.g. a
+    shell with FORCE_COLOR set), so string assertions on the output stay reliable.
+    """
     previous = os.getcwd()
     os.chdir(cwd)
     try:
-        return CliRunner().invoke(cli, args)
+        return CliRunner().invoke(cli, args, input=input, env={"NO_COLOR": "1", "FORCE_COLOR": ""})
     finally:
         os.chdir(previous)
 
@@ -398,6 +402,7 @@ def test_restore_is_quiet_about_the_genomes_that_worked(recorded):
 def test_restore_verbose_shows_each_download(recorded):
     base, name = recorded
     run(["restore", "--from-installed", "--local-dir", "data"], base)
+    run(["restore", "--local-dir", "data", "--no-link"], base)
 
     result = run(["restore", "--local-dir", "data", "--verbose", "--no-link"], base)
     assert result.exit_code == 0
@@ -541,13 +546,17 @@ def test_info_counts_add_up_to_the_catalog_total(installed):
 
     total = int(re.search(r"Catalog: (\d+) genomes", output).group(1))
     counted = sum(
-        int(n) for n in re.findall(r"^  (?:NCBI|TriTrypDB|Scaffolds|Custom|Zenodo|Other)\s+(\d+)$", output, re.M)
+        int(n)
+        for n in re.findall(
+            r"^  (?:NCBI-Nucleotide|NCBI|TriTrypDB|Scaffolds|Custom|Zenodo|Other)\s+(\d+)$", output, re.M
+        )
     )
     assert counted == total
 
 
-def test_rename_sequences_auto_populates_chromosome_map(installed, tmp_path):
+def test_rename_sequences_auto_populates_chromosome_map(installed, tmp_path, monkeypatch):
     """Rename-sequences auto-detects sequences and populates chromosome_map.yaml."""
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "shared_catalog")
     base, fasta = installed
 
     # Run rename-sequences with number flavor
@@ -555,34 +564,49 @@ def test_rename_sequences_auto_populates_chromosome_map(installed, tmp_path):
     assert result.exit_code == 0
     assert "Renaming sequences" in result.output
 
-    # Check that output file was created and renamed
-    output_file = fasta.parent / f"{fasta.stem}.number{fasta.suffix}"
+    # Output is written to the current directory, named after the alias, not the cache
+    output_file = base / f"Ltrop.flye.number{fasta.suffix}"
     assert output_file.exists()
 
-    # Check that sequence was renamed (from >c1 to >1)
+    # Check that sequence was renamed (from >c1 to >1), sequence data preserved
     content = output_file.read_text()
     assert ">1\n" in content
     assert ">c1" not in content
+    assert "ACGTACGT" in content
+
+    # The cache copy itself must never be modified
+    assert fasta.read_text() == ">c1\nACGTACGT\n"
 
 
-def test_rename_sequences_with_roman_flavor(installed):
-    """Rename-sequences with roman flavor renames to Roman numerals."""
-    base, fasta = installed
+def test_rename_sequences_output_filename_keeps_versioned_accession(tmp_path, monkeypatch):
+    """A dotted accession like 'GCA_1.1' is an alias, not a file extension - must survive intact."""
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "shared_catalog")
+    directory = tmp_path / "data" / "GCA_1.1"
+    directory.mkdir(parents=True)
+    fasta = directory / "assembly.fa"
+    fasta.write_text(">c1\nACGTACGT\n")
 
-    result = run(["rename-sequences", "Ltrop.flye", "--flavor", "roman", "--local-dir", "data"], base)
+    write_genome(
+        directory,
+        Genome(
+            identifier="GCA_1.1",
+            source="Local",
+            species="Leishmania tropica",
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+        ),
+    )
+
+    result = run(["rename-sequences", "GCA_1.1", "--flavor", "number", "--local-dir", "data"], tmp_path)
     assert result.exit_code == 0
 
-    output_file = fasta.parent / f"{fasta.stem}.roman{fasta.suffix}"
+    output_file = tmp_path / f"GCA_1.1.number{fasta.suffix}"
     assert output_file.exists()
 
-    # Check that sequence was renamed (from >c1 to >I)
-    content = output_file.read_text()
-    assert ">I\n" in content
-    assert ">c1" not in content
 
-
-def test_rename_sequences_with_kraken_flavor(tmp_path):
+def test_rename_sequences_with_kraken_flavor(tmp_path, monkeypatch):
     """Rename-sequences with kraken flavor appends |kraken:taxid|<TAXID>."""
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "shared_catalog")
     directory = tmp_path / "data" / "Ltrop.flye"
     directory.mkdir(parents=True)
     fasta = directory / "assembly.fa"
@@ -603,16 +627,17 @@ def test_rename_sequences_with_kraken_flavor(tmp_path):
     result = run(["rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--local-dir", "data"], tmp_path)
     assert result.exit_code == 0
 
-    output_file = fasta.parent / f"{fasta.stem}.kraken{fasta.suffix}"
+    output_file = tmp_path / f"Ltrop.flye.kraken{fasta.suffix}"
     assert output_file.exists()
 
-    # Check that sequence was renamed with kraken format
+    # Check that sequence was renamed with kraken format, sequence data preserved
     content = output_file.read_text()
     assert ">c1|kraken:taxid|5666\n" in content
     assert ">c1\n" not in content
+    assert "ACGTACGT" in content
 
 
-def test_rename_sequences_kraken_flavor_does_not_mislabel_37th_contig_as_maxicircle(tmp_path):
+def test_rename_sequences_kraken_flavor_does_not_mislabel_37th_contig_as_maxicircle(tmp_path, monkeypatch):
     """A contig_* sequence that happens to land at position 37 is not the maxicircle.
 
     Regression test: auto-detection used to hardcode "the 37th sequence is the
@@ -621,6 +646,7 @@ def test_rename_sequences_kraken_flavor_does_not_mislabel_37th_contig_as_maxicir
     ordinary contig into slot 37, and it must still get the normal kraken tag
     instead of being renamed to the literal string "maxicircle".
     """
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "shared_catalog")
     directory = tmp_path / "data" / "Ltrop.scaffold"
     directory.mkdir(parents=True)
     fasta = directory / "assembly.fa"
@@ -642,7 +668,7 @@ def test_rename_sequences_kraken_flavor_does_not_mislabel_37th_contig_as_maxicir
     result = run(["rename-sequences", "Ltrop.scaffold", "--flavor", "kraken", "--local-dir", "data"], tmp_path)
     assert result.exit_code == 0
 
-    output_file = fasta.parent / f"{fasta.stem}.kraken{fasta.suffix}"
+    output_file = tmp_path / f"Ltrop.scaffold.kraken{fasta.suffix}"
     content = output_file.read_text()
 
     assert ">contig_10|kraken:taxid|5666\n" in content
@@ -672,8 +698,9 @@ def test_rename_sequences_kraken_flavor_requires_taxid(tmp_path):
     assert "taxid" in result.output.lower()
 
 
-def test_rename_sequences_kraken_flavor_uses_explicit_taxid(tmp_path):
+def test_rename_sequences_kraken_flavor_uses_explicit_taxid(tmp_path, monkeypatch):
     """Rename-sequences kraken flavor accepts --taxid parameter."""
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "shared_catalog")
     directory = tmp_path / "data" / "Ltrop.flye"
     directory.mkdir(parents=True)
     fasta = directory / "assembly.fa"
@@ -696,6 +723,245 @@ def test_rename_sequences_kraken_flavor_uses_explicit_taxid(tmp_path):
     )
     assert result.exit_code == 0
 
-    output_file = fasta.parent / f"{fasta.stem}.kraken{fasta.suffix}"
+    output_file = tmp_path / f"Ltrop.flye.kraken{fasta.suffix}"
     content = output_file.read_text()
     assert ">c1|kraken:taxid|5661\n" in content
+    assert "ACGTACGT" in content
+
+
+def _genome_with_accession(directory, accession, sequences=">chr1\nACGT\n>unmapped\nTTTT\n"):
+    fasta = directory / "assembly.fa"
+    fasta.write_text(sequences)
+    write_genome(
+        directory,
+        Genome(
+            identifier=directory.name,
+            source="Local",
+            species="Leishmania tropica",
+            accession=accession,
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+        ),
+    )
+    return fasta
+
+
+def test_prune_scaffold_requires_an_accession(tmp_path):
+    directory = tmp_path / "data" / "NoAcc"
+    directory.mkdir(parents=True)
+    fasta = directory / "assembly.fa"
+    fasta.write_text(">c1\nACGT\n")
+    write_genome(
+        directory,
+        Genome(
+            identifier="NoAcc",
+            source="Local",
+            species="Leishmania tropica",
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+        ),
+    )
+
+    result = run(["prune-scaffold", "NoAcc", "--local-dir", "data"], tmp_path)
+    assert result.exit_code != 0
+    assert "no accession" in result.output.lower()
+
+
+def test_prune_scaffold_requires_chromosome_info(tmp_path, monkeypatch):
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "empty_catalog")
+    directory = tmp_path / "data" / "Ltrop.acc"
+    directory.mkdir(parents=True)
+    _genome_with_accession(directory, "ACCX")
+
+    result = run(["prune-scaffold", "Ltrop.acc", "--local-dir", "data"], tmp_path)
+    assert result.exit_code != 0
+    assert "No chromosome info found" in result.output
+
+
+def test_prune_scaffold_keeps_mapped_and_kinetoplast_sequences(tmp_path, monkeypatch):
+    catalog_dir = tmp_path / "shared_catalog"
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", catalog_dir)
+    from leishref.chromosomes import save_chromosome_map
+
+    save_chromosome_map({"ACCX": [{"accession": "chr1", "name": "chr1", "index": 1}]}, catalog_dir)
+
+    directory = tmp_path / "data" / "Ltrop.acc"
+    directory.mkdir(parents=True)
+    fasta = _genome_with_accession(directory, "ACCX", ">chr1\nACGT\n>unmapped\nTTTT\n>maxicircle\nGGGG\n")
+
+    result = run(["prune-scaffold", "Ltrop.acc", "--local-dir", "data"], tmp_path)
+    assert result.exit_code == 0
+
+    assert fasta.read_text() == ">chr1\nACGT\n>maxicircle\nGGGG\n"
+
+    updated = read_genome(directory)
+    assert updated.checksums["fasta"] == md5_file(fasta)
+
+
+def test_info_shows_a_single_catalog_entry_in_full(installed):
+    base, _ = installed
+    result = run(["info", "BK010877.1", "--local-dir", "data"], base)
+
+    assert result.exit_code == 0
+    assert "identifier: BK010877.1" in result.output
+    assert "suggested alias:" in result.output
+
+
+def test_search_long_form_prints_the_full_yaml_record(installed):
+    base, _ = installed
+    result = run(["search", "--long", "tropica", "L590"], base)
+
+    assert result.exit_code == 0
+    assert "identifier:" in result.output
+
+
+def test_link_reports_a_conflict_instead_of_overwriting_a_real_file(installed):
+    base, _ = installed
+    (base / "accessions.txt").write_text("Ltrop.flye\tLtrop.flye\n")
+    (base / "Ltrop.flye.fna").write_text("not a symlink")
+
+    result = run(["link", "--local-dir", "data"], base)
+
+    assert result.exit_code == 0
+    assert "Not linked" in result.output
+    assert "Created 0 links" in result.output
+
+
+def test_restore_with_an_empty_accessions_file_errors(tmp_path):
+    (tmp_path / "accessions.txt").write_text("# nothing here\n")
+
+    result = run(["restore"], tmp_path)
+
+    assert result.exit_code != 0
+    assert "lists no genomes" in result.output
+
+
+def test_restore_dry_run_reports_installed_and_missing_state(installed):
+    base, _ = installed
+    (base / "accessions.txt").write_text("Ltrop.flye\tLtrop.flye\nSomeOther\tSomeOther\n")
+
+    result = run(["restore", "--dry-run", "--local-dir", "data"], base)
+
+    assert result.exit_code == 0
+    assert "installed" in result.output
+    assert "missing" in result.output
+
+
+def test_restore_from_installed_records_accessions_file(tmp_path):
+    directory = tmp_path / "local" / "Ltrop.acc"
+    directory.mkdir(parents=True)
+    _genome_with_accession(directory, "ACCX")
+
+    result = run(["restore", "--from-installed", "--local-dir", "local"], tmp_path)
+
+    assert result.exit_code == 0
+    assert "Recorded 1 genome" in result.output
+    lines = [line for line in (tmp_path / "accessions.txt").read_text().splitlines() if not line.startswith("#")]
+    assert lines == ["ACCX\tLtrop.acc"]
+
+
+def test_dev_remove_deletes_the_catalog_entry_with_force(tmp_path):
+    directory = tmp_path / "cat" / "Ltrop.flye"
+    directory.mkdir(parents=True)
+    fasta = directory / "assembly.fa"
+    fasta.write_text(">c1\nACGT\n")
+    write_genome(
+        directory,
+        Genome(identifier="Ltrop.flye", source="Local", species="Leishmania tropica"),
+    )
+
+    result = run(["dev", "remove", "Ltrop.flye", "--catalog-dir", "cat", "--force"], tmp_path)
+
+    assert result.exit_code == 0
+    assert not directory.exists()
+
+
+def test_dev_remove_without_force_aborts_when_declined(tmp_path):
+    directory = tmp_path / "cat" / "Ltrop.flye"
+    directory.mkdir(parents=True)
+    write_genome(
+        directory,
+        Genome(identifier="Ltrop.flye", source="Local", species="Leishmania tropica"),
+    )
+
+    result = run(["dev", "remove", "Ltrop.flye", "--catalog-dir", "cat"], tmp_path, input="n\n")
+
+    assert result.exit_code == 0
+    assert directory.exists()
+
+
+def test_dev_check_aliases_passes_on_a_clean_catalog(tmp_path):
+    directory = tmp_path / "cat" / "Ltrop.flye"
+    directory.mkdir(parents=True)
+    write_genome(
+        directory,
+        Genome(identifier="Ltrop.flye", source="Local", species="Leishmania tropica", accession="ACCX"),
+    )
+
+    result = run(["dev", "check-aliases", "--catalog-dir", "cat"], tmp_path)
+
+    assert result.exit_code == 0
+    assert "No duplicate accessions" in result.output
+
+
+def test_dev_check_aliases_flags_a_duplicate_accession(tmp_path):
+    for name in ("Ltrop.one", "Ltrop.two"):
+        directory = tmp_path / "cat" / name
+        directory.mkdir(parents=True)
+        write_genome(
+            directory,
+            Genome(identifier=name, source="Local", species="Leishmania tropica", accession="ACCX"),
+        )
+
+    result = run(["dev", "check-aliases", "--catalog-dir", "cat"], tmp_path)
+
+    assert result.exit_code != 0
+    assert "Duplicate accessions" in result.output
+    assert "ACCX" in result.output
+
+
+def test_dev_status_reports_a_clean_catalog(tmp_path):
+    directory = tmp_path / "cat" / "Ltrop.flye"
+    directory.mkdir(parents=True)
+    write_genome(
+        directory,
+        Genome(
+            identifier="Ltrop.flye",
+            source="Local",
+            species="Leishmania tropica",
+            assembly_level="Complete Genome",
+            taxon_id=5666,
+        ),
+    )
+
+    result = run(["dev", "status", "--catalog-dir", "cat"], tmp_path)
+
+    assert result.exit_code == 0
+    assert "Catalog is clean" in result.output
+
+
+def test_dev_status_flags_missing_fields_and_bad_checksums(tmp_path):
+    directory = tmp_path / "cat" / "Ltrop.flye"
+    directory.mkdir(parents=True)
+    fasta = directory / "assembly.fa"
+    fasta.write_text(">c1\nACGT\n")
+    write_genome(
+        directory,
+        Genome(
+            identifier="Ltrop.flye",
+            source="Local",
+            species=None,
+            files={"fasta": fasta.name},
+            checksums={"fasta": "deadbeef"},
+        ),
+    )
+    orphan = tmp_path / "cat" / "custom" / "orphan"
+    orphan.mkdir(parents=True)
+
+    result = run(["dev", "status", "--catalog-dir", "cat"], tmp_path)
+
+    assert result.exit_code != 0
+    assert "Missing required field: species" in result.output
+    assert "checksum mismatch" in result.output
+    assert "Orphaned directory" in result.output
+    assert "Missing taxon_id" in result.output
