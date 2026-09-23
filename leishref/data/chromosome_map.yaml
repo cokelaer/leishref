@@ -607,8 +607,7 @@ Ltropica.Ld1S.scaffold.flye.filtered:
 - accession: contig_10
   index: 37
   name: contig_10
-  new_name: maxicircle
-  type: maxicircle
+  new_name: contig_10|kraken:taxid|5666
 - accession: contig_115
   index: 38
   name: contig_115

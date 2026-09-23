@@ -599,6 +599,43 @@ def test_rename_sequences_with_kraken_flavor(tmp_path):
     assert ">c1\n" not in content
 
 
+def test_rename_sequences_kraken_flavor_does_not_mislabel_37th_contig_as_maxicircle(tmp_path):
+    """A contig_* sequence that happens to land at position 37 is not the maxicircle.
+
+    Regression test: auto-detection used to hardcode "the 37th sequence is the
+    maxicircle", which only holds for standard 36-chromosome + maxicircle NCBI
+    assemblies. A custom scaffold with fewer numbered chromosomes can push an
+    ordinary contig into slot 37, and it must still get the normal kraken tag
+    instead of being renamed to the literal string "maxicircle".
+    """
+    directory = tmp_path / "data" / "Ltrop.scaffold"
+    directory.mkdir(parents=True)
+    fasta = directory / "assembly.fa"
+    headers = [f"chr{i}" for i in range(1, 37)] + ["contig_10"]
+    fasta.write_text("".join(f">{h}\nACGTACGT\n" for h in headers))
+
+    write_genome(
+        directory,
+        Genome(
+            identifier="Ltrop.scaffold",
+            source="Local",
+            species="Leishmania tropica",
+            taxon_id=5666,
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+        ),
+    )
+
+    result = run(["rename-sequences", "Ltrop.scaffold", "--flavor", "kraken", "--local-dir", "data"], tmp_path)
+    assert result.exit_code == 0
+
+    output_file = fasta.parent / f"{fasta.stem}.kraken{fasta.suffix}"
+    content = output_file.read_text()
+
+    assert ">contig_10|kraken:taxid|5666\n" in content
+    assert ">maxicircle\n" not in content
+
+
 def test_rename_sequences_kraken_flavor_requires_taxid(tmp_path):
     """Rename-sequences kraken flavor requires --taxid if genome has no taxon_id."""
     directory = tmp_path / "data" / "Ltrop.flye"
