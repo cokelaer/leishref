@@ -1,0 +1,101 @@
+# Leishmania species to NCBI taxon ID mapping
+# Primary taxon_id is the formal species-level NCBI code
+# Alternative IDs are strain or assembly-specific
+
+Leishmania adleri:
+  primary: 5674
+
+Leishmania aethiopica:
+  primary: 5667
+  alternatives: [1206056]
+
+Leishmania amazonensis:
+  primary: 5659
+
+Leishmania arabica:
+  primary: 40284
+
+Leishmania braziliensis:
+  primary: 5660
+  alternatives: [420245, 1295825]
+
+Leishmania cf. guyanensis/panamensis:
+  primary: 3137466
+
+Leishmania chagasi:
+  primary: 44271
+
+Leishmania donovani:
+  primary: 5661
+  alternatives: [1215323, 1240127]
+
+Leishmania enriettii:
+  primary: 5663
+
+Leishmania gerbilli:
+  primary: 40285
+
+Leishmania guyanensis:
+  primary: 5670
+
+Leishmania infantum:
+  primary: 5671
+  alternatives: [435258]
+
+Leishmania lainsoni:
+  primary: 5677
+
+Leishmania lindenbergi:
+  primary: 651832
+
+Leishmania major:
+  primary: 5664
+  alternatives: [347515, 860569, 860570]
+
+Leishmania martiniquensis:
+  primary: 1580590
+
+Leishmania mexicana:
+  primary: 5665
+  alternatives: [929439]
+
+Leishmania naiffi:
+  primary: 5678
+
+Leishmania orientalis:
+  primary: 2249476
+
+Leishmania panamensis:
+  primary: 5679
+  alternatives: [1295824]
+
+Leishmania peruviana:
+  primary: 5681
+
+Leishmania shawi:
+  primary: 5680
+
+Leishmania sp. AIIMS/LM/SS/PKDL/LD-974:
+  primary: 1638716
+
+Leishmania sp. Ghana:
+  primary: 2803181
+
+Leishmania sp. MAR:
+  primary: 1303197
+
+Leishmania sp. Namibia:
+  primary: 2802991
+
+Leishmania tarentolae:
+  primary: 5689
+
+Leishmania tropica:
+  primary: 5666
+  alternatives: [1206058]
+
+Leishmania turanica:
+  primary: 62297
+
+Leishmania utingensis:
+  primary: 653362
