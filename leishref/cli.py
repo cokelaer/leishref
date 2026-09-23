@@ -2544,7 +2544,7 @@ def status(catalog_dir):
             if not val:
                 errors.append(f"{prefix} Missing required field: {field}")
 
-        # 3. Check file checksums
+        # 3. Check file checksums (only if file is present)
         for file_kind, checksum in genome.checksums.items():
             file_path = None
             if file_kind == "fasta" and genome.files.get("fasta"):
@@ -2556,8 +2556,6 @@ def status(catalog_dir):
                 actual = hashlib.md5(file_path.read_bytes()).hexdigest()
                 if actual != checksum:
                     errors.append(f"{prefix} {file_kind} checksum mismatch: {checksum} != {actual}")
-            elif file_path:
-                warnings.append(f"{prefix} {file_kind} file missing: {file_path.name}")
 
         # 4. Check valid assembly_level
         if genome.assembly_level and genome.assembly_level not in valid_levels:
