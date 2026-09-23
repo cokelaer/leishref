@@ -16,6 +16,7 @@ import textwrap
 from pathlib import Path
 
 import rich_click as click
+import yaml
 from rich.console import Console
 from rich.markup import escape
 from rich.syntax import Syntax
@@ -42,7 +43,7 @@ from leishref.metadata import (
     write_genome,
 )
 from leishref.naming import suggest_alias
-from leishref.ncbi import fetch_fasta_gff, fetch_metadata, species_from_organism
+from leishref.ncbi import fetch_fasta_gff, fetch_metadata, fetch_metadata_many, species_from_organism
 from leishref.nuccore import NuccoreError, fetch_nucleotide_fasta, fetch_nucleotide_metadata
 from leishref.prune import prune_fasta
 from leishref.scaffold import clean_scaffolded_fasta, ragtag_version, run_scaffold
@@ -133,11 +134,11 @@ click.rich_click.COMMAND_GROUPS = {
     "leishref dev": [
         {
             "name": "Adding genomes",
-            "commands": ["fetch-genome", "fetch-nucleotide", "add", "scaffold", "derive-agp"],
+            "commands": ["fetch-genome", "fetch-nucleotide", "add", "import", "scaffold"],
         },
         {
             "name": "Publishing and managing",
-            "commands": ["publish", "remove"],
+            "commands": ["publish", "checksum", "status", "check-aliases", "remove"],
         },
     ],
 }
@@ -174,6 +175,7 @@ click.rich_click.OPTION_GROUPS = {
             "--molecule-type",
             "--help",
         ],
+        "leishref dev import": ["--from-tsv", "--overwrite", "--dry-run", "--help"],
         "leishref dev publish": ["--version", "--confirm", "--sandbox", "--help"],
         "leishref dev scaffold": [
             "--query",
@@ -555,7 +557,7 @@ ACCESSIONS_FILE = "accessions.txt"
 #: Zenodo and local entries are everything else.
 INFO_SECTIONS = {
     "ncbi": "NCBI",
-    "ncbi_nucleotide": "NCBI Nucleotide",
+    "ncbi_nucleotide": "NCBI-Nucleotide",
     "tritrypdb": "TriTrypDB",
     "scaffolds": "Scaffolds",
     "custom": "Custom",
@@ -827,7 +829,7 @@ def info(name, local_dir):
     sections = {group: [] for group in INFO_SECTIONS}
     for genome in entries:
         group = catalog_group(genome)
-        sections[group if group in sections else "other"].append(genome)
+        sections[group if group in sections else "local"].append(genome)
 
     for group, label in INFO_SECTIONS.items():
         console.print(f"  {label:<12} [bold]{len(sections[group]):>5}[/]")
@@ -1018,33 +1020,43 @@ def verify(local_dir, quick):
 @click.argument("name")
 @click.option(
     "--flavor",
-    type=click.Choice(["chr", "number", "roman", "name", "kraken"]),
+    type=click.Choice(["number", "name", "kraken"]),
     default="number",
     show_default=True,
     help="Naming scheme for renamed sequences",
 )
 @click.option("--taxid", type=int, default=None, help="NCBI taxon ID (required for 'kraken' flavor)")
-@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-def rename_sequences_cmd(name, flavor, taxid, local_dir):
+@click.option(
+    "--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True, help="Where cached genomes live"
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(),
+    default=".",
+    show_default=True,
+    help="Where to write the renamed FASTA (never the cache)",
+)
+def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
     """Rename sequences in a cached genome using chromosome database.
 
     NAME is the genome alias or accessions.txt entry to transform (resolves via
     local accessions.txt or genome identifier).
 
     Flavors:
-    - chr: 'chromosome I', 'chromosome II', ...
     - number: '1', '2', '3', ... (default)
-    - roman: 'I', 'II', 'III', ...
     - name: use names from chromosome database
     - kraken: 'name|kraken:taxid|<TAXID>' format for Kraken classification
               (requires NCBI taxon ID from --taxid or genome metadata)
+
+    The renamed FASTA is written to --output-dir (default: current directory),
+    never into the shared cache. Its filename is the original stem with the
+    flavor appended, e.g. assembly.fa -> assembly.number.fa.
 
     Examples:
 
     \b
       leishref rename-sequences Ld1S
       leishref rename-sequences Ld1S --flavor number
-      leishref rename-sequences Ld1S --flavor roman
       leishref rename-sequences Ld1S --flavor kraken --taxid 5661
       leishref rename-sequences LtropCDCnew.fna --flavor kraken
     """
@@ -1092,17 +1104,17 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir):
         click.echo(f"Warning: {error}", err=True)
         click.echo(f"Auto-detected {len(name_map)} sequences from FASTA file", err=True)
 
-    # Write to new file with flavor suffix
-    renamed_path = fasta_path.parent / f"{fasta_path.stem}.{flavor}{fasta_path.suffix}"
+    # Write renamed FASTA to the output directory (never the cache) with flavor suffix
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    alias = name
+    for ext in (".fasta", ".fna", ".fa"):
+        if alias.lower().endswith(ext):
+            alias = alias[: -len(ext)]
+            break
+    renamed_path = out_dir / f"{alias}.{flavor}{fasta_path.suffix}"
     renamed_path.write_text(renamed)
-    click.echo(f"Wrote renamed sequences to {renamed_path.name}")
-
-    # Create symlink in current directory with genome alias name
-    link_name = Path.cwd() / f"{name}.{flavor}{fasta_path.suffix}"
-    if link_name.exists() or link_name.is_symlink():
-        link_name.unlink()
-    link_name.symlink_to(renamed_path)
-    click.echo(f"  {link_name.name} -> {renamed_path}")
+    click.echo(f"Wrote renamed sequences to {renamed_path}")
 
     # Update chromosome_map.yaml with the mapping
     if name_map:
@@ -1216,13 +1228,18 @@ def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verb
         # call it - that mapping only ever lived in accessions.txt itself. A cache
         # entry from before this rework may still carry the old alias as its
         # identifier, with the real catalog id stashed under provenance.catalog_id;
-        # prefer that when present. Anything that traces back to no catalog entry at
-        # all cannot be replayed, so it is skipped rather than recorded.
+        # prefer that when present, then the genome's own accession, both trusted
+        # outright since they were recorded deliberately. Only a bare identifier -
+        # with neither field set - needs checking against the catalog, to tell a
+        # dev add/scaffold entry (identifier is the catalog id by construction) apart
+        # from one with no catalog origin at all, which cannot be replayed.
         entries = catalog()
         written = 0
         for genome in _by_organism(local(Path(local_dir))):
-            origin = genome.provenance.get("catalog_id") or genome.accession or genome.identifier
-            if find(entries, origin) is None:
+            origin = genome.provenance.get("catalog_id") or genome.accession
+            if origin is None and find(entries, genome.identifier) is not None:
+                origin = genome.identifier
+            if origin is None:
                 click.echo(f"{genome.identifier}: no catalog origin recorded, skipping", err=True)
                 continue
             _record_download(Path(local_dir), origin, genome.identifier)
@@ -2032,12 +2049,112 @@ def fetch_nucleotide(accession, alias, species, strain, molecule_type, email, ca
             _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
 
 
+def _load_species_mapping():
+    """Load species to taxon_id mapping from YAML."""
+    mapping_file = CATALOG_DIR / "species_taxon_mapping.yaml"
+    if not mapping_file.exists():
+        return {}
+    with open(mapping_file) as f:
+        return yaml.safe_load(f) or {}
+
+
+def _get_strains_for_species(species):
+    """Extract known strains for a species from catalog."""
+    strains = set()
+    for entry in catalog():
+        if entry.species == species and entry.strain:
+            strains.add(entry.strain)
+    return sorted(strains)
+
+
+def _prompt_for_metadata(species_mapping):
+    """Interactively prompt user for genome metadata fields."""
+    species_list = sorted(species_mapping.keys())
+
+    # Species prompt with full list
+    click.echo("\nAvailable species:")
+    for i in range(0, len(species_list), 2):
+        line = f"  {i+1}. {species_list[i]}"
+        if i + 1 < len(species_list):
+            line += f"  |  {i+2}. {species_list[i+1]}"
+        click.echo(line)
+
+    while True:
+        species_input = click.prompt("Species", type=str).strip()
+        if species_input in species_mapping:
+            species = species_input
+            break
+        matches = [s for s in species_list if species_input.lower() in s.lower()]
+        if len(matches) == 1:
+            species = matches[0]
+            click.echo(f"Matched: {species}")
+            break
+        if matches:
+            click.echo(f"Matches: {', '.join(matches)}")
+        else:
+            click.echo("Species not found. Type the full species name or a substring.")
+
+    # Strain prompt with known strains for this species
+    known_strains = _get_strains_for_species(species)
+    if known_strains:
+        click.echo(f"\nKnown strains for {species}:")
+        for i in range(0, len(known_strains), 2):
+            line = f"  {i+1}. {known_strains[i]}"
+            if i + 1 < len(known_strains):
+                line += f"  |  {i+2}. {known_strains[i+1]}"
+            click.echo(line)
+        click.echo(f"  or type 'unknown' for new strain")
+
+    while True:
+        strain_input = click.prompt("Strain", type=str).strip()
+        if strain_input == "unknown":
+            strain = "unknown"
+            break
+        if known_strains:
+            if strain_input in known_strains:
+                strain = strain_input
+                break
+            matches = [s for s in known_strains if strain_input.lower() in s.lower()]
+            if len(matches) == 1:
+                strain = matches[0]
+                click.echo(f"Matched: {strain}")
+                break
+            if matches:
+                click.echo(f"Matches: {', '.join(matches)}")
+                click.echo("Or type the full strain name if not listed above.")
+            else:
+                # Accept any new strain name not in known_strains
+                strain = strain_input
+                break
+        else:
+            strain = strain_input
+            break
+
+    # Taxon ID with suggestion
+    mapping_data = species_mapping[species]
+    suggested_taxon = mapping_data.get("primary")
+    taxon_id = click.prompt("Taxon ID", type=int, default=suggested_taxon, show_default=True)
+
+    # Assembly level with default
+    assembly_level = click.prompt("Assembly level", type=str, default="scaffold", show_default=True).strip()
+
+    # Notes (optional, empty by default)
+    notes = click.prompt("Notes", type=str, default="", show_default=False).strip()
+    notes = notes if notes else None
+
+    return {
+        "species": species,
+        "strain": strain,
+        "taxon_id": taxon_id,
+        "assembly_level": assembly_level,
+        "notes": notes,
+    }
+
+
 @dev.command()
 @click.argument("fasta", type=click.Path(exists=True))
 @click.argument("gff", type=click.Path(exists=True), required=False)
 @click.option("--alias", help="Informal name, recorded in metadata.yaml only - it does not name the directory")
-@click.option("--species", help="Species name")
-@click.option("--strain", help="Strain name")
 @click.option("--technology", help="Sequencing technology, e.g. 'PacBio RS II'")
 @click.option("--assembler", help="Assembler used, e.g. Flye")
 @click.option(
@@ -2051,7 +2168,7 @@ def fetch_nucleotide(accession, alias, species, strain, molecule_type, email, ca
     show_default=True,
     help="Staging directory for entries not yet published",
 )
-def add(fasta, gff, alias, species, strain, technology, assembler, molecule_type, outdir):
+def add(fasta, gff, alias, technology, assembler, molecule_type, outdir):
     """Stage a local assembly for review and publishing to Zenodo.
 
     Copies FASTA (and GFF, if given) plus a metadata.yaml into
@@ -2061,15 +2178,15 @@ def add(fasta, gff, alias, species, strain, technology, assembler, molecule_type
     a working area outside the shipped catalog and outside your local install -
     nothing is installed or symlinked by this command.
 
-    Review the staged metadata.yaml, then run
+    Prompts interactively for species, strain, taxon_id, assembly_level, and notes.
+    Other metadata can be provided via options. Review the staged metadata.yaml, then run
     'leishref dev publish <outdir>/<fasta-stem>' to deposit it on Zenodo and add the
     entry to leishref/data/custom/.
 
     Examples:
 
     \b
-      leishref dev add Ltropica.CDC216-162.genome.flye.fasta \\
-          --species "Leishmania tropica" --strain CDC216-162 --assembler Flye
+      leishref dev add Ltropica.CDC216-162.genome.flye.fasta
       leishref dev add assembly.fa assembly.gff --alias "for the Sicilian hybrids paper"
       leishref dev add kdna.fa --molecule-type kinetoplast,maxicircle
     """
@@ -2081,11 +2198,16 @@ def add(fasta, gff, alias, species, strain, technology, assembler, molecule_type
         click.echo("Remove it first, or rename the input FASTA, to stage again.", err=True)
         raise SystemExit(1)
 
+    species_mapping = _load_species_mapping()
+    metadata = _prompt_for_metadata(species_mapping)
+
     genome = Genome(
         identifier=identifier,
         source="Custom",
-        species=species,
-        strain=strain,
+        species=metadata["species"],
+        strain=metadata["strain"],
+        taxon_id=metadata["taxon_id"],
+        assembly_level=metadata["assembly_level"],
         molecule_type=molecule_type,
         files={k: v.name for k, v in (("fasta", fasta), ("gff", gff)) if v},
         checksums={k: md5_file(v) for k, v in (("fasta", fasta), ("gff", gff)) if v},
@@ -2093,6 +2215,7 @@ def add(fasta, gff, alias, species, strain, technology, assembler, molecule_type
         provenance={
             k: v for k, v in (("sequencing_technology", technology), ("assembler", assembler), ("alias", alias)) if v
         },
+        notes=metadata["notes"],
         date_added=today_iso(),
     )
 
@@ -2405,6 +2528,101 @@ def remove(identifier, catalog_dir, force):
 
     shutil.rmtree(entry_path, ignore_errors=False)
     click.echo(f"Removed {entry_path}")
+
+
+def _genome_from_ncbi(accession: str, meta: dict) -> Genome:
+    """Build a catalog entry from a `datasets summary` record."""
+    return Genome(
+        identifier=accession,
+        source="NCBI",
+        accession=accession,
+        taxon_id=meta.get("taxon_id"),
+        species=species_from_organism(meta.get("organism_name")) or None,
+        strain=meta.get("strain"),
+        assembly_name=meta.get("assembly_name"),
+        assembly_level=meta.get("assembly_level"),
+        release_date=meta.get("release_date"),
+        stats=meta.get("stats") or {},
+        provenance={
+            k: v
+            for k, v in (
+                ("bioproject", meta.get("bioproject")),
+                ("biosample", meta.get("biosample")),
+                ("sequencing_technology", meta.get("sequencing_technology")),
+                ("assembler", meta.get("assembler")),
+            )
+            if v
+        },
+        date_added=today_iso(),
+    )
+
+
+def _accessions_from_tsv(path: Path) -> list:
+    """Accessions from an NCBI Datasets table export."""
+    import csv
+
+    with open(path, newline="") as handle:
+        rows = list(csv.DictReader(handle, delimiter="\t"))
+    column = next((c for c in (rows[0] if rows else {}) if c.strip().lower() == "assembly accession"), None)
+    if column is None:
+        raise click.ClickException(f"No 'Assembly Accession' column in {path}")
+    return [r[column].strip() for r in rows if r.get(column, "").strip()]
+
+
+@dev.command("import")
+@click.argument("accessions", nargs=-1)
+@click.option("--from-tsv", type=click.Path(exists=True), help="NCBI Datasets TSV export to read accessions from")
+@click.option("--catalog-dir", type=click.Path(), help="Write entries here instead")
+@click.option("--overwrite", is_flag=True, help="Replace entries that already exist")
+@click.option("--dry-run", is_flag=True, help="Report what would be added without writing")
+def import_cmd(accessions, from_tsv, catalog_dir, overwrite, dry_run):
+    """Add catalog entries from NCBI without downloading any sequence.
+
+    NCBI's summary already carries the assembly statistics, and they agree with computing
+    them from the FASTA, so a catalog entry needs no download. Only the md5 checksums are
+    missing; `leishref dev checksum` fills those in.
+
+    Examples:
+
+    \b
+      leishref dev import GCA_000227135.2 GCA_000410715.1
+      leishref dev import --from-tsv ~/Downloads/ncbi_dataset.tsv
+      leishref dev import --from-tsv ncbi_dataset.tsv --dry-run
+    """
+    wanted = list(accessions) + (_accessions_from_tsv(Path(from_tsv)) if from_tsv else [])
+    if not wanted:
+        raise click.ClickException("Give accessions, or --from-tsv")
+
+    # Preserve order while removing the duplicates a TSV export often carries.
+    seen = set()
+    wanted = [a for a in wanted if not (a in seen or seen.add(a))]
+
+    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
+    existing = {d.name for d in root.iterdir() if (d / "metadata.yaml").is_file()} if root.is_dir() else set()
+
+    todo = wanted if overwrite else [a for a in wanted if a not in existing]
+    click.echo(f"{len(wanted)} accessions, {len(wanted) - len(todo)} already in the catalog, {len(todo)} to add")
+    if not todo:
+        return
+
+    if dry_run:
+        for accession in todo:
+            click.echo(f"  would add {accession}")
+        return
+
+    added = skipped = 0
+    with click.progressbar(fetch_metadata_many(todo), length=len(todo), label="Querying NCBI") as stream:
+        for accession, meta in stream:
+            if not meta:
+                skipped += 1
+                continue
+            write_genome(root / "ncbi" / accession, _genome_from_ncbi(accession, meta))
+            added += 1
+
+    click.echo(f"Added {added} entries to {root}")
+    if skipped:
+        click.echo(f"{skipped} accessions returned nothing from NCBI", err=True)
+    click.echo("Checksums are still missing; run 'leishref dev checksum' to fill them in")
 
 
 @dev.command("check-aliases")
