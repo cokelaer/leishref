@@ -809,7 +809,8 @@ def verify(local_dir, quick):
 def rename_sequences_cmd(name, flavor, taxid, local_dir):
     """Rename sequences in a cached genome using chromosome database.
 
-    NAME is the local alias of the genome to transform.
+    NAME is the genome alias or accessions.txt entry to transform (resolves via
+    local accessions.txt or genome identifier).
 
     Flavors:
     - chr: 'chromosome I', 'chromosome II', ...
@@ -817,6 +818,7 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir):
     - roman: 'I', 'II', 'III', ...
     - name: use names from chromosome database
     - kraken: 'name|kraken:taxid|<TAXID>' format for Kraken classification
+              (requires NCBI taxon ID from --taxid or genome metadata)
 
     Examples:
 
@@ -825,6 +827,7 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir):
       leishref rename-sequences Ld1S --flavor number
       leishref rename-sequences Ld1S --flavor roman
       leishref rename-sequences Ld1S --flavor kraken --taxid 5661
+      leishref rename-sequences LtropCDCnew.fna --flavor kraken
     """
     genome = _require(local(Path(local_dir)), name, "cached database")
 
@@ -848,7 +851,12 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir):
         if not taxid:
             taxid = genome.taxon_id
         if not taxid:
-            click.echo(f"Kraken flavor requires --taxid or genome metadata with taxon_id", err=True)
+            click.echo(
+                f"Kraken flavor requires NCBI taxon ID. Provide it with:\n"
+                f"  --taxid <TAXID>  (override)\n"
+                f"  OR add taxon_id to {genome.identifier}'s metadata.yaml",
+                err=True,
+            )
             raise SystemExit(1)
 
     click.echo(f"Renaming sequences in {fasta_path.name} ({flavor} flavor)...")
