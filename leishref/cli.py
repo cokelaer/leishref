@@ -1046,10 +1046,11 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir):
     if not genome:
         accessions_file = Path.cwd() / "accessions.txt"
         if accessions_file.exists():
+            name_stem = Path(name).stem  # strip extension to match alias from accessions.txt
             for line in accessions_file.read_text().strip().split("\n"):
-                if line.strip():
+                if line.strip() and not line.startswith("#"):
                     parts = line.split()
-                    if len(parts) >= 2 and parts[1] == name:
+                    if len(parts) >= 2 and parts[1] == name_stem:
                         genome = find(genomes, parts[0])
                         break
     if not genome:
