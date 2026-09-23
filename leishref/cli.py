@@ -829,7 +829,21 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir):
       leishref rename-sequences Ld1S --flavor kraken --taxid 5661
       leishref rename-sequences LtropCDCnew.fna --flavor kraken
     """
-    genome = _require(local(Path(local_dir)), name, "cached database")
+    genomes = local(Path(local_dir))
+    genome = find(genomes, name)
+    if not genome:
+        accessions_file = Path.cwd() / "accessions.txt"
+        if accessions_file.exists():
+            for line in accessions_file.read_text().strip().split("\n"):
+                if line.strip():
+                    parts = line.split()
+                    if len(parts) >= 2 and parts[1] == name:
+                        genome = find(genomes, parts[0])
+                        break
+    if not genome:
+        click.echo(f"Not in cached database: {name}", err=True)
+        click.echo("Run 'leishref info' to see what is available", err=True)
+        raise SystemExit(1)
 
     fasta_path = None
     for kind, path, _ in genome.file_paths():
