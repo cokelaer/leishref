@@ -85,6 +85,7 @@ def test_verify_reports_a_missing_file(installed):
 
 def test_link_creates_alias_named_symlinks(installed):
     base, _ = installed
+    (base / "accessions.txt").write_text("Ltrop.flye\tLtrop.flye\n")
     result = run(["link", "--local-dir", "data"], base)
 
     link = base / "Ltrop.flye.fna"
@@ -248,7 +249,7 @@ def test_search_output_shows_the_dash(installed):
 def test_install_records_the_files_it_wrote(tmp_path):
     """A catalog entry imported from NCBI's summary names no files; installing one has
     to record what actually arrived, or verify and link cannot see it."""
-    from leishref.cli import _install
+    from leishref.cli import _install, cache_key
 
     source = tmp_path / "GCA_9_genomic.fna"
     source.write_text(">c1\nACGT\n")
@@ -258,12 +259,15 @@ def test_install_records_the_files_it_wrote(tmp_path):
     catalog_entry = Genome(identifier="GCA_9.1", source="NCBI", accession="GCA_9.1")
     assert catalog_entry.files == {}
 
-    target = _install(catalog_entry, "mine", [source, gff], tmp_path / "data")
+    target = _install(catalog_entry, cache_key(catalog_entry), [source, gff], tmp_path / "data")
     written = read_genome(target)
 
     assert written.files == {"fasta": "GCA_9_genomic.fna", "gff": "GCA_9_genomic.gff"}
-    assert written.identifier == "mine"
-    assert written.provenance["catalog_id"] == "GCA_9.1"
+    # The cache is keyed by accession, not by a user-chosen alias, so the genome's own
+    # identifier is left untouched - a different alias in another project shares this
+    # same cache entry instead of duplicating it.
+    assert written.identifier == "GCA_9.1"
+    assert written.provenance == {}
 
 
 def test_organism_does_not_repeat_a_strain_already_in_the_species():
@@ -317,10 +321,19 @@ def test_restore_lists_what_it_would_do(recorded):
 
 
 def test_restore_reports_a_genome_that_is_no_longer_there(recorded):
-    """A recorded alias whose directory was deleted shows up as missing."""
+    """A recorded alias whose cache entry was deleted shows up as missing."""
+    from leishref.cli import cache_key
+    from leishref.metadata import catalog as read_catalog
+    from leishref.metadata import find
+
     base, name = recorded
     run(["install", name, "--alias", "mine", "--local-dir", "data", "--no-link"], base)
-    (base / "data" / "mine" / "metadata.yaml").unlink()
+
+    # The cache is keyed by accession/identifier, not by the alias just used to
+    # install it - find the real cache directory to delete.
+    entries = read_catalog()
+    key = cache_key(find(entries, name))
+    (base / "data" / key / "metadata.yaml").unlink()
 
     result = run(["restore", "--local-dir", "data", "--dry-run"], base)
     assert "missing" in result.output
