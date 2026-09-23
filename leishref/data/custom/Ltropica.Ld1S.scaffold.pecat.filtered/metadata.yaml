@@ -1,5 +1,6 @@
 identifier: Ltropica.Ld1S.scaffold.pecat.filtered
 source: Custom
+taxon_id: 5666
 species: Leishmania tropica
 strain: CDC
 assembly_level: Scaffold
@@ -20,15 +21,20 @@ stats:
   num_ambiguous: 600
   num_gaps: 6
 provenance:
-  zenodo_doi: 10.5281/zenodo.22710153
   sequencing_technology: PacBio RS II
   bioproject: PRJNA484340
   raw_reads_accession: PRJNA484340
   assembler: PECAT
   pipeline: LORA 1.0.0
   reads: filtered
+  zenodo_doi: 10.5281/zenodo.22925473
+  zenodo_notes: Ltropica assembly assembled from PRJNA484340 using pecat and scaffold
+    onto Ld1S reference genome (filtering reads below 1000bp)
 scaffold:
   reference_alias: Ld1S
   tool_version: ragtag.py
 date_added: '2026-09-11'
-notes: 48 contigs before scaffolding; maxicircle 29591 bp
+notes: Assembly made from the PRJNA484340 project using 6 SRR files from the project
+  related to L.tropica CDC. Filtered reads below 1000bp. Applied sequana_lora pipeline
+  v1.0 using pecat assembler. Got 48 contigs before scaffolding. 36 + maxicircle 29591
+  bp + 5 extra contigs.
