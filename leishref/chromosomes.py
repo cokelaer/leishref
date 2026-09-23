@@ -64,8 +64,12 @@ def detect_sequences_from_fasta(fasta_path: Path) -> list[dict]:
             "name": seq_id,
             "index": index,
         }
-        # Mark sequence 37 as maxicircle (kinetoplast DNA)
-        if index == 37:
+        # Mark sequence 37 as maxicircle (kinetoplast DNA): true for standard
+        # NCBI assemblies with 36 nuclear chromosomes, but custom scaffolds
+        # can have fewer chromosomes, pushing an ordinary contig into slot 37.
+        # contig_* IDs are always scaffold-local contig names, never a real
+        # maxicircle accession, so exclude them from the position heuristic.
+        if index == 37 and not seq_id.startswith("contig_"):
             entry["type"] = "maxicircle"
         sequences.append(entry)
 
