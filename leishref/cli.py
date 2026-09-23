@@ -2440,5 +2440,189 @@ def check_aliases(catalog_dir):
     click.echo("✓ All checks passed")
 
 
+@dev.command()
+@click.option("--catalog-dir", type=click.Path(), help="Update entries here instead")
+@click.option("--workdir", type=click.Path(), default="NCBI", show_default=True, help="Where downloads land")
+@click.option("--keep", is_flag=True, help="Keep the downloaded files instead of discarding them")
+@click.option("--limit", type=int, help="Stop after this many genomes")
+def checksum(catalog_dir, workdir, keep, limit):
+    """Download genomes that have no checksum yet and record md5 and gap counts.
+
+    Entries added by `dev import` carry NCBI's statistics but no md5, because that needs
+    the sequence itself. This fetches each one, records the checksum, and recomputes the
+    statistics locally, which also fills in num_gaps.
+
+    Examples:
+
+    \b
+      leishref dev checksum
+      leishref dev checksum --limit 10
+      leishref dev checksum --keep
+    """
+    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
+    workdir = Path(workdir)
+
+    pending = [g for g in catalog(root) if g.accession and not g.checksums.get("fasta")]
+    if limit:
+        pending = pending[:limit]
+
+    if not pending:
+        click.echo("Every catalog entry already has a checksum")
+        return
+
+    click.echo(f"{len(pending)} entries without a checksum")
+    done = failed = 0
+
+    for genome in pending:
+        scratch = None if keep else tempfile.TemporaryDirectory()
+        destination = workdir if keep else Path(scratch.name)
+        try:
+            fasta, gff = fetch_fasta_gff(genome.accession, destination)
+            if not fasta:
+                click.echo(f"  {genome.accession}: nothing on NCBI", err=True)
+                failed += 1
+                continue
+
+            genome.files = {k: v.name for k, v in (("fasta", fasta), ("gff", gff)) if v}
+            genome.checksums = {k: md5_file(v) for k, v in (("fasta", fasta), ("gff", gff)) if v}
+            genome.stats = genome_stats(fasta)
+            write_genome(genome.path or catalog_entry_dir(root, genome), genome)
+            done += 1
+            click.echo(f"  {genome.accession}: {genome.stats['num_scaffolds']} scaffolds, md5 recorded")
+        except Exception as exc:  # one bad genome must not end the batch
+            click.echo(f"  {genome.accession}: {exc}", err=True)
+            failed += 1
+        finally:
+            if scratch is not None:
+                scratch.cleanup()
+
+    click.echo(f"\nRecorded {done} checksums, {failed} failed")
+
+
+@dev.command()
+@click.option("--catalog-dir", type=click.Path(), help="Check entries here instead")
+def status(catalog_dir):
+    """Audit catalog metadata for completeness and consistency.
+
+    Checks:
+    - taxon_id presence (required for kraken flavor)
+    - Required fields: identifier, source, species, assembly_level
+    - File checksums match actual files
+    - Valid assembly_level values
+    - Kinetoplast entries have molecule_type
+    - No duplicate identifiers or accessions
+    - No orphaned directories without metadata.yaml
+
+    Examples:
+
+    \b
+      leishref dev status
+      leishref dev status --catalog-dir /path/to/catalog
+    """
+    import hashlib
+
+    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
+    entries = catalog(root)
+
+    errors = []
+    warnings = []
+    seen_ids = {}
+    seen_accessions = {}
+    valid_levels = {"Contig", "Scaffold", "Chromosome", "Complete Genome", "Unknown"}
+
+    # Check each genome entry
+    for genome in entries:
+        prefix = f"[{genome.identifier}]"
+
+        # 1. Check taxon_id presence
+        if not genome.taxon_id:
+            warnings.append(f"{prefix} Missing taxon_id (needed for kraken flavor)")
+
+        # 2. Check required fields
+        for field in ("identifier", "source", "species", "assembly_level"):
+            val = getattr(genome, field, None)
+            if not val:
+                errors.append(f"{prefix} Missing required field: {field}")
+
+        # 3. Check file checksums
+        for file_kind, checksum in genome.checksums.items():
+            file_path = None
+            if file_kind == "fasta" and genome.files.get("fasta"):
+                file_path = (genome.path or catalog_entry_dir(root, genome)) / genome.files["fasta"]
+            elif file_kind == "gff" and genome.files.get("gff"):
+                file_path = (genome.path or catalog_entry_dir(root, genome)) / genome.files["gff"]
+
+            if file_path and file_path.exists():
+                actual = hashlib.md5(file_path.read_bytes()).hexdigest()
+                if actual != checksum:
+                    errors.append(f"{prefix} {file_kind} checksum mismatch: {checksum} != {actual}")
+            elif file_path:
+                warnings.append(f"{prefix} {file_kind} file missing: {file_path.name}")
+
+        # 4. Check valid assembly_level
+        if genome.assembly_level and genome.assembly_level not in valid_levels:
+            errors.append(
+                f"{prefix} Invalid assembly_level: {genome.assembly_level} "
+                f"(must be one of: {', '.join(valid_levels)})"
+            )
+
+        # 5. Check kinetoplast entries have molecule_type
+        if genome.source == "NCBI-Nucleotide" and not genome.molecule_type:
+            warnings.append(f"{prefix} NCBI-Nucleotide entry missing molecule_type")
+
+        # 6. Track duplicates
+        if genome.identifier in seen_ids:
+            errors.append(f"{prefix} Duplicate identifier: already seen in {seen_ids[genome.identifier]}")
+        else:
+            seen_ids[genome.identifier] = str(genome.path or catalog_entry_dir(root, genome))
+
+        if genome.accession:
+            if genome.accession in seen_accessions:
+                errors.append(
+                    f"{prefix} Duplicate accession {genome.accession}: already seen in {seen_accessions[genome.accession]}"
+                )
+            else:
+                seen_accessions[genome.accession] = genome.identifier
+
+    # 7. Check for orphaned directories
+    for data_subdir in (
+        root / "ncbi",
+        root / "ncbi_nucleotide",
+        root / "scaffolds",
+        root / "custom",
+        root / "tritrypdb",
+    ):
+        if data_subdir.exists():
+            for entry_dir in data_subdir.iterdir():
+                if entry_dir.is_dir() and not (entry_dir / "metadata.yaml").exists():
+                    errors.append(f"Orphaned directory (no metadata.yaml): {entry_dir.name}")
+
+    # Report results
+    click.echo(f"\nCatalog status ({len(entries)} genomes)")
+    click.echo("=" * 60)
+
+    if errors:
+        click.echo(f"\n[ERROR] {len(errors)} issues found:", err=True)
+        for msg in errors[:20]:
+            click.echo(f"  ✗ {msg}", err=True)
+        if len(errors) > 20:
+            click.echo(f"  ... and {len(errors) - 20} more", err=True)
+
+    if warnings:
+        click.echo(f"\n[WARNING] {len(warnings)} items need attention:")
+        for msg in warnings[:20]:
+            click.echo(f"  ⚠ {msg}")
+        if len(warnings) > 20:
+            click.echo(f"  ... and {len(warnings) - 20} more")
+
+    if not errors and not warnings:
+        click.echo("\n✓ Catalog is clean")
+
+    click.echo(f"\nSummary: {len(entries)} genomes, {len(errors)} errors, {len(warnings)} warnings")
+
+    if errors:
+        raise SystemExit(1)
+
+
 if __name__ == "__main__":
     cli()
