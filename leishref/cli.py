@@ -43,7 +43,7 @@ from leishref.metadata import (
     write_genome,
 )
 from leishref.naming import suggest_alias
-from leishref.ncbi import fetch_fasta_gff, fetch_metadata, fetch_metadata_many, species_from_organism
+from leishref.ncbi import fetch_fasta_gff, fetch_metadata, species_from_organism
 from leishref.nuccore import NuccoreError, fetch_nucleotide_fasta, fetch_nucleotide_metadata
 from leishref.prune import prune_fasta
 from leishref.scaffold import clean_scaffolded_fasta, ragtag_version, run_scaffold
@@ -1699,6 +1699,18 @@ def plot_assembly_by_technology(catalog_dir, output):
 # ------------------------------------------------------------------------ dev commands
 
 
+def _resolve_symlink_targets(pattern: str, basedir: Path) -> list[tuple]:
+    """Find symlinks in basedir matching pattern. Return (linkname, target) tuples."""
+    matches = []
+    if not basedir.is_dir():
+        return matches
+    for path in basedir.glob(pattern):
+        if path.is_symlink():
+            target = path.resolve()
+            matches.append((path.name, target))
+    return matches
+
+
 @cli.command()
 @click.argument("patterns", nargs=-1, required=True)
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
@@ -2102,7 +2114,7 @@ def _prompt_for_metadata(species_mapping):
             if i + 1 < len(known_strains):
                 line += f"  |  {i+2}. {known_strains[i+1]}"
             click.echo(line)
-        click.echo(f"  or type 'unknown' for new strain")
+        click.echo("  or type 'unknown' for new strain")
 
     while True:
         strain_input = click.prompt("Strain", type=str).strip()
