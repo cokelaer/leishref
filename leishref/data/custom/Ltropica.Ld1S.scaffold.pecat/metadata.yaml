@@ -1,12 +1,13 @@
 identifier: Ltropica.Ld1S.scaffold.pecat
 source: Custom
+taxon_id: 5666
 species: Leishmania tropica
-strain: CDC
-assembly_level: Scaffold
+strain: CDC216-162
+assembly_level: scaffold
 files:
   fasta: Ltropica.Ld1S.scaffold.pecat.fasta
 checksums:
-  fasta: 779a6fcf0ea8cbddbe6624630f0beb35
+  fasta: 9d2dfb435a1b5e81fd966f859250a8ef
 stats:
   num_bases: 34463892
   num_ungapped: 34463092
@@ -31,4 +32,5 @@ scaffold:
   reference_alias: Ld1S
   tool_version: ragtag.py
 date_added: '2026-09-11'
-notes: 52 contigs before scaffolding; maxicircle 29614 bp
+notes:  Assembly made from the PRJNA484340 project using 6 SRR files from the project related to L.tropica CDC. No read iltering. Applied sequana_lora pipeline v1.0 using pecat assembler. Got 52 contigs before scaffolding; 36 chromosomes + maxicircle (29614 bp) + 7 contigs after ragtag was applied on Ld1S genome (GCA_002243465.1).
+
