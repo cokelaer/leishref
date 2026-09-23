@@ -566,3 +566,86 @@ def test_rename_sequences_with_roman_flavor(installed):
     content = output_file.read_text()
     assert ">I\n" in content
     assert ">c1" not in content
+
+
+def test_rename_sequences_with_kraken_flavor(tmp_path):
+    """Rename-sequences with kraken flavor appends |kraken:taxid|<TAXID>."""
+    directory = tmp_path / "data" / "Ltrop.flye"
+    directory.mkdir(parents=True)
+    fasta = directory / "assembly.fa"
+    fasta.write_text(">c1\nACGTACGT\n")
+
+    write_genome(
+        directory,
+        Genome(
+            identifier="Ltrop.flye",
+            source="Local",
+            species="Leishmania tropica",
+            taxon_id=5666,
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+        ),
+    )
+
+    result = run(["rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--local-dir", "data"], tmp_path)
+    assert result.exit_code == 0
+
+    output_file = fasta.parent / f"{fasta.stem}.kraken{fasta.suffix}"
+    assert output_file.exists()
+
+    # Check that sequence was renamed with kraken format
+    content = output_file.read_text()
+    assert ">c1|kraken:taxid|5666\n" in content
+    assert ">c1\n" not in content
+
+
+def test_rename_sequences_kraken_flavor_requires_taxid(tmp_path):
+    """Rename-sequences kraken flavor requires --taxid if genome has no taxon_id."""
+    directory = tmp_path / "data" / "Ltrop.flye"
+    directory.mkdir(parents=True)
+    fasta = directory / "assembly.fa"
+    fasta.write_text(">c1\nACGTACGT\n")
+
+    write_genome(
+        directory,
+        Genome(
+            identifier="Ltrop.flye",
+            source="Local",
+            species="Leishmania tropica",
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+        ),
+    )
+
+    result = run(["rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--local-dir", "data"], tmp_path)
+    assert result.exit_code != 0
+    assert "taxid" in result.output.lower()
+
+
+def test_rename_sequences_kraken_flavor_uses_explicit_taxid(tmp_path):
+    """Rename-sequences kraken flavor accepts --taxid parameter."""
+    directory = tmp_path / "data" / "Ltrop.flye"
+    directory.mkdir(parents=True)
+    fasta = directory / "assembly.fa"
+    fasta.write_text(">c1\nACGTACGT\n")
+
+    write_genome(
+        directory,
+        Genome(
+            identifier="Ltrop.flye",
+            source="Local",
+            species="Leishmania tropica",
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+        ),
+    )
+
+    result = run(
+        ["rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--taxid", "5661", "--local-dir", "data"],
+        tmp_path,
+    )
+    assert result.exit_code == 0
+
+    output_file = fasta.parent / f"{fasta.stem}.kraken{fasta.suffix}"
+    content = output_file.read_text()
+    assert ">c1|kraken:taxid|5661\n" in content
