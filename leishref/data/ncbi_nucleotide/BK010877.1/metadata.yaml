@@ -1,0 +1,26 @@
+identifier: BK010877.1
+source: NCBI-Nucleotide
+accession: BK010877.1
+taxon_id: 5671
+species: Leishmania infantum
+strain: JPCM5
+molecule_type: kinetoplast,maxicircle
+release_date: '2019-09-26'
+files:
+  fasta: BK010877.1.fasta
+checksums:
+  fasta: adcf5c2575e434e12e4c78e9bef73b6e
+stats:
+  num_bases: 18277
+  num_ungapped: 18277
+  num_scaffolds: 1
+  num_contigs: 1
+  gc_percent: 22.0
+  scaffold_n50: 18277
+  scaffold_l50: 1
+  contig_n50: 18277
+  contig_l50: 1
+  num_ambiguous: 0
+  num_gaps: 0
+date_added: '2026-09-21'
+notes: 'TPA_asm: Leishmania infantum strain JPCM5 kinetoplast, complete sequence'

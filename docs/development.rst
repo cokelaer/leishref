@@ -1,10 +1,10 @@
 Development
 ============
 
-Contributing
-------------
+Repository layout
+------------------
 
-The repository structure::
+::
 
     leishref/
       __init__.py
@@ -15,6 +15,35 @@ The repository structure::
       scaffold.py      # Ragtag scaffolding wrapper
       zenodo.py        # Zenodo publishing
       data/            # Shipped catalog (metadata.yaml per genome)
+
+Contributing a genome
+-----------------------
+
+If you just want to add a genome to the catalog, you don't need to touch any code.
+For an NCBI GCA/GCF assembly or a standalone nuccore record, ``leishref dev
+fetch-genome``/``fetch-nucleotide`` write straight to ``leishref/data/``. For a
+local assembly, ``leishref dev add`` followed by ``leishref dev publish`` gets it
+onto Zenodo and into ``leishref/data/custom/`` (see :doc:`workflow` for the full
+walk-through). Either way, check the resulting ``leishref/data/.../metadata.yaml``,
+run ``leishref dev check-aliases`` to catch accidental duplicates, and open a pull
+request with the new entry - see :doc:`catalog` for where it belongs.
+
+Contributing code
+--------------------
+
+1. Fork the repository and create a branch for your change.
+2. ``poetry install --with dev`` to set up a matching dev environment.
+3. Make your change. Prefer small, focused commits over one large diff.
+4. Add or update tests under ``tests/`` for any behavior change — see *Testing*
+   below.
+5. Run ``pre-commit run --all-files`` before committing; the same hooks run in CI,
+   so a local pass avoids a red build.
+6. Open a pull request describing *why* the change is needed, not just what
+   changed — the diff already shows the what.
+
+Code style is enforced by pre-commit hooks (black, isort, flake8; see
+``.pre-commit-config.yaml`` and ``.flake8``) rather than by convention, so there's
+nothing to memorize: run the hooks and fix whatever they flag.
 
 Testing
 -------
@@ -28,31 +57,47 @@ With coverage::
 
     pytest --cov=leishref --cov-report=term-missing
 
-Code style is enforced by pre-commit hooks; see ``.pre-commit-config.yaml``.
+A single test::
+
+    pytest tests/test_cli.py::test_bundle_from_symlinks -xvs
+
+Tests that would otherwise hit the network (NCBI, Zenodo) mock the relevant
+function with ``monkeypatch`` rather than making real requests — see
+``test_install_many_parallel_installs_all_genomes`` in ``tests/test_cli.py`` for
+the pattern. Keep new tests network-free the same way, so the suite stays fast and
+doesn't flake on connectivity.
 
 Maintainer commands
 -------------------
 
-Add NCBI genome to catalog::
+Add NCBI genome assembly to catalog::
 
-    leishref dev fetch --accession GCA_000227135.2
+    leishref dev fetch-genome GCA_000227135.2
 
 Downloads metadata and FASTA/GFF from NCBI, creates ``leishref/data/ncbi/GCA_000227135.2/metadata.yaml``.
 
-Add local assembly to catalog::
+Stage a local assembly for review::
 
-    leishref dev add ~/my_assembly.fasta --technology pacbio
+    leishref dev add Ltropica.CDC216-162.genome.flye.fasta --technology pacbio
 
-Adds local FASTA to catalog as a new genome entry with metadata.
+Writes only to ``./to_publish_on_zenodo/<fasta-stem>/`` (a metadata.yaml plus the
+FASTA) - it doesn't touch the shipped catalog or your local install.
+``--alias`` is optional and purely informational, recorded in metadata.yaml; the
+entry's identifier comes from the FASTA filename instead, so name it
+``<species>.<strain>.<molecule_type>.<assembler>`` (see :doc:`workflow`) before
+running this.
 
 Scaffold assembly against reference::
 
     leishref dev scaffold --query query.fasta --reference Ld1S
 
-Creates scaffolded assembly by aligning query to reference, adds to ``leishref/data/scaffold/``.
+Creates scaffolded assembly by aligning query to reference, adds to ``leishref/data/scaffolds/``.
 
-Publish scaffold to Zenodo::
+Publish a staged genome to Zenodo::
 
-    leishref dev publish scaffold.fasta
+    leishref dev publish to_publish_on_zenodo/Ltropica.CDC216-162.genome.flye
 
-Uploads scaffold files to Zenodo, records DOI in catalog metadata.
+Takes a path to what ``dev add`` staged (or, for an already-installed genome such
+as a scaffold, its identifier). Uploads its files to Zenodo, records the DOI, and
+creates the ``leishref/data/custom/`` catalog entry. See :doc:`workflow` for the
+full add → publish walk-through, including ``--confirm``/dry-run and the sandbox.

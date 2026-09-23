@@ -59,11 +59,12 @@ $ leishref --help
   dev        Commands for maintaining the shipped catalog
 
 $ leishref dev --help
-  fetch        Add an NCBI genome to the catalog
-  add          Add a local assembly to the catalog
-  scaffold     Scaffold an assembly against a reference with ragtag
-  publish      Deposit an installed genome on Zenodo
-  derive-agp   Derive an AGP showing how one assembly was laid out from another
+  fetch-genome      Add an NCBI genome assembly to the catalog
+  fetch-nucleotide  Add a standalone NCBI nuccore record to the catalog
+  add               Add a local assembly to the catalog
+  scaffold          Scaffold an assembly against a reference with ragtag
+  publish           Deposit an installed genome on Zenodo
+  derive-agp        Derive an AGP showing how one assembly was laid out from another
 ```
 
 Everything under `dev` writes to `leishref/data/`, the catalog that ships with the
@@ -196,6 +197,7 @@ record count does. `search` shows the scaffold figures; both levels are in the r
 | source | meaning |
 |---|---|
 | `NCBI` | fetched by accession through the `datasets` CLI |
+| `NCBI-Nucleotide` | a standalone nuccore record (not a GCA/GCF assembly), fetched via `dev fetch-nucleotide` over NCBI EUtils |
 | `Zenodo` | published to Zenodo; retrieved by DOI, no token needed |
 | `TriTrypDB` | downloaded by hand, because their downloads require a login |
 | `Local` | added from disk and not published anywhere yet |
@@ -210,17 +212,20 @@ which it becomes retrievable by anyone else.
 
 ### Install a genome
 
-`--alias` is required. It is the name the genome takes on your machine: the directory
-under `data/`, and the symlink you will actually type.
+`--alias` is required. It names the symlink `install` leaves in the current
+directory -- it does **not** name where the genome is stored. The genome itself is
+cached under `~/.config/leishref/<accession>/`, shared across every project on the
+machine and keyed by accession, so installing the same genome under two different
+aliases (in this project or another) never downloads it twice.
 
 `--alias` is required, but leishref proposes one rather than leaving you to invent it:
 
 ```console
-$ leishref download GCA_000410715.1
---alias is required: it names this genome in your local database,
-becoming the directory under data/ and the symlink you will type.
+$ leishref install GCA_000410715.1
+--alias is required: it names the symlink in the current directory,
+not the cache itself (shared, under ~/.config/leishref/).
 
-  leishref download GCA_000410715.1 --alias Ltrop.ncbi.L590
+  leishref install GCA_000410715.1 --alias Ltrop.ncbi.L590
 ```
 
 The suggestion is `<Lspec>.<source>.<discriminator>`, where the discriminator is the
@@ -229,12 +234,12 @@ left the strain field empty -- and the accession otherwise. `leishref info <name
 it too. Take it or pick your own.
 
 ```console
-$ leishref download GCA_000410715.1 --alias Ltrop.L590
+$ leishref install GCA_000410715.1 --alias Ltrop.L590
 GCA_000410715.1 -> GCA_000410715.1 (NCBI)
-Installed into data/Ltrop.L590
+Installed into /home/you/.config/leishref/GCA_000410715.1
   md5 OK: GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna
-  Ltrop.L590.fna -> data/Ltrop.L590/GCA_000410715.1_..._genomic.fna
-  Ltrop.L590.gff -> data/Ltrop.L590/GCA_000410715.1_..._genomic.gff
+  Ltrop.L590.fna -> /home/you/.config/leishref/GCA_000410715.1/GCA_000410715.1_..._genomic.fna
+  Ltrop.L590.gff -> /home/you/.config/leishref/GCA_000410715.1/GCA_000410715.1_..._genomic.gff
 ```
 
 leishref prefers a Zenodo DOI where the catalog records one and falls back to the NCBI
@@ -245,16 +250,26 @@ a login; fetch those by hand and register them with `leishref dev add`.
 The result:
 
 ```
-data/Ltrop.L590/
-  metadata.yaml         # copied from the catalog, identifier rewritten to your alias
+~/.config/leishref/GCA_000410715.1/
+  metadata.yaml         # copied straight from the catalog entry, unmodified
   GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna
   GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.gff
-Ltrop.L590.fna -> data/Ltrop.L590/...     # relative symlink
-Ltrop.L590.gff -> data/Ltrop.L590/...
+Ltrop.L590.fna -> /home/you/.config/leishref/GCA_000410715.1/...    # absolute symlink
+Ltrop.L590.gff -> /home/you/.config/leishref/GCA_000410715.1/...
 ```
 
-The extension is preserved so file-type sniffing works, and links are relative so the
-tree can be moved or shared. `leishref link` refreshes them; `--no-link` opts out. An
+Reusing `Ltrop.L590` as the alias for a *different* genome later just repoints these
+two symlinks -- it's never a conflict, since the alias never names the cache itself.
+Rerunning `install` for the same genome (any alias) is always a safe no-op: it makes
+sure the symlink is in place and does nothing else. `--force` only forces a fresh
+download. `./accessions.txt` (in the current directory, not the cache) is what
+remembers which alias this project uses for which accession; `leishref restore` and
+`leishref link` replay it.
+
+FASTA symlinks are always named `.fna` regardless of the source file's own extension
+(`.fa`, `.fasta`). Links are absolute, since the target lives in the shared cache
+(`~/.config/leishref`) rather than beside the link, so they keep working if you copy or
+move the symlink elsewhere. `leishref link` refreshes them; `--no-link` opts out. An
 existing symlink is repointed, but a regular file of the same name is never overwritten.
 
 ### Look around
@@ -311,8 +326,11 @@ Exits non-zero on a missing file or a checksum mismatch, so it can gate CI or ru
 ## Maintaining the catalog
 
 ```bash
-# Add an NCBI genome. --alias also keeps the files locally rather than discarding them.
-leishref dev fetch GCA_000410715.1 --alias Ltrop.L590
+# Add an NCBI genome assembly. --alias also keeps the files locally rather than discarding them.
+leishref dev fetch-genome GCA_000410715.1 --alias Ltrop.L590
+
+# Add a standalone NCBI nuccore record (not a GCA/GCF assembly, e.g. a lone kinetoplast)
+leishref dev fetch-nucleotide BK010877.1 --alias LiJPCM5.kinetoplast
 
 # Register your own assembly
 leishref dev add assembly.fa --alias Ltrop.flye --species "Leishmania tropica" \
@@ -329,7 +347,7 @@ leishref dev publish Ltrop.flye --confirm --version v1.0
 Use `ZENODO_SANDBOX_TOKEN` with `--sandbox` to rehearse. A sandbox DOI is deliberately
 not recorded, since it would block the real publish later.
 
-**Contributing a genome:** run `leishref dev fetch` or `dev add`, check the new
+**Contributing a genome:** run `leishref dev fetch-genome`, `dev fetch-nucleotide`, or `dev add`, check the new
 `leishref/data/<id>/metadata.yaml`, and open a pull request. Only metadata is committed;
 sequence data never enters the repository.
 

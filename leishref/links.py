@@ -5,7 +5,6 @@ to type. A symlink named after the alias gives a stable, readable handle to pass
 other tools without copying or renaming anything.
 """
 
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -29,8 +28,13 @@ def link_name(alias: str, target: Path) -> str:
 def make_link(alias: str, target: Path, basedir: Path = Path(".")) -> Optional[Path]:
     """Point <alias><ext> in basedir at target. Returns the link, or None if unchanged.
 
-    The link is relative so the tree can be moved or shared without breaking. An existing
-    symlink is replaced; an existing regular file is never overwritten.
+    The link is absolute, not relative to basedir: target lives in the shared cache
+    (~/.config/leishref), not inside whatever directory the link is made in, so a
+    relative path would only be valid there by coincidence. An absolute link keeps
+    resolving correctly if the link itself is later copied or moved elsewhere - the
+    common case, since a symlink is a portable handle to hand off, while `leishref
+    bundle` resolves it to the real file anyway when the target needs to travel too.
+    An existing symlink is replaced; an existing regular file is never overwritten.
     """
     target = Path(target)
     basedir = Path(basedir)
@@ -39,14 +43,14 @@ def make_link(alias: str, target: Path, basedir: Path = Path(".")) -> Optional[P
     if link.exists() and not link.is_symlink():
         raise LinkConflict(f"{link} exists and is not a symlink")
 
-    relative = os.path.relpath(target.resolve(), start=basedir.resolve())
+    absolute = target.resolve()
 
     if link.is_symlink():
-        if os.readlink(link) == relative:
+        if link.readlink() == absolute:
             return None
         link.unlink()
 
-    link.symlink_to(relative)
+    link.symlink_to(absolute)
     return link
 
 

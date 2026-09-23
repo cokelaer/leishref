@@ -5,6 +5,7 @@ taxon_id: 5674
 species: Leishmania adleri
 assembly_name: Lad
 assembly_level: Chromosome
+molecule_type: kinetoplast,maxicircle
 release_date: '2019-10-04'
 files:
   fasta: GCA_902369305.1_Lad_genomic.fna

@@ -6,6 +6,7 @@ species: Leishmania major
 strain: Friedlin
 assembly_name: LmjF
 assembly_level: Chromosome
+molecule_type: kinetoplast,maxicircle
 release_date: '2019-10-04'
 files:
   fasta: GCA_902369385.1_LmjF_genomic.fna

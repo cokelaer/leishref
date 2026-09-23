@@ -138,6 +138,24 @@ def test_matches_finds_taxon_id_given_as_text(genome):
     assert genome.matches(["5666"])
 
 
+def test_molecule_type_is_searchable_and_roundtrips(tmp_path, genome):
+    """A kinetoplast/maxicircle entry should turn up in a plain search by name."""
+    genome.molecule_type = "kinetoplast,maxicircle"
+    assert genome.matches(["kinetoplast"])
+    assert genome.matches(["maxicircle"])
+
+    written = write_genome(tmp_path / "GCA_1.1", genome)
+    loaded = read_genome(tmp_path / "GCA_1.1")
+    assert loaded.molecule_type == "kinetoplast,maxicircle"
+    assert "molecule_type: kinetoplast,maxicircle" in written.read_text()
+
+
+def test_molecule_type_absent_by_default(genome):
+    """An ordinary nuclear genome shouldn't turn up in a kinetoplast search."""
+    assert genome.molecule_type is None
+    assert not genome.matches(["kinetoplast"])
+
+
 def test_a_lone_star_matches_every_genome(genome):
     assert genome.matches(["*"])
 
@@ -168,7 +186,7 @@ def test_every_catalog_genome_has_statistics():
 
 def test_catalog_sources_come_from_a_known_vocabulary():
     """source says where `download` fetches a genome from, not who assembled it."""
-    allowed = {"NCBI", "Zenodo", "TriTrypDB", "Local", "Leishref", "Custom"}
+    allowed = {"NCBI", "NCBI-Nucleotide", "Zenodo", "TriTrypDB", "Local", "Leishref", "Custom"}
     for entry in catalog():
         assert entry.source in allowed, f"{entry.identifier} has source {entry.source!r}"
 
@@ -253,6 +271,15 @@ def test_an_accession_decides_the_ncbi_group(genome):
     assert catalog_group(genome) == "ncbi"
     genome.accession = "GCA_000002875.2"
     assert catalog_group(genome) == "ncbi"
+
+
+def test_a_standalone_nuccore_record_groups_separately_from_assemblies(genome):
+    """A lone nuccore record (not a GCA/GCF assembly) must not land in ncbi/."""
+    from leishref.metadata import catalog_group
+
+    genome.source = "NCBI-Nucleotide"
+    genome.accession = "BK010877.1"
+    assert catalog_group(genome) == "ncbi_nucleotide"
 
 
 def test_a_genome_with_no_origin_at_all_is_local(genome):

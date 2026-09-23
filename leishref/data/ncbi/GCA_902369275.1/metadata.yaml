@@ -5,6 +5,7 @@ taxon_id: 5660
 species: Leishmania braziliensis
 assembly_name: Lbraz
 assembly_level: Chromosome
+molecule_type: kinetoplast,maxicircle
 release_date: '2019-10-04'
 files:
   fasta: GCA_902369275.1_Lbraz_genomic.fna

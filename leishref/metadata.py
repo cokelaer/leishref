@@ -20,7 +20,7 @@ METADATA_FILE = "metadata.yaml"
 CATALOG_DIR = Path(__file__).parent / "data"
 
 #: Catalog entries are grouped by where the genome came from, one directory per origin.
-CATALOG_GROUPS = ("ncbi", "scaffolds", "zenodo", "tritrypdb", "custom", "local")
+CATALOG_GROUPS = ("ncbi", "ncbi_nucleotide", "scaffolds", "zenodo", "tritrypdb", "custom", "local")
 
 #: Global cache directory for downloaded genomes, shared across all projects.
 CACHE_DIR = Path.home() / ".config" / "leishref"
@@ -64,6 +64,12 @@ class Genome:
     strain: Optional[str] = None
     assembly_name: Optional[str] = None
     assembly_level: Optional[str] = None
+    #: What kind of sequence this entry is, when it isn't a nuclear assembly - e.g.
+    #: "kinetoplast" or "kinetoplast,maxicircle". Unset for ordinary nuclear genomes.
+    #: NCBI's own assembly_level doesn't distinguish this (a lone maxicircle still
+    #: comes back as "Chromosome"), so nothing infers it automatically; set it
+    #: explicitly with --molecule-type on fetch-genome/fetch-nucleotide/add.
+    molecule_type: Optional[str] = None
     release_date: Optional[str] = None
     release_version: Optional[str] = None
     files: dict = field(default_factory=dict)
@@ -114,6 +120,7 @@ class Genome:
             self.species,
             self.strain,
             self.assembly_name,
+            self.molecule_type,
             self.release_version,
             self.notes,
             *self.files.values(),
@@ -143,6 +150,7 @@ class Genome:
             "strain": self.strain,
             "assembly_name": self.assembly_name,
             "assembly_level": self.assembly_level,
+            "molecule_type": self.molecule_type,
             "release_date": self.release_date,
             "release_version": self.release_version,
             "files": self.files,
@@ -186,14 +194,18 @@ def catalog_group(genome) -> str:
     """The catalog subdirectory a genome belongs in.
 
     Grouping follows the source: custom entries stay in custom/ (even if on Zenodo),
-    scaffolds go to scaffolds/, NCBI accessions to ncbi/, TriTrypDB to tritrypdb/,
-    and Zenodo-published genomes to zenodo/.
+    scaffolds go to scaffolds/, NCBI assemblies to ncbi/, standalone NCBI nuccore
+    records (not a GCA/GCF assembly - e.g. a lone kinetoplast/maxicircle sequence)
+    to ncbi_nucleotide/, TriTrypDB to tritrypdb/, and Zenodo-published genomes to
+    zenodo/.
     """
     source = (genome.source or "").lower()
     if source == "custom":
         return "custom"
     if genome.scaffold:
         return "scaffolds"
+    if source == "ncbi-nucleotide":
+        return "ncbi_nucleotide"
     if source in ("tritrypdb", "ncbi"):
         return source
     accession = genome.accession or ""
