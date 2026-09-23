@@ -20,8 +20,9 @@ The common case: find a genome, install it, and confirm it's intact.
     # Confirm the checksum matches what the catalog recorded
     leishref verify
 
-``leishref install`` creates ``~/.config/leishref/Ld1S/`` with the FASTA (and GFF, if
-the catalog entry has one) plus an absolute symlink ``Ld1S.fna`` in the current
+``leishref install`` creates ``~/.config/leishref/GCA_000227135.2/`` with the FASTA
+(and GFF, if the catalog entry has one) - the shared cache is keyed by accession,
+not by the alias you chose - plus an absolute symlink ``Ld1S.fna`` in the current
 directory, and appends the install to ``./accessions.txt`` so it can be replayed
 later with ``leishref restore``.
 

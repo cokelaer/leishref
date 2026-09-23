@@ -117,15 +117,17 @@ Checksum mismatch after ``leishref verify``
       mismatch: 1
 
     CHECKSUM MISMATCH:
-      Ld1S: /home/you/.config/leishref/Ld1S/GCA_000227135.2_ASM22713v2_genomic.fna
+      GCA_000227135.2: /home/you/.config/leishref/GCA_000227135.2/GCA_000227135.2_ASM22713v2_genomic.fna
 
 The file on disk no longer matches the md5 recorded when it was installed —
 typically because it was edited in place (``rename-sequences`` and
 ``prune-scaffold`` intentionally do this and update the stored checksum
-themselves; anything else touching the file directly won't). Re-install to restore
-the original::
+themselves; anything else touching the file directly won't). The label is the
+genome's catalog identifier/accession (what the shared cache is keyed by), not
+whatever alias you installed it under - check ``accessions.txt`` if you need to
+match it back to one. Re-install to restore the original::
 
-    leishref install <name> --alias Ld1S --force
+    leishref install GCA_000227135.2 --alias Ld1S --force
 
 Duplicate catalog entries or aliases
 ------------------------------------------

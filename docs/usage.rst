@@ -38,7 +38,7 @@ User commands
     ╭─ Using the database ───────────────────────────────────────────────────────────────────────────────────────╮
     │ search                  Find catalog genomes matching every TERM.                                          │
     │ info                    List the catalog and the cached database, or show one genome in full.              │
-    │ install                 Download a catalog genome and cache it with ALIAS.                                 │
+    │ install                 Download a catalog genome and cache it, with a symlink named ALIAS.                 │
     │ install-ncbi            Install all NCBI entries from the catalog.                                         │
     │ install-ncbi-refseq     Install all RefSeq (GCF) NCBI entries from the catalog.                            │
     │ restore                 Re-download every genome listed in accessions.txt in the current directory.        │
@@ -50,16 +50,23 @@ User commands
     ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
     ╭─ For maintainers and developers ───────────────────────────────────────────────────────────────────────────╮
     │ dev      Commands for maintaining the shipped catalog.                                                     │
-    │ link     Refresh the alias-named symlinks for everything installed locally.                                │
+    │ link     Refresh the alias-named symlinks for everything installed from here.                              │
     ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
     ╭─ Plotting ─────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ plot-stats                Plot genome statistics: genome size, scaffold count, contig count, scaffold N50. │
-    │ plot-sizes                Plot genome sizes by species.                                                    │
-    │ plot-histogram            Plot histogram of genome sizes.                                                  │
-    │ plot-chromosome-histogram Plot chromosome/sequence length histogram from available local FASTA files.      │
+    │ plot-stats                   Plot genome statistics: genome size, scaffold count, contig count, scaffold   │
+    │                              N50.                                                                          │
+    │ plot-sizes                   Plot genome sizes by species.                                                 │
+    │ plot-histogram               Plot histogram of genome sizes.                                               │
+    │ plot-chromosome-histogram    Plot chromosome/sequence length histogram from available local FASTA files.   │
+    │ plot-completeness            Plot pie chart of genome completeness (assembly_level breakdown).             │
+    │ plot-technology              Plot pie chart of sequencing technology distribution.                         │
+    │ plot-assembly-by-technology  Plot assembly level (quality) vs sequencing technology.                        │
+    │ plot-species-count           Plot bar chart of genome count per species.                                   │
+    │ plot-gc-content              Plot GC content distribution by species.                                      │
     ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
     ╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ --help  Show this message and exit.                                                                        │
+    │ --version  Show the version and exit.                                                                      │
+    │ --help     Show this message and exit.                                                                     │
     ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 For the dev part, use::

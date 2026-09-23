@@ -51,21 +51,24 @@ Using the database and maintaining it are different jobs, so the commands are sp
 
 ```console
 $ leishref --help
-  download   Install a catalog genome into the local database under ALIAS
+  install    Download a catalog genome and cache it, with a symlink named ALIAS
   info       List the catalog and the local database
   search     Find catalog genomes matching every term
   verify     Check the local database against recorded checksums
+  restore    Re-download everything listed in accessions.txt
   link       Refresh the alias-named symlinks
   dev        Commands for maintaining the shipped catalog
 
 $ leishref dev --help
   fetch-genome      Add an NCBI genome assembly to the catalog
   fetch-nucleotide  Add a standalone NCBI nuccore record to the catalog
-  add               Add a local assembly to the catalog
+  add               Stage a local assembly for review and publishing to Zenodo
+  import            Add catalog entries from NCBI without downloading any sequence
   scaffold          Scaffold an assembly against a reference with ragtag
-  publish           Deposit an installed genome on Zenodo
-  derive-agp        Derive an AGP showing how one assembly was laid out from another
+  publish           Deposit a genome's files on Zenodo and record the DOI
 ```
+
+See the [command reference](docs/commands.rst) (or `leishref --help` / `leishref dev --help`) for the full list.
 
 Everything under `dev` writes to `leishref/data/`, the catalog that ships with the
 package. Those changes are meant to travel as a pull request.
@@ -353,61 +356,10 @@ sequence data never enters the repository.
 
 ---
 
-## Derivation model
-
-Contig counts differ wildly between sources for the same organism. For *L. tropica* L590:
-
-| source | sequences |
-|---|---|
-| NCBI `GCA_000410715.1` | 448 (182 scaffolds + 266 WGS contigs) |
-| TriTrypDB-68 | 160 (36 chromosomes + 124 supercontigs) |
-| ragtag on Ld1S | 140 |
-
-These are **not three genomes**. They are one sequence with three chromosome
-assignments. Measured on the NCBI/TriTrypDB pair: non-N content differs by 324 bases
-in 31.3 Mb (0.001%), and every large NCBI scaffold appears inside the TriTrypDB
-assembly — about half of them reverse-complemented, joined with 100-N padding.
-
-So leishref records a layout as a **derivation**, not as a new genome:
-
-- `derived_from` — the parent assembly supplying the sequence
-- `agp_filename` — an AGP giving order, orientation and gaps relative to that parent
-
-Two consequences:
-
-1. **Choosing what to use** becomes an explicit choice of layout over one lineage,
-   not a guess about which FASTA is "better".
-2. **Third-party sequence never needs redistributing.** An AGP is coordinates —
-   a few hundred KB of facts. `leishref derive-agp` produces one; `apply_agp()`
-   regenerates the child FASTA from parent + AGP. Zenodo depositions therefore
-   only ever carry your own assemblies, your AGPs, and the manifest.
-
-```bash
-leishref derive-agp \
-  NCBI/GCA_000410715.1_Leishmania_tropica_L590-2.0.2_genomic.fna \
-  TriTryDB68/TriTrypDB-68_LtropicaL590_Genome.fasta \
-  --record
-
-#   parent sequences:  448 (441 placed)
-#   child sequences:   160 (158 used)
-#   blocks placed:     1894/1938
-#   orientation:       969 forward, 925 reverse
-#   coverage:          97.556% of non-N parent bases
-#   Same sequence, different layout: child is a re-scaffolding of parent.
-```
-
-Coverage below ~95% means the two really are different assemblies, not a re-layout.
-
-The residual on this pair (2.4% N from unplaced blocks, 0.026% true mismatch on
-round-trip) is TriTrypDB's own sequence editing — visible precisely *because* the
-layout is now explicit.
-
 ### TriTrypDB access
 
-TriTrypDB downloads now require a login, so `leishref fetch-tritrypdb` cannot fetch
-unattended. Download the release by hand, then register each genome as a derivation
-of its NCBI parent with `derive-agp --record`. Their GFF is in chromosome
-coordinates and NCBI's is in scaffold coordinates; the same AGP is what relates them.
+TriTrypDB downloads now require a login, so leishref can't fetch them unattended.
+Download the release by hand, then register it with `leishref dev add`.
 
 ---
 
@@ -439,7 +391,6 @@ leishref/
   ncbi.py       datasets CLI wrapper
   tritrypdb.py  TriTrypDB download (needs a login; see above)
   scaffold.py   ragtag wrapper and AGP-based cleaning
-  agp.py        AGP derivation and reconstruction
   zenodo.py     deposition and record download
   data/         THE CATALOG, one directory per genome
 ```

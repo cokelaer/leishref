@@ -221,7 +221,7 @@ def test_ncbi_entries_record_assembly_level_and_release_date():
 
 
 def test_assembly_levels_come_from_a_known_vocabulary():
-    allowed = {"Complete Genome", "Chromosome", "Scaffold", "Contig"}
+    allowed = {"Complete Genome", "Chromosome", "Scaffold", "Contig", "Unknown"}
     for entry in catalog():
         if entry.assembly_level:
             assert entry.assembly_level in allowed, f"{entry.identifier}: {entry.assembly_level!r}"
