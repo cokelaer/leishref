@@ -1,8 +1,8 @@
 identifier: Ltropica.Ld1S.scaffold.flye
 source: Custom
+taxon_id: 5666
 species: Leishmania tropica
 strain: CDC
-taxon_id: 5666
 assembly_level: Scaffold
 files:
   fasta: Ltropica.Ld1S.scaffold.flye.fasta
@@ -21,15 +21,20 @@ stats:
   num_ambiguous: 6500
   num_gaps: 65
 provenance:
-  zenodo_doi: 10.5281/zenodo.22710142
+  zenodo_doi: 10.5281/zenodo.22924925
   sequencing_technology: PacBio RS II
   bioproject: PRJNA484340
   raw_reads_accession: PRJNA484340
   assembler: Flye
   pipeline: LORA 1.0.0
   reads: raw
+  zenodo_notes: Ltropica assembly assembled from PRJNA484340 using flye and scaffold
+    onto Ld1S reference genome (filtered data at 1000bp).
 scaffold:
   reference_alias: Ld1S
   tool_version: ragtag.py
 date_added: '2026-09-11'
-notes: Assembly made from the PRJNA484340 project using 6 SRR files from the project related to L.tropica CDC. No read filtering. Applied sequana_lora pipeline v1.0 using flye assembler. Got 141 contigs before scaffolding; 36 chromosomes + maxicircle (18975 bp) + 39 contigs after ragtag was applied on Ld1S genome (GCA_002243465.1).
+notes: Assembly made from the PRJNA484340 project using 6 SRR files from the project
+  related to L.tropica CDC. No read filtering. Applied sequana_lora pipeline v1.0
+  using flye assembler. Got 141 contigs before scaffolding; 36 chromosomes + maxicircle
+  (18975 bp) + 39 contigs after ragtag was applied on Ld1S genome (GCA_002243465.1).

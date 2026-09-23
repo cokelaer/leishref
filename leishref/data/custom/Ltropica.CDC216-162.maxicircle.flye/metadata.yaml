@@ -2,6 +2,8 @@ identifier: Ltropica.CDC216-162.maxicircle.flye
 source: Custom
 species: Leishmania tropica
 strain: CDC216-162
+taxon_id: 5666
+assembly_level: Complete Genome
 molecule_type: kinetoplast,maxicircle
 files:
   fasta: Ltropica.CDC216-162.maxicircle.flye.fa
