@@ -134,11 +134,15 @@ click.rich_click.COMMAND_GROUPS = {
     "leishref dev": [
         {
             "name": "Adding genomes",
-            "commands": ["fetch-genome", "fetch-nucleotide", "add", "import", "scaffold"],
+            "commands": ["fetch-genome", "fetch-nucleotide", "add", "scaffold"],
         },
         {
             "name": "Publishing and managing",
-            "commands": ["publish", "checksum", "status", "check-aliases", "remove"],
+            "commands": ["publish", "status", "check-aliases", "remove"],
+        },
+        {
+            "name": "Utilities",
+            "commands": ["sort-fasta"],
         },
     ],
 }
@@ -1116,21 +1120,17 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
     renamed_path.write_text(renamed)
     click.echo(f"Wrote renamed sequences to {renamed_path}")
 
-    # Update chromosome_map.yaml with the mapping
+    # Persist the new_name mappings for this flavor to chromosome_map.yaml
+    # (rename_fasta_sequences generates the mapping but doesn't persist flavor-specific names)
     if name_map:
         chrom_map = load_chromosome_map()
-        if chrom_key not in chrom_map:
-            chrom_map[chrom_key] = []
-
-        # Build mapping entries from chrom_info
-        chrom_info = chrom_map.get(chrom_key, [])
-        for i, info in enumerate(chrom_info, 1):
-            old_name = info.get("accession", f"sequence_{i}")
-            if old_name in name_map:
-                info["new_name"] = name_map[old_name]
-
-        save_chromosome_map(chrom_map)
-        click.echo("Updated chromosome mapping in catalog/chromosome_map.yaml")
+        if chrom_key in chrom_map:
+            chrom_info = chrom_map[chrom_key]
+            for info in chrom_info:
+                old_name = info.get("accession", "")
+                if old_name and old_name in name_map:
+                    info["new_name"] = name_map[old_name]
+            save_chromosome_map(chrom_map)
 
 
 @cli.command("prune-scaffold")
@@ -2557,74 +2557,6 @@ def _genome_from_ncbi(accession: str, meta: dict) -> Genome:
     )
 
 
-def _accessions_from_tsv(path: Path) -> list:
-    """Accessions from an NCBI Datasets table export."""
-    import csv
-
-    with open(path, newline="") as handle:
-        rows = list(csv.DictReader(handle, delimiter="\t"))
-    column = next((c for c in (rows[0] if rows else {}) if c.strip().lower() == "assembly accession"), None)
-    if column is None:
-        raise click.ClickException(f"No 'Assembly Accession' column in {path}")
-    return [r[column].strip() for r in rows if r.get(column, "").strip()]
-
-
-@dev.command("import")
-@click.argument("accessions", nargs=-1)
-@click.option("--from-tsv", type=click.Path(exists=True), help="NCBI Datasets TSV export to read accessions from")
-@click.option("--catalog-dir", type=click.Path(), help="Write entries here instead")
-@click.option("--overwrite", is_flag=True, help="Replace entries that already exist")
-@click.option("--dry-run", is_flag=True, help="Report what would be added without writing")
-def import_cmd(accessions, from_tsv, catalog_dir, overwrite, dry_run):
-    """Add catalog entries from NCBI without downloading any sequence.
-
-    NCBI's summary already carries the assembly statistics, and they agree with computing
-    them from the FASTA, so a catalog entry needs no download. Only the md5 checksums are
-    missing; `leishref dev checksum` fills those in.
-
-    Examples:
-
-    \b
-      leishref dev import GCA_000227135.2 GCA_000410715.1
-      leishref dev import --from-tsv ~/Downloads/ncbi_dataset.tsv
-      leishref dev import --from-tsv ncbi_dataset.tsv --dry-run
-    """
-    wanted = list(accessions) + (_accessions_from_tsv(Path(from_tsv)) if from_tsv else [])
-    if not wanted:
-        raise click.ClickException("Give accessions, or --from-tsv")
-
-    # Preserve order while removing the duplicates a TSV export often carries.
-    seen = set()
-    wanted = [a for a in wanted if not (a in seen or seen.add(a))]
-
-    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
-    existing = {d.name for d in root.iterdir() if (d / "metadata.yaml").is_file()} if root.is_dir() else set()
-
-    todo = wanted if overwrite else [a for a in wanted if a not in existing]
-    click.echo(f"{len(wanted)} accessions, {len(wanted) - len(todo)} already in the catalog, {len(todo)} to add")
-    if not todo:
-        return
-
-    if dry_run:
-        for accession in todo:
-            click.echo(f"  would add {accession}")
-        return
-
-    added = skipped = 0
-    with click.progressbar(fetch_metadata_many(todo), length=len(todo), label="Querying NCBI") as stream:
-        for accession, meta in stream:
-            if not meta:
-                skipped += 1
-                continue
-            write_genome(root / "ncbi" / accession, _genome_from_ncbi(accession, meta))
-            added += 1
-
-    click.echo(f"Added {added} entries to {root}")
-    if skipped:
-        click.echo(f"{skipped} accessions returned nothing from NCBI", err=True)
-    click.echo("Checksums are still missing; run 'leishref dev checksum' to fill them in")
-
-
 @dev.command("check-aliases")
 @click.option("--catalog-dir", type=click.Path(), help="Check this catalog instead")
 def check_aliases(catalog_dir):
@@ -2677,65 +2609,6 @@ def check_aliases(catalog_dir):
             click.echo(f"✓ No duplicate aliases ({len(aliases)} total)")
 
     click.echo("✓ All checks passed")
-
-
-@dev.command()
-@click.option("--catalog-dir", type=click.Path(), help="Update entries here instead")
-@click.option("--workdir", type=click.Path(), default="NCBI", show_default=True, help="Where downloads land")
-@click.option("--keep", is_flag=True, help="Keep the downloaded files instead of discarding them")
-@click.option("--limit", type=int, help="Stop after this many genomes")
-def checksum(catalog_dir, workdir, keep, limit):
-    """Download genomes that have no checksum yet and record md5 and gap counts.
-
-    Entries added by `dev import` carry NCBI's statistics but no md5, because that needs
-    the sequence itself. This fetches each one, records the checksum, and recomputes the
-    statistics locally, which also fills in num_gaps.
-
-    Examples:
-
-    \b
-      leishref dev checksum
-      leishref dev checksum --limit 10
-      leishref dev checksum --keep
-    """
-    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
-    workdir = Path(workdir)
-
-    pending = [g for g in catalog(root) if g.accession and not g.checksums.get("fasta")]
-    if limit:
-        pending = pending[:limit]
-
-    if not pending:
-        click.echo("Every catalog entry already has a checksum")
-        return
-
-    click.echo(f"{len(pending)} entries without a checksum")
-    done = failed = 0
-
-    for genome in pending:
-        scratch = None if keep else tempfile.TemporaryDirectory()
-        destination = workdir if keep else Path(scratch.name)
-        try:
-            fasta, gff = fetch_fasta_gff(genome.accession, destination)
-            if not fasta:
-                click.echo(f"  {genome.accession}: nothing on NCBI", err=True)
-                failed += 1
-                continue
-
-            genome.files = {k: v.name for k, v in (("fasta", fasta), ("gff", gff)) if v}
-            genome.checksums = {k: md5_file(v) for k, v in (("fasta", fasta), ("gff", gff)) if v}
-            genome.stats = genome_stats(fasta)
-            write_genome(genome.path or catalog_entry_dir(root, genome), genome)
-            done += 1
-            click.echo(f"  {genome.accession}: {genome.stats['num_scaffolds']} scaffolds, md5 recorded")
-        except Exception as exc:  # one bad genome must not end the batch
-            click.echo(f"  {genome.accession}: {exc}", err=True)
-            failed += 1
-        finally:
-            if scratch is not None:
-                scratch.cleanup()
-
-    click.echo(f"\nRecorded {done} checksums, {failed} failed")
 
 
 @dev.command()
@@ -2859,6 +2732,59 @@ def status(catalog_dir):
 
     if errors:
         raise SystemExit(1)
+
+
+@dev.command("sort-fasta")
+@click.argument("infile", type=click.Path(exists=True))
+@click.argument("outfile", type=click.Path())
+def sort_fasta_cmd(infile, outfile):
+    """Sort FASTA: chromosomes 1-36, maxicircle, extra contigs by size.
+
+    Prepares assemblies with numeric chromosome names. Extra contigs sorted by
+    size (descending) and renamed to extra_contig_1, extra_contig_2, etc.
+
+    Examples:
+
+    \b
+      leishref dev sort-fasta assembly.fa assembly.sorted.fa
+    """
+    from Bio import SeqIO
+
+    infile_path = Path(infile)
+    outfile_path = Path(outfile)
+
+    records = list(SeqIO.parse(str(infile_path), "fasta"))
+
+    chroms = []
+    maxicircle = None
+    extras = []
+
+    for rec in records:
+        name = rec.id
+        if name.isdigit():
+            chroms.append((int(name), rec))
+        elif name.lower() == "maxicircle":
+            maxicircle = rec
+        else:
+            extras.append(rec)
+
+    chroms.sort(key=lambda x: x[0])
+    extras.sort(key=lambda r: len(r.seq), reverse=True)
+
+    out = [rec for _, rec in chroms]
+    if maxicircle is not None:
+        out.append(maxicircle)
+    for i, rec in enumerate(extras, start=1):
+        rec.id = f"extra_contig_{i}"
+        rec.description = ""
+        rec.name = rec.id
+    out.extend(extras)
+
+    SeqIO.write(out, str(outfile_path), "fasta")
+    click.echo(f"Wrote sorted FASTA to {outfile_path}")
+    click.echo(f"  chromosomes: {len(chroms)}")
+    click.echo(f"  maxicircle: {'yes' if maxicircle else 'no'}")
+    click.echo(f"  extra contigs: {len(extras)}")
 
 
 if __name__ == "__main__":
