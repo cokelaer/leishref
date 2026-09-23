@@ -79,17 +79,15 @@ def detect_sequences_from_fasta(fasta_path: Path) -> list[dict]:
 def rename_fasta_sequences(
     fasta_path: Path,
     accession: str,
-    flavor: str = "chr",
+    flavor: str = "number",
     data_dir: Path = None,
     taxon_id: Optional[int] = None,
 ) -> tuple[str, dict, Optional[str]]:
     """Rename sequences in FASTA using local chromosome database.
 
     Flavors:
-    - 'chr': chromosome I, chromosome II, ...
     - 'name': use stored names from database
     - 'number': 1, 2, 3, ... (numeric index)
-    - 'roman': I, II, III, ... (Roman numerals)
     - 'kraken': name|kraken:taxid|<TAXON_ID> format for Kraken classification
 
     Args:
@@ -121,14 +119,10 @@ def rename_fasta_sequences(
         # Special handling for maxicircle (kinetoplast DNA)
         elif info.get("type") == "maxicircle":
             new_name = "maxicircle"
-        elif flavor == "chr":
-            new_name = f"chromosome {_roman_numeral(i)}"
         elif flavor == "name":
             new_name = info.get("name", old_name)
         elif flavor == "number":
             new_name = str(i)
-        elif flavor == "roman":
-            new_name = _roman_numeral(i)
         elif flavor == "kraken":
             if not taxon_id:
                 return fasta_path.read_text(), {}, "Kraken flavor requires --taxid parameter"
@@ -142,24 +136,10 @@ def rename_fasta_sequences(
 
     for old, new in name_map.items():
         content = re.sub(
-            rf"^>{re.escape(old)}(?:\s.*)?$",
+            rf"^>{re.escape(old)}(?:[ \t].*)?$",
             f">{new}",
             content,
             flags=re.MULTILINE,
         )
 
     return content, name_map, None
-
-
-def _roman_numeral(n: int) -> str:
-    """Convert number to Roman numeral."""
-    val = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
-    syms = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
-    roman_num = ""
-    i = 0
-    while n > 0:
-        for _ in range(n // val[i]):
-            roman_num += syms[i]
-            n -= val[i]
-        i += 1
-    return roman_num
