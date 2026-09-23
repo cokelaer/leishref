@@ -83,6 +83,7 @@ def rename_fasta_sequences(
     accession: str,
     flavor: str = "chr",
     data_dir: Path = None,
+    taxon_id: Optional[int] = None,
 ) -> tuple[str, dict, Optional[str]]:
     """Rename sequences in FASTA using local chromosome database.
 
@@ -91,6 +92,10 @@ def rename_fasta_sequences(
     - 'name': use stored names from database
     - 'number': 1, 2, 3, ... (numeric index)
     - 'roman': I, II, III, ... (Roman numerals)
+    - 'kraken': name|kraken:taxid|<TAXON_ID> format for Kraken classification
+
+    Args:
+        taxon_id: NCBI taxon ID (required for 'kraken' flavor)
 
     Returns: (renamed FASTA content, mapping dict {old_name: new_name}, error message or None)
     """
@@ -126,6 +131,10 @@ def rename_fasta_sequences(
             new_name = str(i)
         elif flavor == "roman":
             new_name = _roman_numeral(i)
+        elif flavor == "kraken":
+            if not taxon_id:
+                return fasta_path.read_text(), {}, "Kraken flavor requires --taxid parameter"
+            new_name = f"{old_name}|kraken:taxid|{taxon_id}"
         else:
             new_name = old_name
 

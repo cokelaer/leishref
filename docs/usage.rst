@@ -8,13 +8,17 @@ List the entire catalog::
 
     leishref info
 
+Show details for one genome::
+
+    leishref info GCA_037177955.1
+
 Search for genomes::
 
     leishref search donovani
 
 Download a genome locally::
 
-    leishref install --alias Ld1S GCA_000227135.2
+    leishref install GCA_000227135.2 --alias Ld1S
 
 Verify checksums::
 
@@ -41,6 +45,8 @@ User commands
     │ verify                  Check the local database against the checksums recorded with each genome.          │
     │ rename-sequences        Rename sequences in a cached genome using chromosome database.                     │
     │ prune-scaffold          Remove unmapped contigs, keeping only chromosome sequences and kinetoplast.        │
+    │ bundle                  Pack genomes into a tarball: from symlinks or by genome name.                      │
+    │ export                  Export genome metadata as JSON, YAML, or TSV.                                      │
     ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
     ╭─ For maintainers and developers ───────────────────────────────────────────────────────────────────────────╮
     │ dev      Commands for maintaining the shipped catalog.                                                     │
