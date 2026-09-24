@@ -256,6 +256,15 @@ def dev():
     """
 
 
+@cli.group()
+def modifiers():
+    """Commands for modifying sequences: rename and prune.
+
+    These transform FASTA files without altering the cache.
+    Output goes to --output-dir (default: current directory).
+    """
+
+
 # --------------------------------------------------------------------------- helpers
 
 
@@ -1021,7 +1030,7 @@ def verify(local_dir, quick):
         raise SystemExit(1)
 
 
-@cli.command("rename-sequences")
+@modifiers.command("rename-sequences")
 @click.argument("name")
 @click.option(
     "--flavor",
@@ -1226,7 +1235,7 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
     click.echo(f"Wrote renamed sequences to {renamed_path}")
 
 
-@cli.command("prune-scaffold")
+@modifiers.command("prune-scaffold")
 @click.argument("name")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), hidden=True)
 @click.option(
