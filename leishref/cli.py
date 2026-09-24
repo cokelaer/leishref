@@ -673,7 +673,8 @@ def _require_local(genomes, name, what):
 )
 @click.option("--force", is_flag=True, help="Re-download even though the cache already has this genome")
 @click.option("--no-link", is_flag=True, help="Skip the alias-named symlink")
-def install(name, alias, local_dir, force, no_link):
+@click.option("--hard-copy", is_flag=True, help="Copy files locally instead of symlinking")
+def install(name, alias, local_dir, force, no_link, hard_copy):
     """Download a catalog genome and cache it, with a symlink named ALIAS.
 
     NAME picks the genome out of the catalog by accession or catalog id. The genome
@@ -711,7 +712,14 @@ def install(name, alias, local_dir, force, no_link):
         # deterministically this genome - nothing worth re-downloading. Quiet
         # unless the symlink itself needed fixing.
         click.echo(f"Already installed: {target}")
-        _link(alias, [p for _, p, _ in existing.file_paths() if p.exists()], no_link)
+        if hard_copy:
+            for _, src_path, _ in existing.file_paths():
+                if src_path and src_path.exists():
+                    dst_path = Path.cwd() / src_path.name
+                    shutil.copy2(src_path, dst_path)
+                    click.echo(f"  {dst_path.name} (copied)")
+        else:
+            _link(alias, [p for _, p, _ in existing.file_paths() if p.exists()], no_link)
         _record_download(Path(local_dir), genome.identifier, alias)
         return
 
@@ -731,7 +739,14 @@ def install(name, alias, local_dir, force, no_link):
 
         if all(local_checksums.get(k) == v for k, v in genome.checksums.items() if k in ("fasta", "gff")):
             click.echo("Files already present with correct checksums, skipping install")
-            _link(alias, [p for _, p, _ in genome.file_paths() if p and p.exists()], no_link)
+            if hard_copy:
+                for _, src_path, _ in genome.file_paths():
+                    if src_path and src_path.exists():
+                        dst_path = Path.cwd() / src_path.name
+                        shutil.copy2(src_path, dst_path)
+                        click.echo(f"  {dst_path.name} (copied)")
+            else:
+                _link(alias, [p for _, p, _ in genome.file_paths() if p and p.exists()], no_link)
             return
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -792,7 +807,16 @@ def install(name, alias, local_dir, force, no_link):
         local_genome.checksums = computed
         write_genome(installed, local_genome)
 
-    _link(alias, [p for _, p, _ in local_genome.file_paths() if p.exists()], no_link)
+    if hard_copy:
+        # Copy files locally instead of symlinking
+        for _, src_path, _ in local_genome.file_paths():
+            if src_path and src_path.exists():
+                dst_path = Path.cwd() / src_path.name
+                shutil.copy2(src_path, dst_path)
+                click.echo(f"  {dst_path.name} (copied)")
+    else:
+        _link(alias, [p for _, p, _ in local_genome.file_paths() if p.exists()], no_link)
+
     recorded_in = _record_download(Path(local_dir), genome.identifier, alias)
     click.echo(f"  recorded in {recorded_in}")
     if bad:
