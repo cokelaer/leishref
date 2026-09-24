@@ -130,17 +130,20 @@ def parse_chromosome_from_header(header: str) -> Optional[str]:
     """Try to extract chromosome number from sequence header.
 
     Looks for patterns like "chromosome 28" or "chr28".
+    Strips leading zeros (01 → 1, 02 → 2).
     Returns chromosome number or None if not found.
     """
     # Match "chromosome 28" or "chromosome28"
     match = re.search(r"chromosome\s*(\d+)", header, re.IGNORECASE)
     if match:
-        return match.group(1)
+        # Strip leading zeros: "01" → "1"
+        return str(int(match.group(1)))
 
     # Match "chr28" or "chr 28"
     match = re.search(r"chr\s*(\d+)", header, re.IGNORECASE)
     if match:
-        return match.group(1)
+        # Strip leading zeros: "01" → "1"
+        return str(int(match.group(1)))
 
     return None
 
