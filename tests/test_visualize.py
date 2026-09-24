@@ -5,7 +5,20 @@ import matplotlib.axes
 import pytest
 
 from leishref.metadata import Genome, write_genome
-from leishref.visualize import plot_chromosome_length_histogram, plot_genome_completeness, plot_genome_stats
+from leishref.visualize import (
+    _classify_technology,
+    _species_label,
+    _species_matches_filter,
+    plot_assembly_level_by_technology,
+    plot_chromosome_length_histogram,
+    plot_gc_content_by_species,
+    plot_genome_completeness,
+    plot_genome_size_histogram,
+    plot_genome_sizes,
+    plot_genome_stats,
+    plot_sequencing_technology,
+    plot_species_genome_count,
+)
 
 
 def _write_genome_with_optional_fasta(
@@ -264,3 +277,222 @@ def test_plot_genome_completeness_handles_all_levels(tmp_path):
 def test_plot_genome_completeness_requires_genomes(tmp_path):
     with pytest.raises(ValueError, match="No genomes found"):
         plot_genome_completeness(tmp_path, tmp_path / "empty.png")
+
+
+# ============================================================================== plot_genome_sizes
+
+
+def test_plot_genome_sizes_creates_file(tmp_path):
+    """plot_genome_sizes renders genome size distribution by species."""
+    _write_genome_with_optional_fasta(
+        tmp_path,
+        "GCA_1",
+        "Leishmania major",
+        {"num_bases": 32000000},
+    )
+    _write_genome_with_optional_fasta(
+        tmp_path,
+        "GCA_2",
+        "Leishmania donovani",
+        {"num_bases": 35000000},
+    )
+
+    output = tmp_path / "sizes.png"
+    out = plot_genome_sizes(tmp_path, output)
+
+    assert out == output
+    assert output.exists()
+    assert output.stat().st_size > 0
+
+
+def test_plot_genome_sizes_excludes_kinetoplast(tmp_path):
+    """plot_genome_sizes excludes kinetoplast-only by default."""
+    _write_genome_with_optional_fasta(
+        tmp_path,
+        "GCA_1",
+        "Leishmania major",
+        {"num_bases": 32000000},
+    )
+    _write_genome_with_optional_fasta(
+        tmp_path,
+        "GCA_kinet",
+        "kinetoplast",
+        {"num_bases": 1000},
+    )
+
+    output = tmp_path / "sizes_no_kinet.png"
+    out = plot_genome_sizes(tmp_path, output, include_kinetoplast=False)
+
+    assert output.exists()
+
+
+def test_plot_genome_sizes_with_kinetoplast(tmp_path):
+    """plot_genome_sizes includes kinetoplast when flag set."""
+    _write_genome_with_optional_fasta(
+        tmp_path,
+        "GCA_1",
+        "Leishmania major",
+        {"num_bases": 32000000},
+    )
+
+    output = tmp_path / "sizes_with_kinet.png"
+    out = plot_genome_sizes(tmp_path, output, include_kinetoplast=True)
+
+    assert output.exists()
+
+
+def test_plot_genome_sizes_species_filter(tmp_path):
+    """plot_genome_sizes filters by species."""
+    _write_genome_with_optional_fasta(
+        tmp_path,
+        "GCA_1",
+        "Leishmania major",
+        {"num_bases": 32000000},
+    )
+    _write_genome_with_optional_fasta(
+        tmp_path,
+        "GCA_2",
+        "Leishmania donovani",
+        {"num_bases": 35000000},
+    )
+
+    output = tmp_path / "sizes_major.png"
+    out = plot_genome_sizes(tmp_path, output, species_filter=["major"])
+
+    assert output.exists()
+
+
+# ============================================================================== plot_genome_size_histogram
+
+
+def test_plot_genome_size_histogram_creates_file(tmp_path):
+    """plot_genome_size_histogram creates histogram of genome sizes."""
+    _write_genome_with_optional_fasta(
+        tmp_path,
+        "GCA_1",
+        "Leishmania major",
+        {"num_bases": 32000000},
+    )
+    _write_genome_with_optional_fasta(
+        tmp_path,
+        "GCA_2",
+        "Leishmania major",
+        {"num_bases": 31000000},
+    )
+
+    output = tmp_path / "size_hist.png"
+    out = plot_genome_size_histogram(tmp_path, output)
+
+    assert output.exists()
+    assert output.stat().st_size > 0
+
+
+def test_plot_genome_size_histogram_with_kinetoplast(tmp_path):
+    """plot_genome_size_histogram includes kinetoplast when flag set."""
+    _write_genome_with_optional_fasta(
+        tmp_path,
+        "GCA_1",
+        "Leishmania major",
+        {"num_bases": 32000000},
+        records={"chr1": "A" * 1000},
+        fasta_name="GCA_1.fasta",
+    )
+
+    output = tmp_path / "size_hist_with_kinet.png"
+    out = plot_genome_size_histogram(tmp_path, output, include_kinetoplast=True)
+
+    assert output.exists()
+
+
+# ============================================================================== plot_sequencing_technology
+
+
+def test_plot_sequencing_technology_creates_file(tmp_path):
+    """plot_sequencing_technology shows tech distribution."""
+    _write_genome_with_optional_fasta(
+        tmp_path,
+        "GCA_1",
+        "Leishmania major",
+        {"num_bases": 32000000},
+        records={"chr1": "A" * 1000},
+    )
+    _write_genome_with_optional_fasta(
+        tmp_path,
+        "GCA_2",
+        "Leishmania major",
+        {"num_bases": 31000000},
+        records={"chr1": "A" * 1000},
+    )
+
+    output = tmp_path / "tech.png"
+    out = plot_sequencing_technology(tmp_path, output)
+
+    assert output.exists()
+    assert output.stat().st_size > 0
+
+
+# ============================================================================== plot_assembly_level_by_technology
+
+
+def test_plot_assembly_level_by_technology_creates_file(tmp_path):
+    """plot_assembly_level_by_technology shows quality vs tech."""
+    for i in range(2):
+        directory = tmp_path / "ncbi" / f"GCA_{i}"
+        directory.mkdir(parents=True, exist_ok=True)
+        write_genome(
+            directory,
+            Genome(
+                identifier=f"GCA_{i}",
+                source="NCBI",
+                accession=f"GCA_{i}",
+                species="Leishmania major",
+                assembly_level="Complete Genome",
+                stats={"num_bases": 32000000},
+            ),
+        )
+
+    output = tmp_path / "tech_vs_quality.png"
+    out = plot_assembly_level_by_technology(tmp_path, output)
+
+    assert output.exists()
+    assert output.stat().st_size > 0
+
+
+# ============================================================================== plot_species_genome_count
+
+
+def test_plot_species_genome_count_empty_catalog(tmp_path):
+    """plot_species_genome_count handles empty catalog."""
+    with pytest.raises(ValueError, match="No genomes"):
+        plot_species_genome_count(tmp_path, tmp_path / "species_count.png")
+
+
+# ============================================================================== plot_gc_content_by_species
+
+
+def test_plot_gc_content_by_species_empty_catalog(tmp_path):
+    """plot_gc_content_by_species handles empty catalog."""
+    with pytest.raises(ValueError, match="No genomes"):
+        plot_gc_content_by_species(tmp_path, tmp_path / "gc_content.png")
+
+
+# ============================================================================== helper functions
+
+
+def test_species_label_uses_last_part_abbreviated():
+    """_species_label returns first 3 chars of last token."""
+    assert _species_label("Leishmania major") == "maj"
+    assert _species_label("Leishmania donovani") == "don"
+
+
+def test_species_matches_filter_token_based():
+    """_species_matches_filter matches species by token."""
+    assert _species_matches_filter("Leishmania major", ["major"])
+    assert not _species_matches_filter("Leishmania major", ["donovani"])
+
+
+def test_classify_technology_identifies_main_techs():
+    """_classify_technology recognizes primary sequencing methods."""
+    assert _classify_technology("Illumina") == "Illumina"
+    assert _classify_technology("PacBio") == "PacBio"
+    assert _classify_technology("") == "Unknown"
