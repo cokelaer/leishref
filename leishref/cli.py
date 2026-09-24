@@ -2839,11 +2839,33 @@ def update_chromosome_map_cmd(genome_accession, fasta, taxid, species):
 
     from leishref.chromosomes import extract_sequences_with_headers, parse_chromosome_from_header
 
-    # Auto-fetch taxid from species if not provided
-    if not taxid and species:
-        taxid = get_taxid_from_species(species)
-        if taxid:
-            click.echo(f"Auto-fetched taxid {taxid} for species: {species}")
+    # Try to auto-fetch taxid (priority: explicit > catalog metadata > species mapping)
+    if not taxid:
+        # 1. Try to find taxid in catalog metadata.yaml
+        catalog_genomes = catalog()
+        genome_in_catalog = None
+        for g in catalog_genomes:
+            if g.identifier == genome_accession or g.accession == genome_accession:
+                genome_in_catalog = g
+                break
+
+        if genome_in_catalog and genome_in_catalog.taxon_id:
+            taxid = genome_in_catalog.taxon_id
+            click.echo(f"✓ Found taxid {taxid} in the metadata.yaml of leishref ({genome_accession})")
+        # 2. Try species-based lookup (from --species or catalog)
+        elif species or (genome_in_catalog and genome_in_catalog.species):
+            lookup_species = species or (genome_in_catalog.species if genome_in_catalog else None)
+            if lookup_species:
+                taxid = get_taxid_from_species(lookup_species)
+                if taxid:
+                    click.echo(f"✓ Auto-fetched taxid {taxid} from species: {lookup_species}")
+        # 3. Warn if not found
+        if not taxid:
+            click.echo(
+                f"⚠ Could not find taxid for {genome_accession}",
+                err=True,
+            )
+            click.echo(f"  Provide it with: --taxid <TAXID>", err=True)
 
     fasta_path = Path(fasta)
     sequences = extract_sequences_with_headers(fasta_path)
