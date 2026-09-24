@@ -1,77 +1,80 @@
 """Chromosome name mapping and sequence renaming utilities."""
 
+import csv
 import re
 from pathlib import Path
 from typing import Optional
 
-import yaml
-
 
 def load_chromosome_map(data_dir: Path = None) -> dict:
-    """Load chromosome name mapping from local database.
+    """Load chromosome mapping from CSV.
 
-    Returns: {accession: [{"name": "chr I", "index": 1}, ...]}
+    Returns: {accession: {"chromosome": "1", "taxid": "", "origin": "GCA_..."}}
     """
     if data_dir is None:
         from leishref.metadata import CATALOG_DIR
 
         data_dir = CATALOG_DIR
 
-    map_file = data_dir / "chromosome_map.yaml"
+    map_file = data_dir / "chromosome_map.csv"
     if not map_file.exists():
         return {}
 
+    mapping = {}
     with open(map_file) as f:
-        return yaml.safe_load(f) or {}
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row and row.get("accession"):
+                mapping[row["accession"]] = {
+                    "chromosome": row.get("chromosome", ""),
+                    "taxid": row.get("taxid", ""),
+                    "origin": row.get("origin", ""),
+                }
+    return mapping
 
 
-def save_chromosome_map(mapping: dict, data_dir: Path = None):
-    """Save chromosome name mapping to local database."""
+def get_chromosome_info(accession: str, data_dir: Path = None) -> Optional[dict]:
+    """Get chromosome info for a sequence accession.
+
+    Returns: {"chromosome": "1", "taxid": "", "origin": "GCA_..."} or None
+    """
+    chrom_map = load_chromosome_map(data_dir)
+    return chrom_map.get(accession)
+
+
+def get_genome_sequences(genome_accession: str, data_dir: Path = None) -> list[dict]:
+    """Get all chromosome sequences for a genome accession.
+
+    Returns: [{"accession": "CP022616.1", "chromosome": "1", ...}, ...]
+    """
     if data_dir is None:
         from leishref.metadata import CATALOG_DIR
 
         data_dir = CATALOG_DIR
 
-    map_file = data_dir / "chromosome_map.yaml"
-    map_file.parent.mkdir(parents=True, exist_ok=True)
+    map_file = data_dir / "chromosome_map.csv"
+    if not map_file.exists():
+        return []
 
-    with open(map_file, "w") as f:
-        yaml.dump(mapping, f, default_flow_style=False, sort_keys=True)
-
-
-def get_chromosome_info(accession: str, data_dir: Path = None) -> list[dict]:
-    """Get chromosome info for accession from local database.
-
-    Returns: [{"name": "chromosome I", "index": 1}, ...]
-    """
-    chrom_map = load_chromosome_map(data_dir)
-    return chrom_map.get(accession, [])
+    sequences = []
+    with open(map_file) as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row and row.get("origin") == genome_accession:
+                sequences.append(row)
+    return sequences
 
 
-def detect_sequences_from_fasta(fasta_path: Path) -> list[dict]:
-    """Extract sequence headers from FASTA file.
+def detect_sequences_from_fasta(fasta_path: Path) -> list[str]:
+    """Extract sequence IDs from FASTA file in order.
 
-    Returns: [{"accession": "NC_007067.7", "name": "NC_007067.7"}, ...]
+    Returns: ["NC_007067.7", "NC_007068.7", ...]
     """
     sequences = []
     content = fasta_path.read_text()
 
     for match in re.finditer(r"^>(\S+)", content, re.MULTILINE):
-        seq_id = match.group(1)
-        index = len(sequences) + 1
-        entry = {
-            "accession": seq_id,
-            "name": seq_id,
-            "index": index,
-        }
-        # Mark sequence 37 as maxicircle (kinetoplast DNA): true for standard
-        # NCBI assemblies with 36 nuclear chromosomes, but custom scaffolds
-        # can have fewer chromosomes, pushing an ordinary contig into slot 37.
-        # contig_* IDs are always scaffold-local contig names, never a real
-        # maxicircle accession, so exclude them from the position heuristic.
-        if index == 37 and not seq_id.startswith("contig_"):
-            entry["type"] = "maxicircle"
-        sequences.append(entry)
+        sequences.append(match.group(1))
 
     return sequences
 
@@ -86,51 +89,34 @@ def rename_fasta_sequences(
     """Rename sequences in FASTA using local chromosome database.
 
     Flavors:
-    - 'name': use stored names from database
-    - 'number': 1, 2, 3, ... (numeric index)
-    - 'kraken': name|kraken:taxid|<TAXON_ID> format for Kraken classification
+    - 'number': 1, 2, 3, ... (numeric index based on sequence order in file)
+    - 'kraken': number|kraken:taxid|<TAXON_ID> format for Kraken classification
 
     Args:
         taxon_id: NCBI taxon ID (required for 'kraken' flavor)
 
     Returns: (renamed FASTA content, mapping dict {old_name: new_name}, error message or None)
     """
-    chrom_info = get_chromosome_info(accession, data_dir)
-
-    if not chrom_info:
-        # Auto-detect from FASTA and populate map
-        chrom_info = detect_sequences_from_fasta(fasta_path)
-        if not chrom_info:
-            return fasta_path.read_text(), {}, f"No sequences found in {fasta_path.name}"
-
-        # Save to chromosome map for future use
-        chrom_map = load_chromosome_map(data_dir)
-        chrom_map[accession] = chrom_info
-        save_chromosome_map(chrom_map, data_dir)
+    sequences = detect_sequences_from_fasta(fasta_path)
+    if not sequences:
+        return fasta_path.read_text(), {}, f"No sequences found in {fasta_path.name}"
 
     # Build mapping of sequence order to new names
     name_map = {}
-    for i, info in enumerate(chrom_info, 1):
-        old_name = info.get("accession", f"sequence_{i}")
-
+    for i, seq_id in enumerate(sequences, 1):
         # Contigs (NW_*) keep original ID, no renaming
-        if old_name.startswith("NW_"):
-            new_name = old_name
-        # Special handling for maxicircle (kinetoplast DNA)
-        elif info.get("type") == "maxicircle":
-            new_name = "maxicircle"
-        elif flavor == "name":
-            new_name = info.get("name", old_name)
+        if seq_id.startswith("NW_"):
+            new_name = seq_id
         elif flavor == "number":
             new_name = str(i)
         elif flavor == "kraken":
             if not taxon_id:
                 return fasta_path.read_text(), {}, "Kraken flavor requires --taxid parameter"
-            new_name = f"{old_name}|kraken:taxid|{taxon_id}"
+            new_name = f"{i}|kraken:taxid|{taxon_id}"
         else:
-            new_name = old_name
+            new_name = seq_id
 
-        name_map[old_name] = new_name
+        name_map[seq_id] = new_name
 
     content = fasta_path.read_text()
 

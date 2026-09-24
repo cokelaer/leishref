@@ -24,7 +24,7 @@ from tqdm import tqdm
 
 from leishref import __version__
 from leishref.checksums import genome_stats, md5_file
-from leishref.chromosomes import get_chromosome_info, rename_fasta_sequences
+from leishref.chromosomes import get_genome_sequences, rename_fasta_sequences
 from leishref.links import LinkConflict, link_paths
 from leishref.metadata import (
     CATALOG_DIR,
@@ -1082,8 +1082,6 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
         click.echo(f"No FASTA file found for {name}", err=True)
         raise SystemExit(1)
 
-    from leishref.chromosomes import load_chromosome_map, save_chromosome_map
-
     # Use accession or identifier as the chromosome map key
     chrom_key = genome.accession or genome.identifier
 
@@ -1119,18 +1117,6 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
     renamed_path.write_text(renamed)
     click.echo(f"Wrote renamed sequences to {renamed_path}")
 
-    # Persist the new_name mappings for this flavor to chromosome_map.yaml
-    # (rename_fasta_sequences generates the mapping but doesn't persist flavor-specific names)
-    if name_map:
-        chrom_map = load_chromosome_map()
-        if chrom_key in chrom_map:
-            chrom_info = chrom_map[chrom_key]
-            for info in chrom_info:
-                old_name = info.get("accession", "")
-                if old_name and old_name in name_map:
-                    info["new_name"] = name_map[old_name]
-            save_chromosome_map(chrom_map)
-
 
 @cli.command("prune-scaffold")
 @click.argument("name")
@@ -1154,9 +1140,9 @@ def prune_scaffold_cmd(name, local_dir):
         click.echo(f"Genome {name} has no accession; cannot look up chromosome info", err=True)
         raise SystemExit(1)
 
-    chrom_info = get_chromosome_info(genome.accession)
+    chrom_sequences = get_genome_sequences(genome.accession)
 
-    if not chrom_info:
+    if not chrom_sequences:
         click.echo(f"No chromosome info found for {genome.accession}", err=True)
         click.echo("Populate chromosome database using 'leishref dev fetch-genome'", err=True)
         raise SystemExit(1)
@@ -1171,7 +1157,7 @@ def prune_scaffold_cmd(name, local_dir):
         click.echo(f"No FASTA file found for {name}", err=True)
         raise SystemExit(1)
 
-    mapped_names = {info.get("accession") for info in chrom_info if info.get("accession")}
+    mapped_names = {seq.get("accession") for seq in chrom_sequences if seq.get("accession")}
     click.echo(f"Pruning {fasta_path.name} ({len(mapped_names)} mapped + kinetoplast)...")
     pruned = prune_fasta(fasta_path, mapped_names)
     fasta_path.write_text(pruned)
