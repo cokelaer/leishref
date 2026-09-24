@@ -1228,7 +1228,7 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
 
 @cli.command("prune-scaffold")
 @click.argument("name")
-@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
+@click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), hidden=True)
 @click.option(
     "--output-dir",
     type=click.Path(),
@@ -1292,13 +1292,23 @@ def prune_scaffold_cmd(name, local_dir, output_dir):
 
     # Look up mapped sequences
     if is_file_input:
-        # For file input: look up each sequence accession directly
+        # For file input: keep mapped sequences + chromosome numbers (1-36) + kinetoplast
         chrom_map = load_chromosome_map()
         mapped_names = {acc for acc in seq_accessions if acc in chrom_map}
-        click.echo(f"Found {len(mapped_names)} mapped sequences")
-        if len(mapped_names) < len(seq_accessions):
-            missing = len(seq_accessions) - len(mapped_names)
-            click.echo(f"⚠ {missing} sequences not in chromosome database", err=True)
+
+        # Also keep chromosome-numbered sequences (1-36, they're already renamed)
+        for acc in seq_accessions:
+            try:
+                chr_num = int(acc)
+                if 1 <= chr_num <= 36:
+                    mapped_names.add(acc)
+            except (ValueError, TypeError):
+                pass
+
+        click.echo(f"Keeping {len(mapped_names)} sequences (mapped + chromosome numbers)")
+        pruned_count = len(seq_accessions) - len(mapped_names)
+        if pruned_count > 0:
+            click.echo(f"⚠ Pruning {pruned_count} unmapped sequences", err=True)
     else:
         # For genome input: use get_genome_sequences
         chrom_sequences = get_genome_sequences(genome.accession)
