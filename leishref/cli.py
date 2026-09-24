@@ -107,10 +107,15 @@ click.rich_click.COMMAND_GROUPS = {
                 "install-ncbi-refseq",
                 "restore",
                 "verify",
-                "rename-sequences",
-                "prune-scaffold",
                 "bundle",
                 "export",
+            ],
+        },
+        {
+            "name": "Modifiers",
+            "commands": [
+                "rename-sequences",
+                "prune-scaffold",
             ],
         },
         {
@@ -253,19 +258,6 @@ def dev():
 
     These write to leishref/data/, the catalog that ships with the package. Changes
     there are meant to travel as a pull request.
-    """
-
-
-@cli.group("modifiers")
-def modifiers():
-    """Modifiers: rename and prune sequences.
-
-    Subcommands:
-    - rename-sequences: Rename sequences using chromosome database or numeric order
-    - prune-scaffold: Remove unmapped contigs, keep chromosomes + kinetoplast
-
-    Both work on cached genomes or arbitrary FASTA files. Output goes to
-    --output-dir (default: current directory). Cache is never modified.
     """
 
 
@@ -1034,7 +1026,7 @@ def verify(local_dir, quick):
         raise SystemExit(1)
 
 
-@modifiers.command("rename-sequences")
+@cli.command("rename-sequences")
 @click.argument("name")
 @click.option(
     "--flavor",
@@ -1239,7 +1231,7 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
     click.echo(f"Wrote renamed sequences to {renamed_path}")
 
 
-@modifiers.command("prune-scaffold")
+@cli.command("prune-scaffold")
 @click.argument("name")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), hidden=True)
 @click.option(
