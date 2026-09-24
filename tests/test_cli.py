@@ -462,6 +462,17 @@ def test_scaffold_rejects_a_name_that_is_neither_file_nor_genome(tmp_path):
         _resolve_assembly("no_such_thing", tmp_path / "data", None, "--query")
 
 
+def test_scaffold_accepts_filename_with_extension_stripped(installed):
+    """--query accepts 'Ltrop.flye.fna' by stripping the extension."""
+    from leishref.cli import _resolve_assembly
+
+    base, fasta = installed
+    path, genome = _resolve_assembly("Ltrop.flye.fna", base / "data", None, "--query")
+
+    assert path == fasta
+    assert genome.identifier == "Ltrop.flye"
+
+
 def test_a_parent_record_names_the_catalog_entry_and_its_checksum(installed):
     """A published scaffold has to say exactly which assemblies it came from."""
     from leishref.cli import _parent_record
