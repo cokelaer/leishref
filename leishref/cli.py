@@ -20,6 +20,7 @@ import yaml
 from rich.console import Console
 from rich.markup import escape
 from rich.syntax import Syntax
+from rich.table import Table
 from tqdm import tqdm
 
 from leishref import __version__
@@ -2782,6 +2783,111 @@ def sort_fasta_cmd(infile, outfile):
     click.echo(f"  chromosomes: {len(chroms)}")
     click.echo(f"  maxicircle: {'yes' if maxicircle else 'no'}")
     click.echo(f"  extra contigs: {len(extras)}")
+
+
+@dev.command("update-chromosome-map")
+@click.argument("genome_accession")
+@click.argument("fasta", type=click.Path(exists=True))
+@click.option("--taxid", type=int, default=None, help="NCBI taxon ID (optional)")
+def update_chromosome_map_cmd(genome_accession, fasta, taxid):
+    """Populate chromosome_map.csv from FASTA headers (interactive).
+
+    Parses sequence headers to extract chromosome numbers (e.g., "chromosome 28").
+    Shows a table for review and confirmation before saving to chromosome_map.csv.
+
+    Examples:
+
+    \b
+      leishref dev update-chromosome-map GCA_999999999.1 assembly.fna --taxid 5661
+    """
+    import csv
+
+    from leishref.chromosomes import extract_sequences_with_headers, parse_chromosome_from_header
+
+    fasta_path = Path(fasta)
+    sequences = extract_sequences_with_headers(fasta_path)
+
+    if not sequences:
+        click.echo("No sequences found in FASTA file", err=True)
+        raise SystemExit(1)
+
+    click.echo(f"\nParsing {len(sequences)} sequences from {fasta_path.name}")
+    click.echo(f"Genome accession: {genome_accession}\n")
+
+    # Try to auto-detect chromosome/contig assignments
+    assignments = []
+    for seq in sequences:
+        accession = seq["accession"]
+        header = seq["header"]
+        auto_chr = parse_chromosome_from_header(header)
+
+        if auto_chr:
+            chromosome = auto_chr
+            source = "auto-detected"
+        else:
+            chromosome = accession
+            source = "contig name"
+
+        assignments.append(
+            {
+                "accession": accession,
+                "chromosome": chromosome,
+                "source": source,
+                "header": header[:80] + ("..." if len(header) > 80 else ""),
+            }
+        )
+
+    # Show table for review
+    console = Console()
+    console.print("\nProposed chromosome assignments:\n")
+
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Accession", style="cyan")
+    table.add_column("→ Chromosome", style="green")
+    table.add_column("Source", style="yellow")
+    table.add_column("Header (first 80 chars)")
+
+    for row in assignments:
+        table.add_row(row["accession"], row["chromosome"], row["source"], row["header"])
+
+    console.print(table)
+
+    # Confirm
+    click.echo()
+    if not click.confirm("Save these assignments to chromosome_map.csv?"):
+        click.echo("Cancelled.")
+        raise SystemExit(0)
+
+    # Load existing map
+    map_file = CATALOG_DIR / "chromosome_map.csv"
+    existing = {}
+    if map_file.exists():
+        with open(map_file) as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row:
+                    existing[row["accession"]] = row
+
+    # Add/update new entries
+    for row in assignments:
+        accession = row["accession"]
+        existing[accession] = {
+            "accession": accession,
+            "chromosome": row["chromosome"],
+            "taxid": str(taxid) if taxid else "",
+            "origin": genome_accession,
+        }
+
+    # Write back
+    map_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(map_file, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["accession", "chromosome", "taxid", "origin"])
+        writer.writeheader()
+        for accession in sorted(existing.keys()):
+            writer.writerow(existing[accession])
+
+    click.echo(f"\n✓ Updated {map_file}")
+    click.echo(f"  Added/updated {len(assignments)} sequences for {genome_accession}")
 
 
 if __name__ == "__main__":
