@@ -662,7 +662,7 @@ def test_rename_sequences_outputs_renamed_fasta(installed, tmp_path, monkeypatch
     base, fasta = installed
 
     # Run rename-sequences with number flavor
-    result = run(["modifiers", "rename-sequences", "Ltrop.flye", "--flavor", "number", "--local-dir", "data"], base)
+    result = run(["rename-sequences", "Ltrop.flye", "--flavor", "number", "--local-dir", "data"], base)
     assert result.exit_code == 0
     assert "Renaming sequences" in result.output
 
@@ -699,7 +699,7 @@ def test_rename_sequences_output_filename_keeps_versioned_accession(tmp_path, mo
         ),
     )
 
-    result = run(["modifiers", "rename-sequences", "GCA_1.1", "--flavor", "number", "--local-dir", "data"], tmp_path)
+    result = run(["rename-sequences", "GCA_1.1", "--flavor", "number", "--local-dir", "data"], tmp_path)
     assert result.exit_code == 0
 
     output_file = tmp_path / f"GCA_1.1.number{fasta.suffix}"
@@ -726,7 +726,7 @@ def test_rename_sequences_with_kraken_flavor(tmp_path, monkeypatch):
         ),
     )
 
-    result = run(["modifiers", "rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--local-dir", "data"], tmp_path)
+    result = run(["rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--local-dir", "data"], tmp_path)
     assert result.exit_code == 0
 
     output_file = tmp_path / f"Ltrop.flye.kraken{fasta.suffix}"
@@ -765,9 +765,7 @@ def test_rename_sequences_kraken_flavor_does_not_mislabel_37th_contig_as_maxicir
         ),
     )
 
-    result = run(
-        ["modifiers", "rename-sequences", "Ltrop.scaffold", "--flavor", "kraken", "--local-dir", "data"], tmp_path
-    )
+    result = run(["rename-sequences", "Ltrop.scaffold", "--flavor", "kraken", "--local-dir", "data"], tmp_path)
     assert result.exit_code == 0
 
     output_file = tmp_path / f"Ltrop.scaffold.kraken{fasta.suffix}"
@@ -797,7 +795,7 @@ def test_rename_sequences_kraken_flavor_requires_taxid(tmp_path):
         ),
     )
 
-    result = run(["modifiers", "rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--local-dir", "data"], tmp_path)
+    result = run(["rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--local-dir", "data"], tmp_path)
     assert result.exit_code != 0
     assert "taxid" in result.output.lower()
 
@@ -822,7 +820,7 @@ def test_rename_sequences_kraken_flavor_uses_explicit_taxid(tmp_path, monkeypatc
     )
 
     result = run(
-        ["modifiers", "rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--taxid", "5661", "--local-dir", "data"],
+        ["rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--taxid", "5661", "--local-dir", "data"],
         tmp_path,
     )
     assert result.exit_code == 0
@@ -866,7 +864,7 @@ def test_prune_scaffold_requires_an_accession(tmp_path):
         ),
     )
 
-    result = run(["modifiers", "prune-scaffold", "NoAcc", "--local-dir", "data"], tmp_path)
+    result = run(["prune-scaffold", "NoAcc", "--local-dir", "data"], tmp_path)
     assert result.exit_code != 0
     assert "no accession" in result.output.lower()
 
@@ -877,7 +875,7 @@ def test_prune_scaffold_requires_chromosome_info(tmp_path, monkeypatch):
     directory.mkdir(parents=True)
     _genome_with_accession(directory, "ACCX")
 
-    result = run(["modifiers", "prune-scaffold", "Ltrop.acc", "--local-dir", "data"], tmp_path)
+    result = run(["prune-scaffold", "Ltrop.acc", "--local-dir", "data"], tmp_path)
     assert result.exit_code != 0
     assert "No chromosome info found" in result.output
 
@@ -903,7 +901,7 @@ def test_prune_scaffold_keeps_mapped_and_kinetoplast_sequences(tmp_path, monkeyp
 
     output_dir = tmp_path / "pruned"
     result = run(
-        ["modifiers", "prune-scaffold", "Ltrop.acc", "--local-dir", "data", "--output-dir", str(output_dir)],
+        ["prune-scaffold", "Ltrop.acc", "--local-dir", "data", "--output-dir", str(output_dir)],
         tmp_path,
     )
     assert result.exit_code == 0
@@ -1151,7 +1149,7 @@ def test_rename_sequences_kraken_with_genome_taxid(installed, tmp_path, monkeypa
         writer.writerow({"accession": "c1", "chromosome": "1", "taxid": "", "origin": "Ltrop.flye"})
 
     result = run(
-        ["modifiers", "rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--taxid", "5666", "--local-dir", "data"],
+        ["rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--taxid", "5666", "--local-dir", "data"],
         base,
     )
     assert result.exit_code == 0
@@ -1460,7 +1458,7 @@ def test_rename_sequences_number_flavor_basic(installed, tmp_path, monkeypatch):
     monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "shared_catalog")
     base, fasta = installed
 
-    result = run(["modifiers", "rename-sequences", "Ltrop.flye", "--flavor", "number", "--local-dir", "data"], base)
+    result = run(["rename-sequences", "Ltrop.flye", "--flavor", "number", "--local-dir", "data"], base)
     assert result.exit_code == 0
 
     output_file = base / f"Ltrop.flye.number{fasta.suffix}"
@@ -1483,7 +1481,7 @@ def test_rename_sequences_name_flavor_uses_chromosome_names(installed, tmp_path,
         writer.writeheader()
         writer.writerow({"accession": "c1", "chromosome": "LdCHR01", "taxid": "5666", "origin": "Ltrop.flye"})
 
-    result = run(["modifiers", "rename-sequences", "Ltrop.flye", "--flavor", "name", "--local-dir", "data"], base)
+    result = run(["rename-sequences", "Ltrop.flye", "--flavor", "name", "--local-dir", "data"], base)
     assert result.exit_code == 0
 
 
@@ -1493,7 +1491,7 @@ def test_rename_sequences_with_missing_fasta_fails(tmp_path):
     directory.mkdir(parents=True)
     write_genome(directory, Genome(identifier="NoFASTA", source="Local", species="Leishmania"))
 
-    result = run(["modifiers", "rename-sequences", "NoFASTA", "--local-dir", "data"], tmp_path)
+    result = run(["rename-sequences", "NoFASTA", "--local-dir", "data"], tmp_path)
     assert result.exit_code == 1
     assert "FASTA" in result.output or "not found" in result.output.lower()
 
@@ -1504,9 +1502,7 @@ def test_rename_sequences_resolves_by_filename_stem(installed, tmp_path, monkeyp
     base, fasta = installed
 
     # Can pass the .fna filename
-    result = run(
-        ["modifiers", "rename-sequences", f"Ltrop.flye.fna", "--flavor", "number", "--local-dir", "data"], base
-    )
+    result = run(["rename-sequences", f"Ltrop.flye.fna", "--flavor", "number", "--local-dir", "data"], base)
     assert result.exit_code == 0
 
 
@@ -1548,7 +1544,7 @@ def test_prune_scaffold_with_mapped_sequences(tmp_path, monkeypatch):
     original_fasta = fasta.read_text()
     output_dir = tmp_path / "pruned"
     result = run(
-        ["modifiers", "prune-scaffold", "Ltrop.acc", "--local-dir", "data", "--output-dir", str(output_dir)],
+        ["prune-scaffold", "Ltrop.acc", "--local-dir", "data", "--output-dir", str(output_dir)],
         tmp_path,
     )
     assert result.exit_code == 0
