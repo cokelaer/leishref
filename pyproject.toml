@@ -65,6 +65,18 @@ testpaths = ["tests"]
 # breaks collection on import; nothing here is async.
 addopts = "-p no:asyncio"
 
+[tool.coverage.run]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+
 [tool.black]
 line-length = 120
 
