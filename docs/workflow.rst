@@ -78,6 +78,44 @@ scaffold from it, from raw FASTA through to a published, installable entry.
     # Zenodo for everyone else too:
     leishref install Ltrop.raw.scaffold.Ld1S --alias my-scaffold
 
+Refining scaffold assemblies: renaming and pruning
+---------------------------------------------------
+
+After scaffolding, you often want to rename sequences to chromosome numbers and
+remove unmapped contigs. Use ``--hard-copy`` to work with local files (avoiding
+symlink complications), then chain ``rename-sequences`` and ``prune-scaffold``.
+
+::
+
+    # 1. Install the scaffold locally as a hard copy (not a symlink)
+    leishref install Ltrop.scaffold.Ld1S --alias LtrL590.scaffold.Ld1S --hard-copy
+
+    # 2. Remove the RagTag scaffolding suffix from sequence headers if present
+    sed -i -e 's/_RagTag//g' LtrL590.scaffold.Ld1S.fna
+
+    # 3. Rename sequences: convert accessions to chromosome numbers (1-36 + kinetoplast)
+    leishref modifiers rename-sequences LtrL590.scaffold.Ld1S.fna --flavor number
+
+    # This creates ``LtrL590.scaffold.Ld1S.number.fna`` locally with:
+    # >1
+    # ACGTACGT...
+    # >2
+    # ...
+    # >maxicircle
+    # ...
+
+    # 4. Prune unmapped contigs: keep only mapped sequences and kinetoplast
+    leishref modifiers prune-scaffold LtrL590.scaffold.Ld1S.number.fna --output-dir pruned
+
+    # Output shows what was kept:
+    # Keeping 37 sequences (mapped + chromosome numbers)
+    # Pruning 103 unmapped sequences
+    # Wrote pruned FASTA to pruned/LtrL590.scaffold.Ld1S.number.fna
+
+The result is a cleaned assembly with only chromosomes and kinetoplast, ready
+for downstream analysis. ``--hard-copy`` avoids symlink issues when working with
+multiple processing steps on the same genome.
+
 Adding a local file to the database and publishing it to Zenodo
 ---------------------------------------------------------------------
 
