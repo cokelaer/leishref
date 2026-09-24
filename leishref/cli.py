@@ -1159,16 +1159,55 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
             )
             raise SystemExit(1)
 
-    # Determine which key to use for renaming
-    if is_file_input:
-        # For file input: use first found sequence accession, or None if none found
-        primary_key = found_accessions[0] if found_accessions else None
-    else:
-        # For genome input: always use the genome key
-        primary_key = chrom_key
-
     click.echo(f"Renaming sequences in {fasta_path.name} ({flavor} flavor)...")
-    renamed, name_map, error = rename_fasta_sequences(fasta_path, primary_key, flavor, None, taxid)
+
+    if is_file_input:
+        # For file input: build mapping by looking up each sequence accession
+        from leishref.chromosomes import load_chromosome_map
+
+        sequences = extract_sequences_with_headers(fasta_path)
+        chrom_map = load_chromosome_map()
+
+        # Build seq_to_chr mapping for all found accessions (regardless of origin)
+        seq_to_chr = {}
+        for seq_acc in seq_accessions:
+            if seq_acc in chrom_map:
+                seq_to_chr[seq_acc] = chrom_map[seq_acc].get("chromosome")
+
+        # Manual renaming for file input
+        name_map = {}
+        new_lines = []
+        fasta_content = fasta_path.read_text()
+        seq_idx = 0
+        for line in fasta_content.split("\n"):
+            if line.startswith(">"):
+                seq_id = line[1:].split()[0]  # Get accession (before first space)
+                if seq_id in seq_to_chr:
+                    chr_value = seq_to_chr[seq_id]
+                    if flavor == "number":
+                        new_name = chr_value
+                    elif flavor == "kraken":
+                        if not taxid:
+                            click.echo("Kraken flavor requires --taxid parameter", err=True)
+                            raise SystemExit(1)
+                        new_name = f"{chr_value}|kraken:taxid|{taxid}"
+                    else:
+                        new_name = seq_id
+                    name_map[seq_id] = new_name
+                    new_lines.append(f">{new_name}")
+                else:
+                    # Keep original name for unmapped sequences
+                    name_map[seq_id] = seq_id
+                    new_lines.append(line)
+            else:
+                new_lines.append(line)
+
+        renamed = "\n".join(new_lines)
+        error = None
+    else:
+        # For genome input: use existing function
+        primary_key = chrom_key
+        renamed, name_map, error = rename_fasta_sequences(fasta_path, primary_key, flavor, None, taxid)
 
     if error:
         click.echo(f"Warning: {error}", err=True)
