@@ -79,6 +79,41 @@ def detect_sequences_from_fasta(fasta_path: Path) -> list[str]:
     return sequences
 
 
+def extract_sequences_with_headers(fasta_path: Path) -> list[dict]:
+    """Extract sequence ID and full header from FASTA file.
+
+    Returns: [{"accession": "CM024314.1", "header": "CM024314.1 Leishmania tropica strain CDC216-162 chromosome 28, ..."}, ...]
+    """
+    sequences = []
+    content = fasta_path.read_text()
+
+    for match in re.finditer(r"^>([^\s]+)\s*(.*?)$", content, re.MULTILINE):
+        accession = match.group(1)
+        description = match.group(2) or ""
+        sequences.append({"accession": accession, "header": f"{accession} {description}".strip()})
+
+    return sequences
+
+
+def parse_chromosome_from_header(header: str) -> Optional[str]:
+    """Try to extract chromosome number from sequence header.
+
+    Looks for patterns like "chromosome 28" or "chr28".
+    Returns chromosome number or None if not found.
+    """
+    # Match "chromosome 28" or "chromosome28"
+    match = re.search(r"chromosome\s*(\d+)", header, re.IGNORECASE)
+    if match:
+        return match.group(1)
+
+    # Match "chr28" or "chr 28"
+    match = re.search(r"chr\s*(\d+)", header, re.IGNORECASE)
+    if match:
+        return match.group(1)
+
+    return None
+
+
 def rename_fasta_sequences(
     fasta_path: Path,
     accession: str,
