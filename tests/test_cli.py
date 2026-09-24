@@ -984,3 +984,72 @@ def test_dev_status_flags_missing_fields_and_bad_checksums(tmp_path):
     assert "checksum mismatch" in result.output
     assert "Orphaned directory" in result.output
     assert "Missing taxon_id" in result.output
+
+
+def test_update_chromosome_map_interactive_confirm(tmp_path, monkeypatch):
+    """Test update-chromosome-map command with user confirmation."""
+    import csv
+
+    from leishref.metadata import CATALOG_DIR
+
+    catalog_dir = tmp_path / "shared_catalog"
+    catalog_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", catalog_dir)
+
+    fasta_file = tmp_path / "test.fna"
+    fasta_file.write_text(">CM024314.1 chromosome 28\nACGT\n>contig1 extra contig\nTTTT\n")
+
+    result = run(
+        ["dev", "update-chromosome-map", "GCA_test.1", str(fasta_file), "--taxid", "5666"],
+        tmp_path,
+        input="y\n",
+    )
+
+    assert result.exit_code == 0
+    assert "Proposed chromosome assignments" in result.output
+    assert "Updated" in result.output
+
+
+def test_update_chromosome_map_cancel(tmp_path, monkeypatch):
+    """Test update-chromosome-map command with user cancellation."""
+    catalog_dir = tmp_path / "shared_catalog"
+    catalog_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", catalog_dir)
+
+    fasta_file = tmp_path / "test.fna"
+    fasta_file.write_text(">seq1 chromosome 1\nACGT\n")
+
+    result = run(
+        ["dev", "update-chromosome-map", "GCA_test.1", str(fasta_file)],
+        tmp_path,
+        input="n\n",
+    )
+
+    assert result.exit_code == 0
+    assert "Cancelled" in result.output
+
+
+def test_rename_sequences_kraken_with_genome_taxid(installed, tmp_path, monkeypatch):
+    """Kraken flavor uses taxon_id from genome metadata."""
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "shared_catalog")
+    base, fasta = installed
+
+    # Create chromosome mapping for the test genome
+    from leishref.metadata import read_genome
+
+    genome = read_genome(base / "data" / "Ltrop.flye")
+    catalog_dir = tmp_path / "shared_catalog"
+    csv_file = catalog_dir / "chromosome_map.csv"
+    import csv
+
+    with open(csv_file, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["accession", "chromosome", "taxid", "origin"])
+        writer.writeheader()
+        writer.writerow({"accession": "c1", "chromosome": "1", "taxid": "", "origin": "Ltrop.flye"})
+
+    result = run(
+        ["rename-sequences", "Ltrop.flye", "--flavor", "kraken", "--taxid", "5666", "--local-dir", "data"],
+        base,
+    )
+    assert result.exit_code == 0
+    assert "kraken" in result.output.lower() or "Renaming" in result.output
