@@ -256,12 +256,16 @@ def dev():
     """
 
 
-@cli.group()
+@cli.group("modifiers")
 def modifiers():
-    """Commands for modifying sequences: rename and prune.
+    """Modifiers: rename and prune sequences.
 
-    These transform FASTA files without altering the cache.
-    Output goes to --output-dir (default: current directory).
+    Subcommands:
+    - rename-sequences: Rename sequences using chromosome database or numeric order
+    - prune-scaffold: Remove unmapped contigs, keep chromosomes + kinetoplast
+
+    Both work on cached genomes or arbitrary FASTA files. Output goes to
+    --output-dir (default: current directory). Cache is never modified.
     """
 
 
