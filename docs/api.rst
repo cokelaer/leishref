@@ -50,3 +50,15 @@ Resolve aliases::
     aliases = load_aliases()
     genomes = catalog()
     genome = find(genomes, "Ld1S")  # resolves via alias
+
+Module Reference
+----------------
+
+.. automodule:: leishref.metadata
+   :members:
+
+.. automodule:: leishref.checksums
+   :members:
+
+.. automodule:: leishref.links
+   :members:

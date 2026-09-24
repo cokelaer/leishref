@@ -224,8 +224,8 @@ def catalog_entry_dir(root: Path, genome) -> Path:
 def iter_genomes(root: Path) -> Iterator[Genome]:
     """Every genome directory under root, in name order.
 
-    A catalog groups its entries one level deep (data/ncbi/GCA_..., data/scaffold/...),
-    while a local database is flat (data/<alias>), so both shapes are walked.
+    A catalog groups its entries one level deep (``data/ncbi/GCA_*``, ``data/scaffold/*``),
+    while a local database is flat (``data/<alias>``), so both shapes are walked.
     """
     root = Path(root)
     if not root.is_dir():
