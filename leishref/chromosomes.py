@@ -157,9 +157,12 @@ def rename_fasta_sequences(
 ) -> tuple[str, dict, Optional[str]]:
     """Rename sequences in FASTA using local chromosome database.
 
+    Mapped sequences: use chromosome value from map (or numeric index for 'number' flavor)
+    Unmapped sequences (extra contigs): keep original names
+
     Flavors:
-    - 'number': 1, 2, 3, ... (numeric index based on sequence order in file)
-    - 'kraken': number|kraken:taxid|<TAXON_ID> format for Kraken classification
+    - 'number': mapped→chromosome value from map, unmapped→original name
+    - 'kraken': mapped→chromosome|kraken:taxid|TAXID, unmapped→original|kraken:taxid|TAXID
 
     Args:
         taxon_id: NCBI taxon ID (required for 'kraken' flavor)
@@ -170,20 +173,51 @@ def rename_fasta_sequences(
     if not sequences:
         return fasta_path.read_text(), {}, f"No sequences found in {fasta_path.name}"
 
+    # Load chromosome map for this genome
+    chrom_map = load_chromosome_map(data_dir)
+
+    # Build a lookup from sequence accession to chromosome value
+    seq_to_chr = {}
+    has_genome_mapping = False
+    for seq_acc, seq_info in chrom_map.items():
+        if isinstance(seq_info, dict) and seq_info.get("origin") == accession:
+            seq_to_chr[seq_acc] = seq_info.get("chromosome")
+            has_genome_mapping = True
+
     # Build mapping of sequence order to new names
     name_map = {}
+    mapped_count = 0
     for i, seq_id in enumerate(sequences, 1):
-        # Contigs (NW_*) keep original ID, no renaming
+        # Check if sequence is in chromosome map
+        chr_value = seq_to_chr.get(seq_id)
+
+        # Contigs (NW_*) always keep original ID
         if seq_id.startswith("NW_"):
             new_name = seq_id
-        elif flavor == "number":
-            new_name = str(i)
-        elif flavor == "kraken":
-            if not taxon_id:
-                return fasta_path.read_text(), {}, "Kraken flavor requires --taxid parameter"
-            new_name = f"{i}|kraken:taxid|{taxon_id}"
-        else:
+        # If genome has mappings and this sequence is not mapped, keep original (extra contig)
+        elif has_genome_mapping and not chr_value:
             new_name = seq_id
+        # If sequence is mapped, use chromosome value
+        elif chr_value:
+            if flavor == "number":
+                new_name = chr_value
+            elif flavor == "kraken":
+                if not taxon_id:
+                    return fasta_path.read_text(), {}, "Kraken flavor requires --taxid parameter"
+                new_name = f"{chr_value}|kraken:taxid|{taxon_id}"
+            else:
+                new_name = seq_id
+            mapped_count += 1
+        # No genome mapping data; fallback to numeric renaming
+        else:
+            if flavor == "number":
+                new_name = str(i)
+            elif flavor == "kraken":
+                if not taxon_id:
+                    return fasta_path.read_text(), {}, "Kraken flavor requires --taxid parameter"
+                new_name = f"{i}|kraken:taxid|{taxon_id}"
+            else:
+                new_name = seq_id
 
         name_map[seq_id] = new_name
 
