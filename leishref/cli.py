@@ -1025,11 +1025,12 @@ def verify(local_dir, quick):
         for genome in bar:
             for kind, path, recorded in genome.file_paths():
                 if not path.exists():
-                    missing.append((genome.identifier, path))
+                    missing.append((genome.identifier, kind, path))
                 elif quick or not recorded:
                     ok += 1
                 elif md5_file(path) != recorded:
-                    mismatch.append((genome.identifier, path))
+                    actual = md5_file(path)
+                    mismatch.append((genome.identifier, kind, path, recorded, actual))
                 else:
                     ok += 1
 
@@ -1040,11 +1041,17 @@ def verify(local_dir, quick):
     console.print(f"  mismatch: [{'red' if mismatch else 'green'}]{len(mismatch)}[/]")
 
     errors = _console(err=True)
-    for label, entries in (("MISSING", missing), ("CHECKSUM MISMATCH", mismatch)):
-        if entries:
-            errors.print(f"\n[bold red]{label}:[/]")
-            for identifier, path in entries:
-                errors.print(f"  [bold]{escape(identifier)}[/]: {escape(str(path))}")
+    if missing:
+        errors.print("\n[bold red]MISSING:[/]")
+        for identifier, kind, path in missing:
+            errors.print(f"  [bold]{escape(identifier)}[/] ({kind}): {escape(str(path))}")
+
+    if mismatch:
+        errors.print("\n[bold red]CHECKSUM MISMATCH:[/]")
+        for identifier, kind, path, recorded, actual in mismatch:
+            errors.print(f"  [bold]{escape(identifier)}[/] ({kind}): {escape(str(path))}")
+            errors.print(f"    expected: {recorded}")
+            errors.print(f"    actual:   {actual}")
 
     if missing or mismatch:
         raise SystemExit(1)
