@@ -2341,6 +2341,11 @@ def scaffold(query, reference, alias, clean, catalog_dir, local_dir, no_link):
         genome.scaffold = {k: v for k, v in genome.scaffold.items() if v is not None}
 
         entry = catalog_entry_dir(root, genome)
+        metadata_path = entry / "metadata.yaml"
+        if metadata_path.exists():
+            click.echo(f"Catalog entry already exists: {entry}", err=True)
+            click.echo(f"Review or remove {metadata_path} before scaffolding again.", err=True)
+            raise SystemExit(1)
         write_genome(entry, genome)
         click.echo(f"Catalog entry: {entry}")
 
