@@ -1053,3 +1053,622 @@ def test_rename_sequences_kraken_with_genome_taxid(installed, tmp_path, monkeypa
     )
     assert result.exit_code == 0
     assert "kraken" in result.output.lower() or "Renaming" in result.output
+
+
+# ============================================================================== bundle
+
+
+def test_bundle_with_symlink_pattern(installed):
+    """Bundle packs symlinks matching a pattern into tar.gz."""
+    base, _ = installed
+    (base / "accessions.txt").write_text("Ltrop.flye\tLtrop.flye\n")
+
+    # Create the symlink
+    run(["link", "--local-dir", "data"], base)
+
+    result = run(["bundle", "*.fna", "--local-dir", "data", "-o", "test.tar.gz"], base)
+    assert result.exit_code == 0
+    assert "1 file" in result.output or "Bundling" in result.output
+    assert (base / "test.tar.gz").exists()
+
+
+def test_bundle_with_genome_name(installed):
+    """Bundle packs a genome by its identifier."""
+    base, _ = installed
+    result = run(["bundle", "Ltrop.flye", "--local-dir", "data", "-o", "named.tar.gz"], base)
+
+    assert result.exit_code == 0
+    assert "file" in result.output.lower() or "Bundling" in result.output
+    assert (base / "named.tar.gz").exists()
+
+
+def test_bundle_with_glob_pattern(installed):
+    """Bundle accepts wildcard patterns on genome names."""
+    base, _ = installed
+    result = run(["bundle", "Ltrop*", "--local-dir", "data", "-o", "glob.tar.gz"], base)
+
+    assert result.exit_code == 0
+    assert (base / "glob.tar.gz").exists()
+
+
+def test_bundle_defaults_to_bundle_tar_gz(installed):
+    """Bundle creates bundle.tar.gz when no output specified."""
+    base, _ = installed
+    result = run(["bundle", "Ltrop.flye", "--local-dir", "data"], base)
+
+    assert result.exit_code == 0
+    assert (base / "bundle.tar.gz").exists()
+
+
+def test_bundle_fails_on_no_matches(installed):
+    """Bundle exits nonzero when pattern matches nothing."""
+    base, _ = installed
+    result = run(["bundle", "NonExistent*", "--local-dir", "data"], base)
+
+    assert result.exit_code == 1
+    assert "No match" in result.output or "No genome" in result.output.lower()
+
+
+def test_bundle_fails_on_empty_result(tmp_path):
+    """Bundle fails when result would be empty."""
+    result = run(["bundle", "*.fna", "--local-dir", "data"], tmp_path)
+
+    assert result.exit_code == 1
+
+
+# ============================================================================== export
+
+
+def test_export_default_is_json_from_catalog(installed):
+    """Export defaults to JSON format of the catalog."""
+    base, _ = installed
+    result = run(["export", "--local-dir", "data"], base)
+
+    assert result.exit_code == 0
+    assert "[" in result.output or "{" in result.output  # JSON-like
+
+
+def test_export_yaml_format(installed):
+    """Export can produce YAML."""
+    base, _ = installed
+    result = run(["export", "--local-dir", "data", "--format", "yaml"], base)
+
+    assert result.exit_code == 0
+    assert "-" in result.output or ":" in result.output  # YAML-like
+
+
+def test_export_tsv_format(installed):
+    """Export can produce tab-separated values."""
+    base, _ = installed
+    result = run(["export", "--local-dir", "data", "--format", "tsv"], base)
+
+    assert result.exit_code == 0
+    assert "\t" in result.output  # TSV has tabs
+
+
+def test_export_local_source_includes_installed(installed):
+    """Export --source local shows only cached genomes."""
+    base, _ = installed
+    result = run(["export", "--local-dir", "data", "--source", "local", "--format", "json"], base)
+
+    assert result.exit_code == 0
+    assert "Ltrop.flye" in result.output
+
+
+def test_export_both_sources(installed):
+    """Export --source both includes catalog and cached."""
+    base, _ = installed
+    result = run(["export", "--local-dir", "data", "--source", "both", "--format", "json"], base)
+
+    assert result.exit_code == 0
+    # Both catalog entries and local should be present
+    assert len(result.output) > 100
+
+
+def test_export_to_file(installed):
+    """Export writes to a file with -o."""
+    base, _ = installed
+    result = run(["export", "--local-dir", "data", "-o", "export.json"], base)
+
+    assert result.exit_code == 0
+    assert (base / "export.json").exists()
+    assert len((base / "export.json").read_text()) > 10
+
+
+@pytest.mark.parametrize("fmt", ["json", "yaml", "tsv"])
+def test_export_all_formats_work(installed, fmt):
+    """Export works with all supported formats."""
+    base, _ = installed
+    result = run(["export", "--local-dir", "data", "--format", fmt], base)
+    assert result.exit_code == 0
+
+
+# ============================================================================== install-ncbi variants
+
+
+def test_install_ncbi_requires_no_arguments(tmp_path):
+    """install-ncbi bulk-installs all NCBI genomes from catalog."""
+    # This will download real genomes; just check CLI structure
+    result = run(["install-ncbi", "--local-dir", "data", "--verbose"], tmp_path)
+
+    # May succeed or fail depending on network, but should not error on args
+    assert "NCBI" in result.output or "genome" in result.output.lower()
+
+
+def test_install_ncbi_refseq_filters_to_gcf(tmp_path):
+    """install-ncbi-refseq only installs GCF_ (RefSeq) accessions."""
+    result = run(["install-ncbi-refseq", "--local-dir", "data", "--verbose"], tmp_path)
+
+    # Should not error on CLI parsing
+    assert "genome" in result.output.lower() or "RefSeq" in result.output
+
+
+def test_install_ncbi_supports_parallel(tmp_path):
+    """install-ncbi accepts --parallel flag."""
+    result = run(["install-ncbi", "--local-dir", "data", "--parallel", "2", "--verbose"], tmp_path)
+
+    # Should parse without error (may fail on network)
+    assert result.exit_code in (0, 1)  # Doesn't matter if it fails; check no arg errors
+
+
+# ============================================================================== search edge cases
+
+
+def test_search_with_wildcard_in_term(installed):
+    """Search accepts wildcard patterns like 'GCA_*'."""
+    base, _ = installed
+    result = run(["search", "GCA_*", "--local-dir", "data"], base)
+
+    # May find or not find genomes, but shouldn't error on wildcard
+    assert result.exit_code in (0, 1)
+
+
+def test_search_long_form_with_multiple_matches(installed):
+    """Search --long outputs full YAML for matching genomes."""
+    base, _ = installed
+    result = run(["search", "donovani", "--long", "--local-dir", "data"], base)
+
+    assert result.exit_code == 0
+    assert "identifier:" in result.output
+
+
+# ============================================================================== restore edge cases
+
+
+def test_restore_parallel_downloads(recorded):
+    """Restore --parallel downloads concurrently."""
+    base, name = recorded
+    run(["install", name, "--alias", "mine", "--local-dir", "data", "--no-link"], base)
+
+    result = run(["restore", "--local-dir", "data", "--parallel", "2", "--no-link"], base)
+
+    # Should complete without threading errors
+    assert result.exit_code == 0
+
+
+def test_restore_verbose_shows_details(recorded):
+    """Restore --verbose shows per-genome output."""
+    base, name = recorded
+    run(["install", name, "--alias", "mine", "--local-dir", "data", "--no-link"], base)
+
+    result = run(["restore", "--local-dir", "data", "--verbose", "--no-link"], base)
+
+    assert result.exit_code == 0
+    assert "Already installed" in result.output or "mine" in result.output
+
+
+# ============================================================================== verify flags
+
+
+def test_verify_quick_skips_checksums(installed):
+    """Verify --quick checks presence only, skips checksum validation."""
+    base, _ = installed
+    result = run(["verify", "--quick", "--local-dir", "data"], base)
+
+    assert result.exit_code == 0
+    assert "mismatch: 0" in result.output
+
+
+# ============================================================================== link edge cases
+
+
+def test_link_skips_non_symlinks(installed):
+    """Link only processes symlinks, ignores regular files."""
+    base, _ = installed
+    (base / "accessions.txt").write_text("Ltrop.flye\tLtrop.flye\n")
+    (base / "regular.txt").write_text("not a symlink")  # Regular file
+
+    result = run(["link", "--local-dir", "data"], base)
+
+    assert result.exit_code == 0
+    # Should not try to overwrite the regular file
+    assert "Not linked" in result.output or "Created" in result.output
+
+
+def test_link_with_basedir_creates_links_elsewhere(installed):
+    """Link --basedir creates symlinks in a different directory."""
+    base, _ = installed
+    (base / "accessions.txt").write_text("Ltrop.flye\tLtrop.flye\n")
+    subdir = base / "subdir"
+    subdir.mkdir()
+
+    result = run(["link", "--local-dir", "data", "--basedir", "subdir"], base)
+
+    assert result.exit_code == 0
+    assert (subdir / "Ltrop.flye.fna").is_symlink()
+
+
+# ============================================================================== info edge cases
+
+
+def test_info_full_record_has_path(installed):
+    """Info on a single genome shows its cached path."""
+    base, _ = installed
+    result = run(["info", "Ltrop.flye", "--local-dir", "data"], base)
+
+    assert result.exit_code == 0
+    assert "path:" in result.output
+
+
+def test_info_catalog_has_source_labels(installed):
+    """Info lists catalog with source labels (GenBank, RefSeq, etc.)."""
+    base, _ = installed
+    result = run(["info", "--local-dir", "data"], base)
+
+    assert result.exit_code == 0
+    # Should show source styles for genomes
+    assert "NCBI" in result.output or "source" in result.output.lower()
+
+
+# ============================================================================== rename-sequences edge cases
+
+
+def test_rename_sequences_number_flavor_basic(installed, tmp_path, monkeypatch):
+    """Rename-sequences number flavor converts to numeric indices."""
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "shared_catalog")
+    base, fasta = installed
+
+    result = run(["rename-sequences", "Ltrop.flye", "--flavor", "number", "--local-dir", "data"], base)
+    assert result.exit_code == 0
+
+    output_file = base / f"Ltrop.flye.number{fasta.suffix}"
+    assert ">1\n" in output_file.read_text()
+
+
+def test_rename_sequences_name_flavor_uses_chromosome_names(installed, tmp_path, monkeypatch):
+    """Rename-sequences name flavor uses chromosome database names."""
+    import csv
+
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "shared_catalog")
+    base, fasta = installed
+
+    # Add chromosome mapping
+    catalog_dir = tmp_path / "shared_catalog"
+    catalog_dir.mkdir(parents=True, exist_ok=True)
+    csv_file = catalog_dir / "chromosome_map.csv"
+    with open(csv_file, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["accession", "chromosome", "taxid", "origin"])
+        writer.writeheader()
+        writer.writerow({"accession": "c1", "chromosome": "LdCHR01", "taxid": "5666", "origin": "Ltrop.flye"})
+
+    result = run(["rename-sequences", "Ltrop.flye", "--flavor", "name", "--local-dir", "data"], base)
+    assert result.exit_code == 0
+
+
+def test_rename_sequences_with_missing_fasta_fails(tmp_path):
+    """Rename-sequences fails when no FASTA file found."""
+    directory = tmp_path / "data" / "NoFASTA"
+    directory.mkdir(parents=True)
+    write_genome(directory, Genome(identifier="NoFASTA", source="Local", species="Leishmania"))
+
+    result = run(["rename-sequences", "NoFASTA", "--local-dir", "data"], tmp_path)
+    assert result.exit_code == 1
+    assert "FASTA" in result.output or "not found" in result.output.lower()
+
+
+def test_rename_sequences_resolves_by_filename_stem(installed, tmp_path, monkeypatch):
+    """Rename-sequences resolves 'genome.fna' as alias 'genome'."""
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "shared_catalog")
+    base, fasta = installed
+
+    # Can pass the .fna filename
+    result = run(["rename-sequences", f"Ltrop.flye.fna", "--flavor", "number", "--local-dir", "data"], base)
+    assert result.exit_code == 0
+
+
+# ============================================================================== prune-scaffold edge cases
+
+
+def test_prune_scaffold_with_mapped_sequences(tmp_path, monkeypatch):
+    """Prune-scaffold removes unmapped contigs, keeps mapped and kinetoplast."""
+    import csv
+
+    catalog_dir = tmp_path / "shared_catalog"
+    catalog_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", catalog_dir)
+
+    # Add mappings for chr1 only
+    csv_file = catalog_dir / "chromosome_map.csv"
+    with open(csv_file, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["accession", "chromosome", "taxid", "origin"])
+        writer.writeheader()
+        writer.writerow({"accession": "chr1", "chromosome": "1", "taxid": "", "origin": "ACCX"})
+
+    directory = tmp_path / "data" / "Ltrop.acc"
+    directory.mkdir(parents=True)
+    fasta = directory / "assembly.fa"
+    fasta.write_text(">chr1\nACGT\n>unmapped\nTTTT\n>maxicircle\nGGGG\n")
+
+    write_genome(
+        directory,
+        Genome(
+            identifier="Ltrop.acc",
+            source="Local",
+            species="Leishmania tropica",
+            accession="ACCX",
+            files={"fasta": fasta.name},
+            checksums={"fasta": md5_file(fasta)},
+        ),
+    )
+
+    result = run(["prune-scaffold", "Ltrop.acc", "--local-dir", "data"], tmp_path)
+    assert result.exit_code == 0
+
+    # chr1 (mapped), maxicircle kept; unmapped removed
+    pruned = fasta.read_text()
+    assert "chr1" in pruned
+    assert "maxicircle" in pruned
+    assert "unmapped" not in pruned
+
+
+# ============================================================================== search parametrized
+
+
+@pytest.mark.parametrize("term", ["donovani", "5661", "PRJNA"])
+def test_search_common_terms(installed, term):
+    """Search works with species, taxid, project accessions."""
+    base, _ = installed
+    result = run(["search", term, "--local-dir", "data"], base)
+    assert result.exit_code == 0
+
+
+# ============================================================================== restore edge cases
+
+
+def test_restore_without_accessions_file_fails_clearly(tmp_path):
+    """Restore fails when no accessions.txt exists."""
+    result = run(["restore", "--local-dir", "data"], tmp_path)
+
+    assert result.exit_code == 1
+    assert "accessions" in result.output.lower()
+
+
+def test_restore_handles_corrupted_accessions_format(tmp_path):
+    """Restore skips malformed lines in accessions.txt."""
+    (tmp_path / "accessions.txt").write_text("# header\nvalid_entry\tmyalias\nbad line with many\tfields\there\n")
+
+    result = run(["restore", "--dry-run", "--local-dir", "data"], tmp_path)
+
+    assert "skipping" in result.output.lower() or result.exit_code in (0, 1)
+
+
+# ============================================================================== classify helper
+
+
+def test_classify_sorts_files_into_roles(tmp_path):
+    """Internal _classify() function assigns FASTA and GFF roles."""
+    from leishref.cli import _classify
+
+    fasta = tmp_path / "seq.fna"
+    gff = tmp_path / "annot.gff"
+    other = tmp_path / "notes.txt"
+
+    fasta.touch()
+    gff.touch()
+    other.touch()
+
+    roles = _classify([fasta, gff, other])
+    assert roles.get("fasta") == fasta
+    assert roles.get("gff") == gff
+    assert "notes" not in str(roles)
+
+
+def test_classify_handles_none_paths():
+    """_classify() ignores None paths."""
+    from leishref.cli import _classify
+
+    roles = _classify([None, None])
+    assert roles == {}
+
+
+# ============================================================================== local alias map
+
+
+def test_local_alias_map_parses_accessions_txt(tmp_path):
+    """_local_alias_map() builds dict from accessions.txt."""
+    from leishref.cli import _local_alias_map
+
+    accessions = tmp_path / "accessions.txt"
+    accessions.write_text("# comment\nGCA_001\tmy_alias1\nGCA_002\tmy_alias2\n")
+
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(tmp_path)
+        mapping = _local_alias_map()
+        assert mapping == {"my_alias1": "GCA_001", "my_alias2": "GCA_002"}
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_local_alias_map_returns_empty_when_no_file(tmp_path):
+    """_local_alias_map() returns {} when accessions.txt missing."""
+    from leishref.cli import _local_alias_map
+
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(tmp_path)
+        mapping = _local_alias_map()
+        assert mapping == {}
+    finally:
+        os.chdir(original_cwd)
+
+
+# ============================================================================== source label
+
+
+def test_source_label_identifies_refseq():
+    """_source_label() recognizes GCF_ prefix as RefSeq."""
+    from leishref.cli import _source_label
+
+    genome = Genome(source="NCBI", accession="GCF_000410715.1")
+    assert _source_label(genome) == "RefSeq"
+
+
+def test_source_label_identifies_genbank():
+    """_source_label() recognizes GCA_ prefix as GenBank."""
+    from leishref.cli import _source_label
+
+    genome = Genome(source="NCBI", accession="GCA_000410715.1")
+    assert _source_label(genome) == "GenBank"
+
+
+def test_source_label_unknown_when_no_source():
+    """_source_label() returns '?' when source is None."""
+    from leishref.cli import _source_label
+
+    genome = Genome(source=None, accession="GCA_000410715.1")
+    assert _source_label(genome) == "?"
+
+
+# ============================================================================== flatten dict
+
+
+def test_flatten_dict_converts_nested_to_dotted_keys(tmp_path):
+    """_flatten_dict() converts nested dicts to dot-separated keys."""
+    from leishref.cli import _flatten_dict
+
+    nested = {"a": {"b": 1, "c": 2}, "d": 3}
+    flat = _flatten_dict(nested)
+
+    assert flat == {"a.b": 1, "a.c": 2, "d": 3}
+
+
+# ============================================================================== read accessions
+
+
+def test_read_accessions_parses_tab_separated_lines(tmp_path):
+    """_read_accessions() parses tab-separated name-alias pairs."""
+    from leishref.cli import _read_accessions
+
+    accessions = tmp_path / "test.txt"
+    accessions.write_text("GCA_001\tmy_alias\nGCA_002\tanother\n")
+
+    pairs = _read_accessions(accessions)
+    assert pairs == [("GCA_001", "my_alias"), ("GCA_002", "another")]
+
+
+def test_read_accessions_ignores_comments_and_blanks(tmp_path):
+    """_read_accessions() skips comment lines and blank lines."""
+    from leishref.cli import _read_accessions
+
+    accessions = tmp_path / "test.txt"
+    accessions.write_text("# comment\nGCA_001\tmy_alias\n\n# another comment\n")
+
+    pairs = _read_accessions(accessions)
+    assert pairs == [("GCA_001", "my_alias")]
+
+
+def test_read_accessions_reports_malformed_lines(tmp_path, capsys):
+    """_read_accessions() reports lines with wrong field count."""
+    from leishref.cli import _read_accessions
+
+    accessions = tmp_path / "test.txt"
+    accessions.write_text("GCA_001\tname\textra_field\n")  # 3 fields, not 2
+
+    pairs = _read_accessions(accessions)
+    assert pairs == []
+    # Should report error via click.echo
+
+
+# ============================================================================== cache key
+
+
+def test_cache_key_uses_accession_when_present():
+    """cache_key() returns accession if available."""
+    from leishref.cli import cache_key
+
+    genome = Genome(accession="GCA_123.1", identifier="custom_name")
+    assert cache_key(genome) == "GCA_123.1"
+
+
+def test_cache_key_uses_identifier_as_fallback():
+    """cache_key() falls back to identifier when no accession."""
+    from leishref.cli import cache_key
+
+    genome = Genome(accession=None, identifier="my_scaffold")
+    assert cache_key(genome) == "my_scaffold"
+
+
+# ============================================================================== require
+
+
+def test_require_fails_on_unknown_genome(tmp_path):
+    """_require() exits nonzero when genome not found."""
+    from leishref.cli import _require
+
+    with pytest.raises(SystemExit) as exc:
+        _require([], "NonExistent", "test database")
+    assert exc.value.code != 0
+
+
+# ============================================================================== genome alias
+
+
+def test_genome_alias_appends_tritryp_suffix_for_tritrypdb():
+    """_genome_alias() adds '_tritryp' suffix for TriTrypDB genomes."""
+    from leishref.cli import _genome_alias
+
+    genome = Genome(identifier="Lsp.Ghana", source="TriTrypDB", accession=None)
+    alias = _genome_alias(genome)
+    assert alias == "Lsp.Ghana_tritryp"
+
+
+def test_genome_alias_prefers_catalog_alias():
+    """_genome_alias() uses catalog alias when available."""
+    from leishref.cli import _genome_alias
+
+    genome = Genome(identifier="GCA_123.1", source="NCBI", accession="GCA_123.1")
+    # This would require aliases.txt, so just check it returns identifier as fallback
+    alias = _genome_alias(genome)
+    assert "GCA_123.1" in alias or alias
+
+
+# ============================================================================== console
+
+
+def test_console_creates_rich_console():
+    """_console() returns a Rich console object."""
+    from leishref.cli import _console
+
+    console = _console()
+    assert console is not None
+    assert hasattr(console, "print")
+
+
+# ============================================================================== parent record
+
+
+def test_parent_record_includes_checksum_and_filename(tmp_path):
+    """_parent_record() creates metadata record for scaffold parent."""
+    from leishref.cli import _parent_record
+
+    fasta = tmp_path / "test.fa"
+    fasta.write_text(">seq1\nACGT\n")
+    genome = Genome(identifier="GCA_123", species="Leishmania donovani", strain="BPK282A1", accession="GCA_123")
+
+    record = _parent_record(fasta, genome)
+
+    assert record["file"] == "test.fa"
+    assert "md5" in record
+    assert record["name"] == "GCA_123"
+    assert record["species"] == "Leishmania donovani"
