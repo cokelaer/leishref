@@ -1,5 +1,6 @@
 """Command-line behaviour that does not need the network."""
 
+import csv
 import os
 
 import pytest
@@ -28,6 +29,17 @@ def installed(tmp_path):
             checksums={"fasta": md5_file(fasta)},
         ),
     )
+
+    # Create chromosome_map.csv for test genome (in shared_catalog subdir)
+    catalog_dir = tmp_path / "shared_catalog"
+    catalog_dir.mkdir(parents=True, exist_ok=True)
+
+    csv_file = catalog_dir / "chromosome_map.csv"
+    with open(csv_file, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["accession", "chromosome", "taxid", "origin"])
+        writer.writeheader()
+        writer.writerow({"accession": "c1", "chromosome": "1", "taxid": "5666", "origin": "Ltrop.flye"})
+
     return tmp_path, fasta
 
 

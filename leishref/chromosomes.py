@@ -95,6 +95,37 @@ def extract_sequences_with_headers(fasta_path: Path) -> list[dict]:
     return sequences
 
 
+def get_taxid_from_species(species: str, data_dir: Path = None) -> Optional[int]:
+    """Look up NCBI taxon ID for a species from mapping file.
+
+    Args:
+        species: Species name (e.g., "Leishmania donovani")
+        data_dir: Catalog directory (default: CATALOG_DIR)
+
+    Returns: NCBI taxon ID or None if not found
+    """
+    if data_dir is None:
+        from leishref.metadata import CATALOG_DIR
+
+        data_dir = CATALOG_DIR
+
+    mapping_file = data_dir / "species_taxon_mapping.yaml"
+    if not mapping_file.exists():
+        return None
+
+    import yaml
+
+    try:
+        with open(mapping_file) as f:
+            data = yaml.safe_load(f) or {}
+            if species in data:
+                return data[species].get("primary")
+    except Exception:
+        pass
+
+    return None
+
+
 def parse_chromosome_from_header(header: str) -> Optional[str]:
     """Try to extract chromosome number from sequence header.
 
