@@ -37,3 +37,7 @@ autodoc_default_options = {
 
 napoleon_include_init_with_doc = False
 napoleon_use_rtype = False
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+}
