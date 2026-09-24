@@ -1229,56 +1229,118 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
 @cli.command("prune-scaffold")
 @click.argument("name")
 @click.option("--local-dir", type=click.Path(), default=str(LOCAL_DIR), show_default=True)
-def prune_scaffold_cmd(name, local_dir):
+@click.option(
+    "--output-dir",
+    type=click.Path(),
+    default=".",
+    show_default=True,
+    help="Where to write pruned FASTA + local metadata.yaml (never the cache)",
+)
+def prune_scaffold_cmd(name, local_dir, output_dir):
     """Remove unmapped contigs, keeping only chromosome sequences and kinetoplast.
 
-    NAME is the local alias of the genome to prune.
+    NAME can be:
+    - A cached genome alias
+    - A path to a FASTA file (accessions extracted from headers)
 
-    Requires genome accession and chromosome info in cached database.
     Kinetoplast sequences are preserved automatically.
+    Pruned FASTA is written to --output-dir with a local metadata.yaml.
+    Cache is never modified.
 
     Examples:
 
     \b
       leishref prune-scaffold Ld1S
+      leishref prune-scaffold Ld1S --output-dir pruned/
+      leishref prune-scaffold /path/to/assembly.fa --output-dir pruned/
     """
-    genome = _require_local(local(Path(local_dir)), name, "cached database")
-
-    if not genome.accession:
-        click.echo(f"Genome {name} has no accession; cannot look up chromosome info", err=True)
-        raise SystemExit(1)
-
-    chrom_sequences = get_genome_sequences(genome.accession)
-
-    if not chrom_sequences:
-        click.echo(f"No chromosome info found for {genome.accession}", err=True)
-        click.echo("Populate chromosome database using 'leishref dev fetch-genome'", err=True)
-        raise SystemExit(1)
+    from leishref.chromosomes import extract_sequences_with_headers, get_chromosome_info, load_chromosome_map
 
     fasta_path = None
-    for kind, path, _ in genome.file_paths():
-        if kind == "fasta" and path.exists():
-            fasta_path = path
-            break
+    genome = None
+    is_file_input = False
+    seq_accessions = []
 
-    if not fasta_path:
-        click.echo(f"No FASTA file found for {name}", err=True)
-        raise SystemExit(1)
+    # Try as file path first
+    name_as_path = Path(name)
+    if name_as_path.is_file():
+        fasta_path = name_as_path
+        is_file_input = True
+        # Extract accessions from FASTA headers
+        try:
+            sequences = extract_sequences_with_headers(fasta_path)
+            seq_accessions = [seq["accession"] for seq in sequences]
+        except Exception as e:
+            click.echo(f"Error reading FASTA file {fasta_path}: {e}", err=True)
+            raise SystemExit(1)
+    else:
+        # Try as cached genome
+        genome = _require_local(local(Path(local_dir)), name, "cached database")
 
-    mapped_names = {seq.get("accession") for seq in chrom_sequences if seq.get("accession")}
+        if not genome.accession:
+            click.echo(f"Genome {name} has no accession; cannot look up chromosome info", err=True)
+            raise SystemExit(1)
+
+        for kind, path, _ in genome.file_paths():
+            if kind == "fasta" and path.exists():
+                fasta_path = path
+                break
+
+        if not fasta_path:
+            click.echo(f"No FASTA file found for {name}", err=True)
+            raise SystemExit(1)
+
+    # Look up mapped sequences
+    if is_file_input:
+        # For file input: look up each sequence accession directly
+        chrom_map = load_chromosome_map()
+        mapped_names = {acc for acc in seq_accessions if acc in chrom_map}
+        click.echo(f"Found {len(mapped_names)} mapped sequences")
+        if len(mapped_names) < len(seq_accessions):
+            missing = len(seq_accessions) - len(mapped_names)
+            click.echo(f"⚠ {missing} sequences not in chromosome database", err=True)
+    else:
+        # For genome input: use get_genome_sequences
+        chrom_sequences = get_genome_sequences(genome.accession)
+        if not chrom_sequences:
+            click.echo(f"No chromosome info found for {genome.accession}", err=True)
+            click.echo("Populate chromosome database using 'leishref dev fetch-genome'", err=True)
+            raise SystemExit(1)
+        mapped_names = {seq.get("accession") for seq in chrom_sequences if seq.get("accession")}
+
     click.echo(f"Pruning {fasta_path.name} ({len(mapped_names)} mapped + kinetoplast)...")
     pruned = prune_fasta(fasta_path, mapped_names)
-    fasta_path.write_text(pruned)
 
-    # Recompute stats and checksum
-    new_checksum = md5_file(fasta_path)
-    genome.checksums["fasta"] = new_checksum
-    genome.stats = genome_stats(fasta_path)
-    write_genome(genome.path, genome)
+    # Write pruned FASTA to output directory
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_fasta = out_dir / fasta_path.name
+    out_fasta.write_text(pruned)
 
-    click.echo(f"Pruned {fasta_path.name}")
-    click.echo(f"  Sequences: {genome.stats.get('num_scaffolds', 'unknown')}")
-    click.echo(f"  Checksum: {new_checksum}")
+    # Create local metadata.yaml if input is a cached genome
+    if genome:
+        pruned_checksum = md5_file(out_fasta)
+        pruned_stats = genome_stats(out_fasta)
+        pruned_genome = Genome(
+            identifier=genome.identifier,
+            source=genome.source,
+            species=genome.species,
+            strain=genome.strain,
+            accession=genome.accession,
+            assembly_level=genome.assembly_level,
+            files={"fasta": out_fasta.name},
+            checksums={"fasta": pruned_checksum},
+            stats=pruned_stats,
+            provenance={"pruned_from": str(fasta_path)},
+            date_added=today_iso(),
+        )
+        write_genome(out_dir, pruned_genome)
+        click.echo(f"Wrote pruned FASTA to {out_fasta}")
+        click.echo(f"Wrote metadata to {out_dir / 'metadata.yaml'}")
+        click.echo(f"  Sequences: {pruned_stats.get('num_scaffolds', 'unknown')}")
+        click.echo(f"  Checksum: {pruned_checksum}")
+    else:
+        click.echo(f"Wrote pruned FASTA to {out_fasta}")
 
 
 @cli.command()

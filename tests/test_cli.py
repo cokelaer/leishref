@@ -897,14 +897,25 @@ def test_prune_scaffold_keeps_mapped_and_kinetoplast_sequences(tmp_path, monkeyp
     directory = tmp_path / "data" / "Ltrop.acc"
     directory.mkdir(parents=True)
     fasta = _genome_with_accession(directory, "ACCX", ">chr1\nACGT\n>unmapped\nTTTT\n>maxicircle\nGGGG\n")
+    original_fasta = fasta.read_text()
 
-    result = run(["prune-scaffold", "Ltrop.acc", "--local-dir", "data"], tmp_path)
+    output_dir = tmp_path / "pruned"
+    result = run(
+        ["prune-scaffold", "Ltrop.acc", "--local-dir", "data", "--output-dir", str(output_dir)],
+        tmp_path,
+    )
     assert result.exit_code == 0
 
-    assert fasta.read_text() == ">chr1\nACGT\n>maxicircle\nGGGG\n"
+    # Check pruned output (not cache)
+    pruned_fasta = output_dir / fasta.name
+    assert pruned_fasta.exists()
+    assert pruned_fasta.read_text() == ">chr1\nACGT\n>maxicircle\nGGGG\n"
 
-    updated = read_genome(directory)
-    assert updated.checksums["fasta"] == md5_file(fasta)
+    # Check cache unchanged
+    assert fasta.read_text() == original_fasta
+
+    # Check local metadata.yaml created
+    assert (output_dir / "metadata.yaml").exists()
 
 
 def test_info_shows_a_single_catalog_entry_in_full(installed):
@@ -1530,14 +1541,23 @@ def test_prune_scaffold_with_mapped_sequences(tmp_path, monkeypatch):
         ),
     )
 
-    result = run(["prune-scaffold", "Ltrop.acc", "--local-dir", "data"], tmp_path)
+    original_fasta = fasta.read_text()
+    output_dir = tmp_path / "pruned"
+    result = run(
+        ["prune-scaffold", "Ltrop.acc", "--local-dir", "data", "--output-dir", str(output_dir)],
+        tmp_path,
+    )
     assert result.exit_code == 0
 
-    # chr1 (mapped), maxicircle kept; unmapped removed
-    pruned = fasta.read_text()
+    # chr1 (mapped), maxicircle kept; unmapped removed (in output)
+    pruned_fasta = output_dir / fasta.name
+    pruned = pruned_fasta.read_text()
     assert "chr1" in pruned
     assert "maxicircle" in pruned
     assert "unmapped" not in pruned
+
+    # Cache unchanged
+    assert fasta.read_text() == original_fasta
 
 
 # ============================================================================== search parametrized
