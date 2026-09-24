@@ -7,7 +7,7 @@ assembly_level: Scaffold
 files:
   fasta: Ltropica.Ld1S.scaffold.pecat.filtered.fasta
 checksums:
-  fasta: a9a3d9a674a2ebbccc93f95c3d6c6691
+  fasta: 00e2f9a756e08ac5afd438ffb742d8a2
 stats:
   num_bases: 34460333
   num_ungapped: 34459733
