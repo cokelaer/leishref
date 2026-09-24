@@ -1186,6 +1186,7 @@ def test_export_all_formats_work(installed, fmt):
 # ============================================================================== install-ncbi variants
 
 
+@pytest.mark.skip(reason="Network-dependent, downloads real NCBI genomes; slow/unreliable in CI")
 def test_install_ncbi_requires_no_arguments(tmp_path):
     """install-ncbi bulk-installs all NCBI genomes from catalog."""
     # This will download real genomes; just check CLI structure
@@ -1195,6 +1196,7 @@ def test_install_ncbi_requires_no_arguments(tmp_path):
     assert "NCBI" in result.output or "genome" in result.output.lower()
 
 
+@pytest.mark.skip(reason="Network-dependent, downloads real NCBI genomes; slow/unreliable in CI")
 def test_install_ncbi_refseq_filters_to_gcf(tmp_path):
     """install-ncbi-refseq only installs GCF_ (RefSeq) accessions."""
     result = run(["install-ncbi-refseq", "--local-dir", "data", "--verbose"], tmp_path)
@@ -1203,6 +1205,7 @@ def test_install_ncbi_refseq_filters_to_gcf(tmp_path):
     assert "genome" in result.output.lower() or "RefSeq" in result.output
 
 
+@pytest.mark.skip(reason="Network-dependent, downloads real NCBI genomes; slow/unreliable in CI")
 def test_install_ncbi_supports_parallel(tmp_path):
     """install-ncbi accepts --parallel flag."""
     result = run(["install-ncbi", "--local-dir", "data", "--parallel", "2", "--verbose"], tmp_path)
@@ -1235,6 +1238,7 @@ def test_search_long_form_with_multiple_matches(installed):
 # ============================================================================== restore edge cases
 
 
+@pytest.mark.skip(reason="Network-dependent, downloads real genomes; slow/unreliable in CI")
 def test_restore_parallel_downloads(recorded):
     """Restore --parallel downloads concurrently."""
     base, name = recorded
@@ -1246,6 +1250,7 @@ def test_restore_parallel_downloads(recorded):
     assert result.exit_code == 0
 
 
+@pytest.mark.skip(reason="Network-dependent, downloads real genomes; slow/unreliable in CI")
 def test_restore_verbose_shows_details(recorded):
     """Restore --verbose shows per-genome output."""
     base, name = recorded
