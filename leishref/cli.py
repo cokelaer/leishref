@@ -1087,10 +1087,8 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
     chrom_key = genome.accession or genome.identifier
 
     # Check if chromosome info exists for this genome; suggest update if missing
-    from leishref.chromosomes import get_chromosome_info
-
-    has_chrom_info = get_chromosome_info(chrom_key) is not None
-    if not has_chrom_info:
+    chrom_sequences = get_genome_sequences(chrom_key)
+    if not chrom_sequences:
         # Try to auto-fetch taxid from species mapping for helpful message
         auto_taxid = None
         if genome.species:
