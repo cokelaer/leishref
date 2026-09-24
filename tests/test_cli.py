@@ -541,16 +541,17 @@ def test_scaffold_refuses_to_overwrite_existing_metadata(tmp_path, monkeypatch):
     write_genome(query_dir, query_genome)
     write_genome(ref_dir, ref_genome)
 
-    # Mock CATALOG_DIR to use temp directory
-    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "catalog")
-
-    # Pre-create the scaffold entry with existing metadata.yaml
+    # Create catalog directory
     catalog_dir = tmp_path / "catalog"
     catalog_dir.mkdir(parents=True, exist_ok=True)
+
+    # Pre-create the scaffold entry with existing metadata.yaml
+    # scaffold attribute must be set for genome to be placed in scaffolds/ directory
     scaffold_genome = Genome(
         identifier="Ltrop.test.scaffold.Ld.ref",
         source="Leishref scaffold",
         species="Leishmania tropica",
+        scaffold={"query": {}, "reference": {}},  # Must be set to place in scaffolds/
     )
     entry = catalog_entry_dir(catalog_dir, scaffold_genome)
     write_genome(entry, scaffold_genome)
@@ -567,7 +568,18 @@ def test_scaffold_refuses_to_overwrite_existing_metadata(tmp_path, monkeypatch):
 
     # Run scaffold command with matching parameters
     result = run(
-        ["dev", "scaffold", "--query", "Ltrop.test", "--reference", "Ld.ref", "--local-dir", str(data_dir)],
+        [
+            "dev",
+            "scaffold",
+            "--query",
+            "Ltrop.test",
+            "--reference",
+            "Ld.ref",
+            "--local-dir",
+            str(data_dir),
+            "--catalog-dir",
+            str(catalog_dir),
+        ],
         tmp_path,
     )
 
