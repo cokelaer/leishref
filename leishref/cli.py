@@ -1266,9 +1266,14 @@ def prune_scaffold_cmd(name, local_dir, output_dir):
     is_file_input = False
     seq_accessions = []
 
-    # Try as file path first
+    # Try as file path first (check if it's a file or looks like a filename)
     name_as_path = Path(name)
-    if name_as_path.is_file():
+    looks_like_file = name_as_path.is_file() or "/" in name or "\\" in name or name.endswith((".fna", ".fa", ".fasta"))
+
+    if looks_like_file:
+        if not name_as_path.is_file():
+            click.echo(f"File not found: {name}", err=True)
+            raise SystemExit(1)
         fasta_path = name_as_path
         is_file_input = True
         # Extract accessions from FASTA headers
