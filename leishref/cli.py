@@ -335,11 +335,12 @@ def _resolve_assembly(value, local_root: Path, cat_root, what: str):
     directory. A plain path is taken as is with no metadata.
     """
     as_path = Path(value)
-    if as_path.exists() and as_path.is_file():
+    if as_path.exists() and as_path.is_file() and not as_path.is_symlink():
         return as_path, None
 
-    # Try local first
-    genome = _resolve_local(local(local_root), value)
+    # Try local first (also accept filename with extension stripped)
+    genomes = local(local_root)
+    genome = _resolve_local(genomes, value) or _resolve_local(genomes, Path(value).stem)
     if genome and genome.path and genome.fasta and (genome.path / genome.fasta).exists():
         return genome.path / genome.fasta, genome
 
