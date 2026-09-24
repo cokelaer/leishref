@@ -25,7 +25,7 @@ from tqdm import tqdm
 
 from leishref import __version__
 from leishref.checksums import genome_stats, md5_file
-from leishref.chromosomes import get_genome_sequences, rename_fasta_sequences
+from leishref.chromosomes import get_genome_sequences, get_taxid_from_species, rename_fasta_sequences
 from leishref.links import LinkConflict, link_paths
 from leishref.metadata import (
     CATALOG_DIR,
@@ -1085,6 +1085,30 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
 
     # Use accession or identifier as the chromosome map key
     chrom_key = genome.accession or genome.identifier
+
+    # Check if chromosome info exists for this genome; suggest update if missing
+    from leishref.chromosomes import get_chromosome_info
+
+    has_chrom_info = get_chromosome_info(chrom_key) is not None
+    if not has_chrom_info:
+        # Try to auto-fetch taxid from species mapping for helpful message
+        auto_taxid = None
+        if genome.species:
+            auto_taxid = get_taxid_from_species(genome.species)
+
+        click.echo(
+            f"⚠ No chromosome mappings found for {chrom_key}",
+            err=True,
+        )
+        click.echo(
+            f"Consider running: leishref dev update-chromosome-map {chrom_key} assembly.fna"
+            + (f" --taxid {auto_taxid}" if auto_taxid else " --taxid <TAXID>"),
+            err=True,
+        )
+        click.echo(
+            f"(See 'leishref dev update-chromosome-map --help' for details)",
+            err=True,
+        )
 
     # For kraken flavor, use provided taxid or get from genome metadata
     if flavor == "kraken":
