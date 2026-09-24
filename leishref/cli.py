@@ -1067,20 +1067,23 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
       leishref rename-sequences LtropCDCnew.fna --flavor kraken
       leishref rename-sequences /path/to/assembly.fa --flavor name
     """
-    from leishref.chromosomes import extract_sequences_with_headers
+    from leishref.chromosomes import extract_sequences_with_headers, get_chromosome_info
 
     fasta_path = None
     genome = None
-    chrom_keys = []
+    is_file_input = False
+    seq_accessions = []  # For file input: sequence accessions from headers
+    chrom_key = None  # For genome input: genome accession/identifier
 
     # Try as file path first
     name_as_path = Path(name)
     if name_as_path.is_file():
         fasta_path = name_as_path
+        is_file_input = True
         # Extract accessions from FASTA headers
         try:
             sequences = extract_sequences_with_headers(fasta_path)
-            chrom_keys = [seq["accession"] for seq in sequences]
+            seq_accessions = [seq["accession"] for seq in sequences]
         except Exception as e:
             click.echo(f"Error reading FASTA file {fasta_path}: {e}", err=True)
             raise SystemExit(1)
@@ -1102,37 +1105,46 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
             click.echo(f"No FASTA file found for {name}", err=True)
             raise SystemExit(1)
 
-        chrom_keys = [genome.accession or genome.identifier]
+        chrom_key = genome.accession or genome.identifier
 
     if not fasta_path:
         click.echo(f"No FASTA file found for {name}", err=True)
         raise SystemExit(1)
 
-    # Look up chromosome info for all accessions found in file
-    all_chrom_sequences = {}
-    found_keys = []
-    missing_keys = []
+    # Look up chromosome info based on input type
+    found_accessions = []
+    missing_accessions = []
 
-    for key in chrom_keys:
-        chrom_sequences = get_genome_sequences(key)
+    if is_file_input:
+        # For file input: look up each sequence accession directly
+        for acc in seq_accessions:
+            if get_chromosome_info(acc):
+                found_accessions.append(acc)
+            else:
+                missing_accessions.append(acc)
+    else:
+        # For genome input: use get_genome_sequences to find all sequences for this genome
+        chrom_sequences = get_genome_sequences(chrom_key)
         if chrom_sequences:
-            all_chrom_sequences[key] = chrom_sequences
-            found_keys.append(key)
+            found_accessions.append(chrom_key)
         else:
-            missing_keys.append(key)
+            missing_accessions.append(chrom_key)
 
     # Report status
-    if found_keys:
-        click.echo(f"Found chromosome mappings for: {', '.join(found_keys)}")
-    if missing_keys:
-        click.echo(f"⚠ No chromosome mappings found for: {', '.join(missing_keys)}", err=True)
-        if genome and genome.species:
-            auto_taxid = get_taxid_from_species(genome.species)
-            click.echo(
-                f"Consider running: leishref dev update-chromosome-map <accession> {fasta_path.name}"
-                + (f" --taxid {auto_taxid}" if auto_taxid else " --taxid <TAXID>"),
-                err=True,
-            )
+    if found_accessions:
+        click.echo(f"Found chromosome mappings for: {', '.join(found_accessions)}")
+    if missing_accessions:
+        if is_file_input:
+            click.echo(f"⚠ No chromosome mappings found for: {', '.join(missing_accessions)}", err=True)
+        else:
+            click.echo(f"⚠ No chromosome mappings found for: {', '.join(missing_accessions)}", err=True)
+            if genome and genome.species:
+                auto_taxid = get_taxid_from_species(genome.species)
+                click.echo(
+                    f"Consider running: leishref dev update-chromosome-map <accession> {fasta_path.name}"
+                    + (f" --taxid {auto_taxid}" if auto_taxid else " --taxid <TAXID>"),
+                    err=True,
+                )
 
     # For kraken flavor, use provided taxid or get from genome metadata
     if flavor == "kraken":
@@ -1147,9 +1159,13 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
             )
             raise SystemExit(1)
 
-    # Use first found key for renaming (or None if no mappings exist)
-    # If None, sequences will be auto-detected from FASTA file
-    primary_key = found_keys[0] if found_keys else None
+    # Determine which key to use for renaming
+    if is_file_input:
+        # For file input: use first found sequence accession, or None if none found
+        primary_key = found_accessions[0] if found_accessions else None
+    else:
+        # For genome input: always use the genome key
+        primary_key = chrom_key
 
     click.echo(f"Renaming sequences in {fasta_path.name} ({flavor} flavor)...")
     renamed, name_map, error = rename_fasta_sequences(fasta_path, primary_key, flavor, None, taxid)
