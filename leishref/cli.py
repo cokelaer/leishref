@@ -2812,21 +2812,38 @@ def sort_fasta_cmd(infile, outfile):
 @dev.command("update-chromosome-map")
 @click.argument("genome_accession")
 @click.argument("fasta", type=click.Path(exists=True))
-@click.option("--taxid", type=int, default=None, help="NCBI taxon ID (optional)")
-def update_chromosome_map_cmd(genome_accession, fasta, taxid):
+@click.option("--taxid", type=int, default=None, help="NCBI taxon ID (auto-fetch from species if omitted)")
+@click.option(
+    "--species",
+    type=str,
+    default=None,
+    help="Species name for taxid lookup (optional, inferred from catalog if available)",
+)
+def update_chromosome_map_cmd(genome_accession, fasta, taxid, species):
     """Populate chromosome_map.csv from FASTA headers (interactive).
 
     Parses sequence headers to extract chromosome numbers (e.g., "chromosome 28").
     Shows a table for review and confirmation before saving to chromosome_map.csv.
 
+    Taxon ID is auto-fetched from species_taxon_mapping.yaml if --taxid not provided
+    (use --species to override species name for lookup).
+
     Examples:
 
     \b
+      leishref dev update-chromosome-map GCA_999999999.1 assembly.fna
       leishref dev update-chromosome-map GCA_999999999.1 assembly.fna --taxid 5661
+      leishref dev update-chromosome-map GCA_999999999.1 assembly.fna --species "Leishmania tropica"
     """
     import csv
 
     from leishref.chromosomes import extract_sequences_with_headers, parse_chromosome_from_header
+
+    # Auto-fetch taxid from species if not provided
+    if not taxid and species:
+        taxid = get_taxid_from_species(species)
+        if taxid:
+            click.echo(f"Auto-fetched taxid {taxid} for species: {species}")
 
     fasta_path = Path(fasta)
     sequences = extract_sequences_with_headers(fasta_path)
