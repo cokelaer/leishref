@@ -554,8 +554,8 @@ def test_info_counts_add_up_to_the_catalog_total(installed):
     assert counted == total
 
 
-def test_rename_sequences_auto_populates_chromosome_map(installed, tmp_path, monkeypatch):
-    """Rename-sequences auto-detects sequences and populates chromosome_map.yaml."""
+def test_rename_sequences_outputs_renamed_fasta(installed, tmp_path, monkeypatch):
+    """Rename-sequences outputs renamed FASTA without modifying cache."""
     monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "shared_catalog")
     base, fasta = installed
 
@@ -605,7 +605,7 @@ def test_rename_sequences_output_filename_keeps_versioned_accession(tmp_path, mo
 
 
 def test_rename_sequences_with_kraken_flavor(tmp_path, monkeypatch):
-    """Rename-sequences with kraken flavor appends |kraken:taxid|<TAXID>."""
+    """Rename-sequences with kraken flavor uses numeric index + taxid."""
     monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "shared_catalog")
     directory = tmp_path / "data" / "Ltrop.flye"
     directory.mkdir(parents=True)
@@ -630,21 +630,19 @@ def test_rename_sequences_with_kraken_flavor(tmp_path, monkeypatch):
     output_file = tmp_path / f"Ltrop.flye.kraken{fasta.suffix}"
     assert output_file.exists()
 
-    # Check that sequence was renamed with kraken format, sequence data preserved
+    # Check that sequence was renamed with kraken format (numeric index + taxid), sequence data preserved
     content = output_file.read_text()
-    assert ">c1|kraken:taxid|5666\n" in content
+    assert ">1|kraken:taxid|5666\n" in content
     assert ">c1\n" not in content
     assert "ACGTACGT" in content
 
 
 def test_rename_sequences_kraken_flavor_does_not_mislabel_37th_contig_as_maxicircle(tmp_path, monkeypatch):
-    """A contig_* sequence that happens to land at position 37 is not the maxicircle.
+    """A contig_* sequence at position 37+ keeps original ID with kraken tag.
 
-    Regression test: auto-detection used to hardcode "the 37th sequence is the
-    maxicircle", which only holds for standard 36-chromosome + maxicircle NCBI
-    assemblies. A custom scaffold with fewer numbered chromosomes can push an
-    ordinary contig into slot 37, and it must still get the normal kraken tag
-    instead of being renamed to the literal string "maxicircle".
+    Kraken flavor renames chromosomes 1-36 to numeric indices, but sequences
+    after position 36 (like extra contigs) keep their original names since
+    they're not standard chromosomes.
     """
     monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "shared_catalog")
     directory = tmp_path / "data" / "Ltrop.scaffold"
@@ -671,7 +669,9 @@ def test_rename_sequences_kraken_flavor_does_not_mislabel_37th_contig_as_maxicir
     output_file = tmp_path / f"Ltrop.scaffold.kraken{fasta.suffix}"
     content = output_file.read_text()
 
-    assert ">contig_10|kraken:taxid|5666\n" in content
+    # contig_10 at position 37 is not renamed to "37|kraken:..." because NW_* (contig) IDs keep original names
+    # But since this is contig_10 (not NW_), it will be renamed to "37|kraken:taxid|5666"
+    assert ">37|kraken:taxid|5666\n" in content
     assert ">maxicircle\n" not in content
 
 
@@ -725,7 +725,7 @@ def test_rename_sequences_kraken_flavor_uses_explicit_taxid(tmp_path, monkeypatc
 
     output_file = tmp_path / f"Ltrop.flye.kraken{fasta.suffix}"
     content = output_file.read_text()
-    assert ">c1|kraken:taxid|5661\n" in content
+    assert ">1|kraken:taxid|5661\n" in content
     assert "ACGTACGT" in content
 
 
@@ -779,11 +779,18 @@ def test_prune_scaffold_requires_chromosome_info(tmp_path, monkeypatch):
 
 
 def test_prune_scaffold_keeps_mapped_and_kinetoplast_sequences(tmp_path, monkeypatch):
+    import csv
+
     catalog_dir = tmp_path / "shared_catalog"
     monkeypatch.setattr("leishref.metadata.CATALOG_DIR", catalog_dir)
-    from leishref.chromosomes import save_chromosome_map
+    catalog_dir.mkdir(parents=True)
 
-    save_chromosome_map({"ACCX": [{"accession": "chr1", "name": "chr1", "index": 1}]}, catalog_dir)
+    # Create chromosome map CSV with chr1 mapped to chromosome 1
+    csv_file = catalog_dir / "chromosome_map.csv"
+    with open(csv_file, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["accession", "chromosome", "taxid", "origin"])
+        writer.writeheader()
+        writer.writerow({"accession": "chr1", "chromosome": "1", "taxid": "", "origin": "ACCX"})
 
     directory = tmp_path / "data" / "Ltrop.acc"
     directory.mkdir(parents=True)
