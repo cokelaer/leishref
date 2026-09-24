@@ -509,6 +509,73 @@ def test_scaffold_requires_query_to_be_catalog_genome(installed):
     assert "catalog genome" in result.output
 
 
+def test_scaffold_refuses_to_overwrite_existing_metadata(tmp_path, monkeypatch):
+    """Scaffold refuses to write over existing metadata.yaml in catalog entry."""
+    from leishref.cli import catalog_entry_dir
+    from leishref.metadata import Genome, write_genome
+
+    # Create two local genomes
+    data_dir = tmp_path / "data"
+    query_dir = data_dir / "Ltrop.test"
+    ref_dir = data_dir / "Ld.ref"
+    query_dir.mkdir(parents=True)
+    ref_dir.mkdir(parents=True)
+
+    query_fasta = query_dir / "assembly.fa"
+    ref_fasta = ref_dir / "assembly.fa"
+    query_fasta.write_text(">c1\nACGTACGT\n")
+    ref_fasta.write_text(">c1\nACGTACGTACGT\n")
+
+    query_genome = Genome(
+        identifier="Ltrop.test",
+        source="Local",
+        species="Leishmania tropica",
+        files={"fasta": query_fasta.name},
+    )
+    ref_genome = Genome(
+        identifier="Ld.ref",
+        source="Local",
+        species="Leishmania donovani",
+        files={"fasta": ref_fasta.name},
+    )
+    write_genome(query_dir, query_genome)
+    write_genome(ref_dir, ref_genome)
+
+    # Mock CATALOG_DIR to use temp directory
+    monkeypatch.setattr("leishref.metadata.CATALOG_DIR", tmp_path / "catalog")
+
+    # Pre-create the scaffold entry with existing metadata.yaml
+    catalog_dir = tmp_path / "catalog"
+    catalog_dir.mkdir(parents=True, exist_ok=True)
+    scaffold_genome = Genome(
+        identifier="Ltrop.test.scaffold.Ld.ref",
+        source="Leishref scaffold",
+        species="Leishmania tropica",
+    )
+    entry = catalog_entry_dir(catalog_dir, scaffold_genome)
+    write_genome(entry, scaffold_genome)
+
+    # Mock run_scaffold to prevent actual ragtag execution
+    monkeypatch.setattr(
+        "leishref.cli.run_scaffold",
+        lambda *args, **kwargs: (tmp_path / "temp_scaffold.fna", tmp_path / "temp_scaffold.agp"),
+    )
+
+    # Create dummy output files
+    (tmp_path / "temp_scaffold.fna").write_text(">c1\nACGT\n")
+    (tmp_path / "temp_scaffold.agp").write_text("# AGP\n")
+
+    # Run scaffold command with matching parameters
+    result = run(
+        ["dev", "scaffold", "--query", "Ltrop.test", "--reference", "Ld.ref", "--local-dir", str(data_dir)],
+        tmp_path,
+    )
+
+    # Should fail because metadata.yaml already exists
+    assert result.exit_code == 1
+    assert "already exists" in result.output or "metadata" in result.output.lower()
+
+
 def test_scaffold_auto_generates_name_from_query_and_reference():
     """Scaffold name is auto-generated as <query_alias>.scaffold.<ref_alias> when --alias is omitted."""
     from leishref.cli import _genome_alias
