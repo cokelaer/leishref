@@ -6,7 +6,7 @@
 - Prestige, high reach in Leishmania community
 - Slower review (~6 months)
 
-**Secondary:** Parasites & Vectors  
+**Secondary:** Parasites & Vectors
 - Faster turnaround (~3-4 months)
 - Strong parasitology readership
 - Also good impact

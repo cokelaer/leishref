@@ -1042,10 +1042,11 @@ def verify(local_dir, quick):
     help="Where to write the renamed FASTA (never the cache)",
 )
 def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
-    """Rename sequences in a cached genome using chromosome database.
+    """Rename sequences in a genome using chromosome database.
 
-    NAME is the genome alias or accessions.txt entry to transform (resolves via
-    local accessions.txt or genome identifier).
+    NAME can be:
+    - A cached genome alias or accessions.txt entry
+    - A path to a FASTA file (accessions extracted from headers)
 
     Flavors:
     - number: '1', '2', '3', ... (default)
@@ -1064,66 +1065,94 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
       leishref rename-sequences Ld1S --flavor number
       leishref rename-sequences Ld1S --flavor kraken --taxid 5661
       leishref rename-sequences LtropCDCnew.fna --flavor kraken
+      leishref rename-sequences /path/to/assembly.fa --flavor name
     """
-    genomes = local(Path(local_dir))
-    # NAME is also accepted as a bare filename (e.g. 'LtropCDCnew.fna'): fall back to
-    # the accessions.txt alias with the extension stripped before giving up.
-    genome = _resolve_local(genomes, name) or _resolve_local(genomes, Path(name).stem)
-    if genome is None:
-        click.echo(f"Not in cached database: {name}", err=True)
-        click.echo("Run 'leishref info' to see what is available", err=True)
-        raise SystemExit(1)
+    from leishref.chromosomes import extract_sequences_with_headers
 
     fasta_path = None
-    for kind, path, _ in genome.file_paths():
-        if kind == "fasta" and path.exists():
-            fasta_path = path
-            break
+    genome = None
+    chrom_keys = []
+
+    # Try as file path first
+    name_as_path = Path(name)
+    if name_as_path.is_file():
+        fasta_path = name_as_path
+        # Extract accessions from FASTA headers
+        try:
+            sequences = extract_sequences_with_headers(fasta_path)
+            chrom_keys = [seq["accession"] for seq in sequences]
+        except Exception as e:
+            click.echo(f"Error reading FASTA file {fasta_path}: {e}", err=True)
+            raise SystemExit(1)
+    else:
+        # Try as cached genome
+        genomes = local(Path(local_dir))
+        genome = _resolve_local(genomes, name) or _resolve_local(genomes, Path(name).stem)
+        if genome is None:
+            click.echo(f"Not in cached database or file not found: {name}", err=True)
+            click.echo("Run 'leishref info' to see what is available", err=True)
+            raise SystemExit(1)
+
+        for kind, path, _ in genome.file_paths():
+            if kind == "fasta" and path.exists():
+                fasta_path = path
+                break
+
+        if not fasta_path:
+            click.echo(f"No FASTA file found for {name}", err=True)
+            raise SystemExit(1)
+
+        chrom_keys = [genome.accession or genome.identifier]
 
     if not fasta_path:
         click.echo(f"No FASTA file found for {name}", err=True)
         raise SystemExit(1)
 
-    # Use accession or identifier as the chromosome map key
-    chrom_key = genome.accession or genome.identifier
+    # Look up chromosome info for all accessions found in file
+    all_chrom_sequences = {}
+    found_keys = []
+    missing_keys = []
 
-    # Check if chromosome info exists for this genome; suggest update if missing
-    chrom_sequences = get_genome_sequences(chrom_key)
-    if not chrom_sequences:
-        # Try to auto-fetch taxid from species mapping for helpful message
-        auto_taxid = None
-        if genome.species:
+    for key in chrom_keys:
+        chrom_sequences = get_genome_sequences(key)
+        if chrom_sequences:
+            all_chrom_sequences[key] = chrom_sequences
+            found_keys.append(key)
+        else:
+            missing_keys.append(key)
+
+    # Report status
+    if found_keys:
+        click.echo(f"Found chromosome mappings for: {', '.join(found_keys)}")
+    if missing_keys:
+        click.echo(f"⚠ No chromosome mappings found for: {', '.join(missing_keys)}", err=True)
+        if genome and genome.species:
             auto_taxid = get_taxid_from_species(genome.species)
-
-        click.echo(
-            f"⚠ No chromosome mappings found for {chrom_key}",
-            err=True,
-        )
-        click.echo(
-            f"Consider running: leishref dev update-chromosome-map {chrom_key} assembly.fna"
-            + (f" --taxid {auto_taxid}" if auto_taxid else " --taxid <TAXID>"),
-            err=True,
-        )
-        click.echo(
-            f"(See 'leishref dev update-chromosome-map --help' for details)",
-            err=True,
-        )
+            click.echo(
+                f"Consider running: leishref dev update-chromosome-map <accession> {fasta_path.name}"
+                + (f" --taxid {auto_taxid}" if auto_taxid else " --taxid <TAXID>"),
+                err=True,
+            )
 
     # For kraken flavor, use provided taxid or get from genome metadata
     if flavor == "kraken":
-        if not taxid:
+        if not taxid and genome:
             taxid = genome.taxon_id
         if not taxid:
             click.echo(
                 f"Kraken flavor requires NCBI taxon ID. Provide it with:\n"
-                f"  --taxid <TAXID>  (override)\n"
-                f"  OR add taxon_id to {genome.identifier}'s metadata.yaml",
+                f"  --taxid <TAXID>"
+                + (f"\n  OR add taxon_id to {genome.identifier}'s metadata.yaml" if genome else ""),
                 err=True,
             )
             raise SystemExit(1)
 
+    # Use first found key for renaming (or None if no mappings exist)
+    # If None, sequences will be auto-detected from FASTA file
+    primary_key = found_keys[0] if found_keys else None
+
     click.echo(f"Renaming sequences in {fasta_path.name} ({flavor} flavor)...")
-    renamed, name_map, error = rename_fasta_sequences(fasta_path, chrom_key, flavor, None, taxid)
+    renamed, name_map, error = rename_fasta_sequences(fasta_path, primary_key, flavor, None, taxid)
 
     if error:
         click.echo(f"Warning: {error}", err=True)
