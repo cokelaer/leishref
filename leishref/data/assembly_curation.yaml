@@ -1,0 +1,48 @@
+# Judgement calls used by leishref.assembly_table. Everything not listed here is derived by rule.
+
+# Records shorter than this are standalone kinetoplast/maxicircle sequences or fragmentary
+# legacy drafts rather than nuclear genomes (shortest kept assembly is ~30 Mb).
+min_nuclear_length: 25000000
+
+# Superseded NCBI versions kept anyway. The original table keeps the 2014 Newbler PSC-1 draft next to
+# its 2025 Canu replacement; the rest of the table has no superseded versions.
+keep_superseded:
+  - GCA_000755165.1
+
+# Species with 35 expected chromosomes (two fused); all other Leishmania species: 36.
+viannia_species:
+  - braziliensis
+  - guyanensis
+  - panamensis
+  - peruviana
+  - lainsoni
+  - naiffi
+  - shawi
+  - cf. guyanensis/panamensis
+
+# long_read_subset(): bioprojects left out. PRJNA881045 is a single ONT GridION population study of
+# 35 L. infantum isolates that would otherwise make L. infantum the largest group in any
+# cross-species comparison.
+exclude_bioprojects:
+  - PRJNA881045
+
+# Assemblies whose contiguity is not what de novo assembly of their reads would give. Carried over
+# from the original hand-curated table; the per-accession reasons were not recorded there.
+# "reference-guided (declared)" is not listed: it follows from the stated method.
+# RefSeq (GCF) mirrors inherit the entry of their GenBank (GCA) accession.
+contig_class:
+  GCA_000002725.2:
+    contig_class: Sanger reference
+  GCA_000002875.2:
+    contig_class: reference-guided (inferred)
+  GCA_003020905.1:
+    contig_class: reference-guided (inferred)
+  GCA_014466935.1:
+    contig_class: reference-guided (inferred)
+  GCA_014466975.1:
+    contig_class: reference-guided (inferred)
+  GCA_022701395.1:
+    contig_class: reference-guided (inferred)
+  GCA_051013985.1:
+    contig_class: reference-guided (inferred)
+    ref_inherited: true

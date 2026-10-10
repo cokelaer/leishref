@@ -424,6 +424,33 @@ identifiers, and the same alias mapped to two different accessions in
 Options:
 - ``--catalog-dir PATH`` — Check this catalog instead
 
+leishref dev assembly-table
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Build the comparison table of every public *Leishmania* nuclear assembly::
+
+    leishref dev assembly-table --outdir OtherAssemblies
+    leishref dev assembly-table --reports ncbi_leishmania_reports.json --outdir tables
+
+Queries NCBI Datasets for the genus (taxon 5658, all versions) and writes
+``leishmania_nuclear_assemblies.csv`` (every current assembly of at least 25 Mb) and
+``leishmania_nuclear_assemblies_longread.csv`` (the GenBank subset built with PacBio or
+Nanopore reads, without the 35-isolate *L. infantum* population study). Besides NCBI's own
+fields each row carries ``platform``, ``lr``, ``assembler``, ``asm_mode``, ``exp_chr``,
+``gapless``, ``ref_inherited`` and ``contig_class``. ``contig_class`` separates contigs earned by
+the reads from contiguity inherited from a reference (reference-guided assemblies).
+
+Everything is derived by rule except a few per-accession calls recorded in
+``leishref/data/assembly_curation.yaml``. Pass ``--save-reports`` to keep the NCBI response, and
+``--reports`` to rebuild from it later without network access.
+
+Options:
+- ``--reports FILE`` — Read this ``dataset_report`` JSON instead of querying NCBI
+- ``--save-reports FILE`` — Write the NCBI response here
+- ``--curation FILE`` — Use another curation file
+- ``--outdir DIR`` — Where to write the CSVs (default ``.``)
+- ``--prefix NAME`` — File name prefix (default ``leishmania_nuclear_assemblies``)
+
 leishref dev remove
 ~~~~~~~~~~~~~~~~~~~
 

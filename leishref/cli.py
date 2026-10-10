@@ -2957,6 +2957,58 @@ def status(catalog_dir):
         raise SystemExit(1)
 
 
+@dev.command("assembly-table")
+@click.option(
+    "--reports",
+    type=click.Path(exists=True, dir_okay=False),
+    help="NCBI Datasets dataset_report JSON to read instead of querying NCBI (offline, reproducible)",
+)
+@click.option("--save-reports", type=click.Path(dir_okay=False), help="Write the NCBI response here for the record")
+@click.option("--curation", type=click.Path(exists=True, dir_okay=False), help="Alternate assembly_curation.yaml")
+@click.option(
+    "--outdir",
+    type=click.Path(file_okay=False),
+    default=".",
+    show_default=True,
+    help="Where to write the two CSV files",
+)
+@click.option("--prefix", default="leishmania_nuclear_assemblies", show_default=True, help="Output file name prefix")
+def assembly_table_cmd(reports, save_reports, curation, outdir, prefix):
+    """Build the table of all public Leishmania nuclear assemblies.
+
+    Writes PREFIX.csv (every current assembly) and PREFIX_longread.csv (the long-read GenBank
+    subset), one row per assembly with NCBI's own fields plus derived platform, assembler and
+    contiguity-class columns. See leishref.assembly_table for the rules and
+    data/assembly_curation.yaml for the per-accession judgement calls.
+
+    Examples:
+
+    \b
+      leishref dev assembly-table --outdir OtherAssemblies
+      leishref dev assembly-table --reports ncbi_leishmania_reports.json
+    """
+    import json
+
+    from leishref import assembly_table as at
+
+    if reports:
+        data = json.loads(Path(reports).read_text())
+        records = data["reports"] if isinstance(data, dict) else data
+    else:
+        records = at.fetch_reports()
+    if save_reports:
+        Path(save_reports).write_text(json.dumps({"reports": records, "total_count": len(records)}))
+
+    table_rules = at.load_curation(curation)
+    rows = at.build_table(records, table_rules)
+    long_read = at.long_read_subset(rows, table_rules)
+
+    out = Path(outdir)
+    out.mkdir(parents=True, exist_ok=True)
+    click.echo(f"{len(records)} reports -> {at.write_csv(rows, out / f'{prefix}.csv')} assemblies")
+    click.echo(f"{at.write_csv(long_read, out / f'{prefix}_longread.csv')} long-read assemblies")
+
+
 @dev.command("sort-fasta")
 @click.argument("infile", type=click.Path(exists=True))
 @click.argument("outfile", type=click.Path())
