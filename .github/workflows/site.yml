@@ -1,0 +1,42 @@
+name: Publish catalog page
+
+# Rebuilds catalog.json and pushes leishref-web/ to leishome.github.io/leishref/.
+# Needs the repository secret SITE_DEPLOY_KEY: the private half of a write-enabled
+# deploy key registered on leishome/leishome.github.io.
+
+on:
+  push:
+    branches: [main]
+    paths: ["leishref/data/**", "leishref/metadata.py", "leishref-web/**"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build catalog.json
+        run: |
+          pip install .
+          python leishref-web/build_catalog.py leishref-web/catalog.json
+
+      - name: Push to leishome.github.io
+        env:
+          SITE_DEPLOY_KEY: ${{ secrets.SITE_DEPLOY_KEY }}
+        run: |
+          install -m 600 /dev/null ~/.deploy_key
+          printf '%s\n' "$SITE_DEPLOY_KEY" > ~/.deploy_key
+          export GIT_SSH_COMMAND="ssh -i ~/.deploy_key -o StrictHostKeyChecking=accept-new"
+          git clone git@github.com:leishome/leishome.github.io.git site
+          mkdir -p site/leishref
+          cp leishref-web/index.html leishref-web/catalog.js leishref-web/style.css leishref-web/catalog.json site/leishref/
+          cd site
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add leishref
+          git diff --cached --quiet || (git commit -m "Update leishref catalog page" && git push origin HEAD:main)

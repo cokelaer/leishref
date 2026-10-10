@@ -2556,7 +2556,7 @@ def _zenodo_description(genome) -> str:
     """Build rich description for Zenodo deposit with HTML formatting."""
     lines = [
         "<p>Leishmania genome assembly from the leishref initiative.</p>",
-        '<p>Repository: <a href="https://github.com/cokelaer/leishref">https://github.com/cokelaer/leishref</a></p>',
+        '<p>Repository: <a href="https://github.com/leishome/leishref">https://github.com/leishome/leishref</a></p>',
     ]
 
     if genome.source == "Leishref scaffold":
@@ -2587,7 +2587,7 @@ def _zenodo_description(genome) -> str:
 
     lines.append(
         "<p><strong>Citation:</strong> If using this assembly, please cite the leishref project:<br/>"
-        '<a href="https://github.com/cokelaer/leishref">https://github.com/cokelaer/leishref</a></p>'
+        '<a href="https://github.com/leishome/leishref">https://github.com/leishome/leishref</a></p>'
     )
 
     return "\n".join(lines)
@@ -2673,7 +2673,7 @@ def publish(name, local_dir, catalog_dir, version, confirm, sandbox):
                     "upload_type": "dataset",
                     "related_identifiers": [
                         {
-                            "identifier": "https://github.com/cokelaer/leishref",
+                            "identifier": "https://github.com/leishome/leishref",
                             "relation": "isPartOf",
                         }
                     ],

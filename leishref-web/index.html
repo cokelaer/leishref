@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leishref catalog</title>
+<script>(function(){var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t);})();</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="inner">
+    <div class="title"><h1>Leishref</h1><p>Searchable catalog of <i>Leishmania</i> reference genomes</p></div>
+    <nav>
+      <a class="btn" href="https://github.com/leishome/leishref" target="_blank" rel="noopener">GitHub</a>
+      <button id="theme" type="button" aria-label="Toggle dark mode">Theme</button>
+    </nav>
+  </div>
+</header>
+<main class="registry">
+  <div class="intro">
+    <p>Find a reference genome, then install it with the <b>leishref</b> CLI.</p>
+    <pre><code>pip install leishref
+leishref search major
+leishref install GCA_000002725.2 --alias Lmajor</code></pre>
+  </div>
+
+  <h2>Catalog statistics</h2>
+  <div class="tiles" id="tiles"></div>
+
+  <h2>Browse the catalog</h2>
+  <input id="q" type="search" placeholder="Search species, strain, accession, alias… (e.g. donovani, Ld1S, GCA_000002725)" autofocus aria-label="Search catalog">
+  <div class="bar">
+    <span id="count"></span>
+    <label>Source <select id="source"><option value="">all</option></select></label>
+    <label>Level <select id="level"><option value="">all</option></select></label>
+    <label>Technology <select id="tech"><option value="">all</option></select></label>
+    <label>Sort <select id="sort">
+      <option value="species">species</option>
+      <option value="id">identifier</option>
+      <option value="size">genome size</option>
+      <option value="n50">scaffold N50</option>
+      <option value="date">date added</option>
+    </select></label>
+  </div>
+  <div class="grid" id="list"><div class="empty">Loading catalog…</div></div>
+
+  <h2>Overview</h2>
+  <div class="chart"><h4>Genomes per species</h4><p>Click a bar to search for that species.</p><div id="c-species"></div></div>
+  <div class="two">
+    <div class="chart"><h4>Sequencing technology</h4><p>Primary platform from the metadata; Hybrid combines several. Click to filter.</p><div id="c-tech"></div></div>
+    <div class="chart"><h4>Assembly level</h4><p>Click a bar to search.</p><div id="c-level"></div></div>
+  </div>
+  <div class="chart"><h4>Contiguity vs genome size</h4><p>One dot per genome (nuclear assemblies, ≥ 5 Mb; kinetoplast/maxicircle records excluded). Hover for details, click to search for it.</p><div id="c-scatter"></div></div>
+</main>
+<div id="tip"></div>
+<footer>Generated from the leishref catalog metadata.</footer>
+<script type="module" src="catalog.js"></script>
+</body>
+</html>

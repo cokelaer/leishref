@@ -17,7 +17,7 @@ From source
 
 For development, clone the repository and use Poetry::
 
-    git clone git@github.com:cokelaer/leishref.git
+    git clone git@github.com:leishome/leishref.git
     cd leishref
     poetry install --with dev
 
