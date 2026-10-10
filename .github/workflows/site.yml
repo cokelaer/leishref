@@ -34,7 +34,7 @@ jobs:
           export GIT_SSH_COMMAND="ssh -i ~/.deploy_key -o StrictHostKeyChecking=accept-new"
           git clone git@github.com:leishome/leishome.github.io.git site
           mkdir -p site/leishref
-          cp leishref-web/index.html leishref-web/catalog.js leishref-web/style.css leishref-web/logo.svg leishref-web/catalog.json site/leishref/
+          cp leishref-web/index.html leishref-web/catalog.js leishref-web/style.css leishref-web/logo.png leishref-web/catalog.json site/leishref/
           cd site
           git config user.name "github-actions"
           git config user.email "actions@users.noreply.github.com"
