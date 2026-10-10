@@ -1,8 +1,8 @@
 name: Publish catalog page
 
 # Rebuilds catalog.json and pushes leishref-web/ to leishome.github.io/leishref/.
-# Needs the repository secret SITE_TOKEN: a fine-grained personal access token with
-# "Contents: read and write" on leishome/leishome.github.io only.
+# Needs the repository secret SITE_DEPLOY_KEY: the private half of a write-enabled
+# deploy key registered on leishome/leishome.github.io.
 
 on:
   push:
@@ -27,9 +27,12 @@ jobs:
 
       - name: Push to leishome.github.io
         env:
-          SITE_TOKEN: ${{ secrets.SITE_TOKEN }}
+          SITE_DEPLOY_KEY: ${{ secrets.SITE_DEPLOY_KEY }}
         run: |
-          git clone "https://x-access-token:${SITE_TOKEN}@github.com/leishome/leishome.github.io.git" site
+          install -m 600 /dev/null ~/.deploy_key
+          printf '%s\n' "$SITE_DEPLOY_KEY" > ~/.deploy_key
+          export GIT_SSH_COMMAND="ssh -i ~/.deploy_key -o StrictHostKeyChecking=accept-new"
+          git clone git@github.com:leishome/leishome.github.io.git site
           mkdir -p site/leishref
           cp leishref-web/index.html leishref-web/catalog.js leishref-web/style.css leishref-web/logo.png leishref-web/catalog.json site/leishref/
           cd site
