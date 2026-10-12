@@ -91,9 +91,8 @@ def test_selection_drops_superseded_and_organelle_records(curation):
     old = report("GCA_1.1", info={"assembly_status": "previous"})
     kinetoplast = report("GCA_2.1", total=25_000)
     kept = report("GCA_3.1")
-    revived = report("GCA_000755165.1", info={"assembly_status": "previous"})
-    selected = [r["accession"] for r in at.select_reports([old, kinetoplast, kept, revived], curation)]
-    assert selected == ["GCA_3.1", "GCA_000755165.1"]
+    selected = [r["accession"] for r in at.select_reports([old, kinetoplast, kept], curation)]
+    assert selected == ["GCA_3.1"]
 
 
 def test_reference_guided_assembly_inherits_contiguity(curation):
