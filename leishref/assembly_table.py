@@ -27,7 +27,6 @@ CURATION_FILE = Path(__file__).parent / "data" / "assembly_curation.yaml"
 COLUMNS = [
     "accession",
     "organism",
-    "strain",
     "infraspecific",
     "level",
     "name",
@@ -40,7 +39,6 @@ COLUMNS = [
     "contig_n50",
     "n_scaf",
     "scaf_n50",
-    "gaps",
     "gc",
     "refseq_cat",
     "bioproject",
@@ -177,7 +175,6 @@ def build_row(report: dict, curation: dict) -> dict:
     return {
         "accession": accession,
         "organism": organism,
-        "strain": "",
         "infraspecific": _infraspecific(report),
         "level": info.get("assembly_level"),
         "name": info.get("assembly_name"),
@@ -190,7 +187,6 @@ def build_row(report: dict, curation: dict) -> dict:
         "contig_n50": stats.get("contig_n50"),
         "n_scaf": stats.get("number_of_scaffolds"),
         "scaf_n50": stats.get("scaffold_n50"),
-        "gaps": "",
         "gc": float(stats["gc_percent"]) if stats.get("gc_percent") is not None else "",
         "refseq_cat": info.get("refseq_category") or "",
         "bioproject": info.get("bioproject_accession") or "",
@@ -209,15 +205,13 @@ def build_row(report: dict, curation: dict) -> dict:
 def select_reports(reports: Iterable[dict], curation: dict) -> list:
     """Current nuclear assemblies: drop superseded versions and organelle-sized records.
 
-    NCBI keeps every version of an assembly; only the current one describes what is deposited,
-    apart from the versions listed in ``curation['keep_superseded']``.
+    NCBI keeps every version of an assembly; only the current one describes what is deposited.
     Records below ``min_nuclear_length`` are standalone kinetoplast/maxicircle sequences or
     fragmentary legacy drafts, not nuclear genomes.
     """
     keep = []
     for report in reports:
-        status = report.get("assembly_info", {}).get("assembly_status")
-        if status != "current" and report["accession"] not in curation["keep_superseded"]:
+        if report.get("assembly_info", {}).get("assembly_status") != "current":
             continue
         total = _int(report.get("assembly_stats", {}).get("total_sequence_length")) or 0
         if total < curation["min_nuclear_length"]:
