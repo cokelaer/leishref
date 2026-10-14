@@ -99,6 +99,29 @@ leishref bundle 'Ld*.fna' Ld1S            # Mix symlinks and IDs
 - Default output: `bundle.tar.gz` (or use `-o/--output`)
 - Uses `tarfile` with gzip compression
 
+## Website (`leishref-web/`)
+
+Static catalog page at https://leishome.github.io/leishref/ (a GitHub Pages project site under the org site
+https://leishome.github.io/, repo leishome/leishome.github.io).
+
+- `index.html` + `catalog.js`: search and charts over `catalog.json`; `about.html` + `about.js`: "What is included",
+  counts by source, level and species, built in the browser from the same `catalog.json`.
+- `site.yml` runs `leishref-web/build_catalog.py` (dumps the catalog to `catalog.json`) and copies the page files
+  into `_site/`: a new file in `leishref-web/` must also be added to the `cp` line there.
+- The header links to the Leishome org page and the About page only (no Leishgene button; the About page links to it
+  in the text).
+- No JS test setup here: check page changes in a browser. The sibling project
+  [leishgene](https://github.com/leishome/leishgene) (https://leishome.github.io/leishgene/) searches the genes of
+  the entries that record a GFF; keep `files.gff` accurate because Leishgene indexes exactly those.
+
+## Notes for CI
+
+- `test.yml` lints with flake8 and has been failing on `main` because of existing warnings in `tests/` (unused
+  variables and imports); it runs on pushes to `main`/`develop` and on pull requests to them.
+- `ncbi.fetch_fasta_gff` returns `(None, None)` whenever `datasets` prints "error" or "not found", so an NCBI outage
+  shows up as "NCBI has no data for X". CI jobs that call `leishref install` need the NCBI `datasets` binary on the
+  PATH and should retry.
+
 ## Default code style & workflow
 
 See `/home/cokelaer/CLAUDE.md` for global preferences (poetry, pytest, etc.).
