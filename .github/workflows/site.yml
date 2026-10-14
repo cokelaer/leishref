@@ -36,7 +36,7 @@ jobs:
           pip install .
           mkdir _site
           python leishref-web/build_catalog.py _site/catalog.json
-          cp leishref-web/index.html leishref-web/catalog.js leishref-web/style.css leishref-web/logo.png _site/
+          cp leishref-web/index.html leishref-web/about.html leishref-web/catalog.js leishref-web/about.js leishref-web/style.css leishref-web/logo.png _site/
 
       - uses: actions/upload-pages-artifact@v3
         with:

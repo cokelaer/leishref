@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leishref: what is included</title>
+<script>(function(){var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t);})();</script>
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="inner">
+    <a href="./" class="logo"><img src="logo.png" alt="Leishref logo"></a>
+    <div class="title"><h1>Leishref</h1><p>What is included</p></div>
+    <nav>
+      <a class="btn" href="./">Catalog</a>
+      <a class="btn" href="https://leishome.github.io/">Leishome</a>
+      <a class="btn" href="https://leishome.github.io/leishgene/">Leishgene</a>
+      <a class="btn" href="https://github.com/leishome/leishref" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+<main class="registry about">
+  <h2>Scope</h2>
+  <p id="summary">Loading…</p>
+  <div class="tiles" id="tiles"></div>
+  <p>The catalog lists <i>Leishmania</i> genome assemblies and the metadata of each: accession or identifier, species, strain,
+  assembly level, assembly statistics, file checksums and provenance (BioProject, BioSample, Zenodo record). It does not
+  host sequences: <code>leishref install</code> downloads a genome from the source its entry records (NCBI, TriTrypDB or
+  a Zenodo record) into a local cache.</p>
+
+  <h2>By source</h2>
+  <div id="sources"></div>
+  <p>NCBI: assemblies with a GCA_ or GCF_ accession. Custom: assemblies added by hand to the catalog, with a Zenodo record
+  where they are published. NCBI-Nucleotide: a single NCBI sequence that is not an assembly (for example a lone
+  kinetoplast sequence). TriTrypDB: a genome taken from TriTrypDB. Leishref: a scaffold derived locally from another
+  assembly.</p>
+
+  <h2>By assembly level</h2>
+  <div id="levels"></div>
+
+  <h2>Annotations</h2>
+  <p id="gff"></p>
+
+  <h2>By species</h2>
+  <div id="species"></div>
+
+  <h2>Known limits</h2>
+  <ul>
+    <li>Only assemblies recorded in the catalog are listed; it is curated, not a mirror of NCBI.</li>
+    <li>Most entries record a FASTA only. A GFF is recorded for the few that have one, and
+    <a href="https://leishome.github.io/leishgene/">Leishgene</a> can only search those.</li>
+    <li>Statistics and technology labels come from the metadata of each entry and may be missing for older assemblies.</li>
+  </ul>
+</main>
+<footer>Generated from the leishref catalog metadata. <a href="./">Back to the catalog</a>.</footer>
+<script type="module" src="about.js"></script>
+</body>
+</html>
