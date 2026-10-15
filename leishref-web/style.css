@@ -34,6 +34,9 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: v
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
 .tile b { display: block; font-size: 30px; letter-spacing: -.02em; line-height: 1.1; color: var(--text); }
 .tile span { font-size: 13px; }
+.tile.origins { display: flex; flex-direction: column; gap: 2px; }
+.tile.origins div { display: flex; align-items: baseline; gap: 8px; }
+.tile.origins b { display: inline; font-size: 18px; min-width: 2.2em; }
 .det { display: none; margin-top: 10px; overflow-x: auto; }
 .tool.open .det { display: block; }
 .dt { width: 100%; font-size: 12px; border-collapse: collapse; }

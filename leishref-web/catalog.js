@@ -106,9 +106,15 @@ function fill(sel, vals) {
 function stats() {
   const species = new Set(genomes.map((g) => g.species).filter(Boolean));
   const complete = genomes.filter((g) => ["Complete Genome", "Chromosome"].includes(g.assembly_level)).length;
-  const tiles = [[genomes.length, "genomes"], [species.size, "species"], [complete, "chromosome-level"],
-    [new Set(genomes.map((g) => g.source)).size, "sources"]];
-  $("#tiles").innerHTML = tiles.map(([v, l]) => `<div class="tile"><b>${v}</b><span>${l}</span></div>`).join("");
+  // The same genome can be in the catalog under several origins (e.g. NCBI and TriTrypDB), so the
+  // last tile splits the entries by origin.
+  const n = (group) => genomes.filter((g) => g.group === group).length;
+  const split = [["NCBI", n("ncbi")], ["TriTrypDB", n("tritrypdb")]];
+  split.push(["others", genomes.length - split[0][1] - split[1][1]]);
+  const tiles = [[genomes.length, "genomes"], [species.size, "species"], [complete, "chromosome-level"]]
+    .map(([v, l]) => `<div class="tile"><b>${v}</b><span>${l}</span></div>`);
+  tiles.push(`<div class="tile origins">${split.map(([l, v]) => `<div><b>${v}</b><span>${l}</span></div>`).join("")}</div>`);
+  $("#tiles").innerHTML = tiles.join("");
 }
 
 /* ---------- tooltip + charts ---------- */
