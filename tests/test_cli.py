@@ -295,11 +295,27 @@ def test_organism_does_not_repeat_a_strain_already_in_the_species():
 
 
 @pytest.fixture
-def recorded(tmp_path):
-    """A local database holding one genome installed from a real catalog entry."""
+def recorded(tmp_path, monkeypatch):
+    """A local database holding one genome installed from a real catalog entry.
+
+    The entry is a Zenodo genome, so the download is replaced by a tiny local file and the
+    checksum recorded for it is dropped: the tests exercise restore, not Zenodo's uptime.
+    """
+    import dataclasses
+
     from leishref.metadata import catalog as read_catalog
 
     origin = read_catalog()[0]
+    offline = dataclasses.replace(origin, checksums={})
+
+    def fake_download(record_id, outdir, sandbox=False, only=None):
+        outdir.mkdir(parents=True, exist_ok=True)
+        fasta = outdir / origin.files["fasta"]
+        fasta.write_text(">c1\nACGT\n")
+        return [fasta]
+
+    monkeypatch.setattr("leishref.cli.catalog", lambda *a, **kw: [offline])
+    monkeypatch.setattr("leishref.cli.download_record_files", fake_download)
     directory = tmp_path / "data" / "mine"
     directory.mkdir(parents=True)
     write_genome(
