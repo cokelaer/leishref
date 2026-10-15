@@ -1,0 +1,41 @@
+identifier: TriTrypDB-71_LpanamensisMHOMCOL81L13
+source: TriTrypDB
+taxon_id: 5679
+species: Leishmania panamensis
+strain: MHOM/COL/81/L13
+assembly_level: Chromosome
+release_date: '2014-12-16'
+files:
+  fasta: TriTrypDB-71_LpanamensisMHOMCOL81L13_Genome.fasta
+  gff: TriTrypDB-71_LpanamensisMHOMCOL81L13.gff
+checksums:
+  fasta: f68066ed576d343199ad3e825afc0ac0
+  gff: 8c32e324f60f92f695136c5f5498b306
+stats:
+  num_bases: 31256077
+  num_ungapped: 30964489
+  num_scaffolds: 856
+  num_contigs: 3163
+  gc_percent: 57.6
+  scaffold_n50: 983630
+  scaffold_l50: 11
+  contig_n50: 22660
+  contig_l50: 402
+  num_ambiguous: 291588
+  num_gaps: 2307
+provenance:
+  original_source: TriTrypDB
+  zenodo_doi: 10.5281/zenodo.23377097
+tritrypdb:
+  release: 71
+  source_url: https://tritrypdb.org/common/downloads/release-71
+  downloaded: '2026-10-14'
+license:
+  name: VEuPathDB data access policy
+  url: https://veupathdb.org/veupathdb/app/static-content/data_license.html
+  note: Freely available for public use; cite the original publications and VEuPathDB.
+access:
+  downloadable: true
+date_added: '2026-10-15'
+notes: TriTrypDB release 71 genome, redistributed unmodified on Zenodo (see the license
+  block).

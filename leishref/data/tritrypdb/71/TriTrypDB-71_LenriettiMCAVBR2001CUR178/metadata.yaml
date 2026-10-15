@@ -1,0 +1,41 @@
+identifier: TriTrypDB-71_LenriettiMCAVBR2001CUR178
+source: TriTrypDB
+taxon_id: 5663
+species: Leishmania enriettii
+strain: MCAV/BR/2001/CUR178
+assembly_level: Chromosome
+release_date: '2021-04-15'
+files:
+  fasta: TriTrypDB-71_LenriettiMCAVBR2001CUR178_Genome.fasta
+  gff: TriTrypDB-71_LenriettiMCAVBR2001CUR178.gff
+checksums:
+  fasta: 555c831ee7ba6bf9cf1a0934ddfdcd9f
+  gff: 9e3e4adcaebfdaef730ec28c2f15d52b
+stats:
+  num_bases: 33318864
+  num_ungapped: 33318484
+  num_scaffolds: 54
+  num_contigs: 65
+  gc_percent: 59.57
+  scaffold_n50: 1075649
+  scaffold_l50: 11
+  contig_n50: 789958
+  contig_l50: 13
+  num_ambiguous: 380
+  num_gaps: 11
+provenance:
+  original_source: TriTrypDB
+  zenodo_doi: 10.5281/zenodo.23377097
+tritrypdb:
+  release: 71
+  source_url: https://tritrypdb.org/common/downloads/release-71
+  downloaded: '2026-10-14'
+license:
+  name: VEuPathDB data access policy
+  url: https://veupathdb.org/veupathdb/app/static-content/data_license.html
+  note: Freely available for public use; cite the original publications and VEuPathDB.
+access:
+  downloadable: true
+date_added: '2026-10-15'
+notes: TriTrypDB release 71 genome, redistributed unmodified on Zenodo (see the license
+  block).

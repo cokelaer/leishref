@@ -1,0 +1,41 @@
+identifier: TriTrypDB-71_LpanamensisMHOMPA94PSC1
+source: TriTrypDB
+taxon_id: 5679
+species: Leishmania panamensis
+strain: MHOM/PA/94/PSC-1
+assembly_level: Chromosome
+release_date: '2015-03-05'
+files:
+  fasta: TriTrypDB-71_LpanamensisMHOMPA94PSC1_Genome.fasta
+  gff: TriTrypDB-71_LpanamensisMHOMPA94PSC1.gff
+checksums:
+  fasta: 23dcf5b7c6a8f390393c135757526000
+  gff: 0883fb0fb3da47563773ac7979824cc5
+stats:
+  num_bases: 30688794
+  num_ungapped: 29989080
+  num_scaffolds: 35
+  num_contigs: 588
+  gc_percent: 57.56
+  scaffold_n50: 1043456
+  scaffold_l50: 10
+  contig_n50: 97606
+  contig_l50: 87
+  num_ambiguous: 699714
+  num_gaps: 553
+provenance:
+  original_source: TriTrypDB
+  zenodo_doi: 10.5281/zenodo.23377097
+tritrypdb:
+  release: 71
+  source_url: https://tritrypdb.org/common/downloads/release-71
+  downloaded: '2026-10-14'
+license:
+  name: VEuPathDB data access policy
+  url: https://veupathdb.org/veupathdb/app/static-content/data_license.html
+  note: Freely available for public use; cite the original publications and VEuPathDB.
+access:
+  downloadable: true
+date_added: '2026-10-15'
+notes: TriTrypDB release 71 genome, redistributed unmodified on Zenodo (see the license
+  block).

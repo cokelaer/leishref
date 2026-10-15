@@ -1,0 +1,41 @@
+identifier: TriTrypDB-71_LtropicaL590
+source: TriTrypDB
+taxon_id: 5666
+species: Leishmania tropica
+strain: L590
+assembly_level: Chromosome
+release_date: '2014-12-16'
+files:
+  fasta: TriTrypDB-71_LtropicaL590_Genome.fasta
+  gff: TriTrypDB-71_LtropicaL590.gff
+checksums:
+  fasta: 75014817c1223d39d72c79c85920cb21
+  gff: 8c9330f2b2ba33465be551da9eb9dc66
+stats:
+  num_bases: 33017490
+  num_ungapped: 31323091
+  num_scaffolds: 160
+  num_contigs: 1938
+  gc_percent: 59.9
+  scaffold_n50: 1057680
+  scaffold_l50: 11
+  contig_n50: 32739
+  contig_l50: 275
+  num_ambiguous: 1694749
+  num_gaps: 1778
+provenance:
+  original_source: TriTrypDB
+  zenodo_doi: 10.5281/zenodo.23377097
+tritrypdb:
+  release: 71
+  source_url: https://tritrypdb.org/common/downloads/release-71
+  downloaded: '2026-10-14'
+license:
+  name: VEuPathDB data access policy
+  url: https://veupathdb.org/veupathdb/app/static-content/data_license.html
+  note: Freely available for public use; cite the original publications and VEuPathDB.
+access:
+  downloadable: true
+date_added: '2026-10-15'
+notes: TriTrypDB release 71 genome, redistributed unmodified on Zenodo (see the license
+  block).

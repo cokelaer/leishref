@@ -1,0 +1,41 @@
+identifier: TriTrypDB-71_LmajorFriedlin
+source: TriTrypDB
+taxon_id: 5664
+species: Leishmania major
+strain: Friedlin
+assembly_level: Chromosome
+release_date: '2016-05-28'
+files:
+  fasta: TriTrypDB-71_LmajorFriedlin_Genome.fasta
+  gff: TriTrypDB-71_LmajorFriedlin.gff
+checksums:
+  fasta: 4e014cd6134e46626b860f07d9eecf6a
+  gff: 42a4af0c9238328629ac9d80eef227b3
+stats:
+  num_bases: 32855095
+  num_ungapped: 32855095
+  num_scaffolds: 36
+  num_contigs: 36
+  gc_percent: 59.72
+  scaffold_n50: 1091540
+  scaffold_l50: 11
+  contig_n50: 1091540
+  contig_l50: 11
+  num_ambiguous: 13
+  num_gaps: 0
+provenance:
+  original_source: TriTrypDB
+  zenodo_doi: 10.5281/zenodo.23377097
+tritrypdb:
+  release: 71
+  source_url: https://tritrypdb.org/common/downloads/release-71
+  downloaded: '2026-10-14'
+license:
+  name: VEuPathDB data access policy
+  url: https://veupathdb.org/veupathdb/app/static-content/data_license.html
+  note: Freely available for public use; cite the original publications and VEuPathDB.
+access:
+  downloadable: true
+date_added: '2026-10-15'
+notes: TriTrypDB release 71 genome, redistributed unmodified on Zenodo (see the license
+  block).
