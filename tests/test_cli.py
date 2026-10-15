@@ -2,6 +2,7 @@
 
 import csv
 import os
+import shutil
 
 import pytest
 from click.testing import CliRunner
@@ -508,6 +509,7 @@ def test_scaffold_requires_query_to_be_catalog_genome(installed):
     assert "catalog genome" in result.output
 
 
+@pytest.mark.skipif(shutil.which("ragtag.py") is None, reason="ragtag.py is not installed")
 def test_scaffold_refuses_to_overwrite_existing_metadata(tmp_path, monkeypatch):
     """Scaffold refuses to write over existing metadata.yaml in catalog entry."""
     from leishref.cli import catalog_entry_dir

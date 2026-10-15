@@ -284,6 +284,7 @@ def test_plot_genome_completeness_requires_genomes(tmp_path):
 
 def test_plot_genome_sizes_creates_file(tmp_path):
     """plot_genome_sizes renders genome size distribution by species."""
+    pytest.importorskip("seaborn")
     _write_genome_with_optional_fasta(
         tmp_path,
         "GCA_1",
@@ -307,6 +308,7 @@ def test_plot_genome_sizes_creates_file(tmp_path):
 
 def test_plot_genome_sizes_excludes_kinetoplast(tmp_path):
     """plot_genome_sizes excludes kinetoplast-only by default."""
+    pytest.importorskip("seaborn")
     _write_genome_with_optional_fasta(
         tmp_path,
         "GCA_1",
@@ -328,6 +330,7 @@ def test_plot_genome_sizes_excludes_kinetoplast(tmp_path):
 
 def test_plot_genome_sizes_with_kinetoplast(tmp_path):
     """plot_genome_sizes includes kinetoplast when flag set."""
+    pytest.importorskip("seaborn")
     _write_genome_with_optional_fasta(
         tmp_path,
         "GCA_1",
@@ -343,6 +346,7 @@ def test_plot_genome_sizes_with_kinetoplast(tmp_path):
 
 def test_plot_genome_sizes_species_filter(tmp_path):
     """plot_genome_sizes filters by species."""
+    pytest.importorskip("seaborn")
     _write_genome_with_optional_fasta(
         tmp_path,
         "GCA_1",
