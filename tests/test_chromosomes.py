@@ -147,7 +147,6 @@ def test_parse_chromosome_from_header_not_found(tmp_path):
 
 def test_get_taxid_from_species_found(tmp_path):
     """Lookup taxid from species_taxon_mapping.yaml."""
-    from pathlib import Path
 
     import yaml
 

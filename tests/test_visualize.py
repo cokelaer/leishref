@@ -321,7 +321,7 @@ def test_plot_genome_sizes_excludes_kinetoplast(tmp_path):
     )
 
     output = tmp_path / "sizes_no_kinet.png"
-    out = plot_genome_sizes(tmp_path, output, include_kinetoplast=False)
+    plot_genome_sizes(tmp_path, output, include_kinetoplast=False)
 
     assert output.exists()
 
@@ -336,7 +336,7 @@ def test_plot_genome_sizes_with_kinetoplast(tmp_path):
     )
 
     output = tmp_path / "sizes_with_kinet.png"
-    out = plot_genome_sizes(tmp_path, output, include_kinetoplast=True)
+    plot_genome_sizes(tmp_path, output, include_kinetoplast=True)
 
     assert output.exists()
 
@@ -357,7 +357,7 @@ def test_plot_genome_sizes_species_filter(tmp_path):
     )
 
     output = tmp_path / "sizes_major.png"
-    out = plot_genome_sizes(tmp_path, output, species_filter=["major"])
+    plot_genome_sizes(tmp_path, output, species_filter=["major"])
 
     assert output.exists()
 
@@ -381,7 +381,7 @@ def test_plot_genome_size_histogram_creates_file(tmp_path):
     )
 
     output = tmp_path / "size_hist.png"
-    out = plot_genome_size_histogram(tmp_path, output)
+    plot_genome_size_histogram(tmp_path, output)
 
     assert output.exists()
     assert output.stat().st_size > 0
@@ -399,7 +399,7 @@ def test_plot_genome_size_histogram_with_kinetoplast(tmp_path):
     )
 
     output = tmp_path / "size_hist_with_kinet.png"
-    out = plot_genome_size_histogram(tmp_path, output, include_kinetoplast=True)
+    plot_genome_size_histogram(tmp_path, output, include_kinetoplast=True)
 
     assert output.exists()
 
@@ -425,7 +425,7 @@ def test_plot_sequencing_technology_creates_file(tmp_path):
     )
 
     output = tmp_path / "tech.png"
-    out = plot_sequencing_technology(tmp_path, output)
+    plot_sequencing_technology(tmp_path, output)
 
     assert output.exists()
     assert output.stat().st_size > 0
@@ -452,7 +452,7 @@ def test_plot_assembly_level_by_technology_creates_file(tmp_path):
         )
 
     output = tmp_path / "tech_vs_quality.png"
-    out = plot_assembly_level_by_technology(tmp_path, output)
+    plot_assembly_level_by_technology(tmp_path, output)
 
     assert output.exists()
     assert output.stat().st_size > 0

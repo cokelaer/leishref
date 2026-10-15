@@ -1192,9 +1192,8 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
             taxid = genome.taxon_id
         if not taxid:
             click.echo(
-                f"Kraken flavor requires NCBI taxon ID. Provide it with:\n"
-                f"  --taxid <TAXID>"
-                + (f"\n  OR add taxon_id to {genome.identifier}'s metadata.yaml" if genome else ""),
+                "Kraken flavor requires NCBI taxon ID. Provide it with:\n"
+                "  --taxid <TAXID>" + (f"\n  OR add taxon_id to {genome.identifier}'s metadata.yaml" if genome else ""),
                 err=True,
             )
             raise SystemExit(1)
@@ -1218,7 +1217,6 @@ def rename_sequences_cmd(name, flavor, taxid, local_dir, output_dir):
         name_map = {}
         new_lines = []
         fasta_content = fasta_path.read_text()
-        seq_idx = 0
         for line in fasta_content.split("\n"):
             if line.startswith(">"):
                 seq_id = line[1:].split()[0]  # Get accession (before first space)
@@ -1294,7 +1292,7 @@ def prune_scaffold_cmd(name, local_dir, output_dir):
       leishref prune-scaffold Ld1S --output-dir pruned/
       leishref prune-scaffold /path/to/assembly.fa --output-dir pruned/
     """
-    from leishref.chromosomes import extract_sequences_with_headers, get_chromosome_info, load_chromosome_map
+    from leishref.chromosomes import extract_sequences_with_headers, load_chromosome_map
 
     fasta_path = None
     genome = None
@@ -3178,7 +3176,7 @@ def update_chromosome_map_cmd(genome_accession, fasta, taxid, species):
                 f"⚠ Could not find taxid for {genome_accession}",
                 err=True,
             )
-            click.echo(f"  Provide it with: --taxid <TAXID>", err=True)
+            click.echo("  Provide it with: --taxid <TAXID>", err=True)
 
     fasta_path = Path(fasta)
     sequences = extract_sequences_with_headers(fasta_path)

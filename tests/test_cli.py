@@ -265,7 +265,7 @@ def test_search_output_shows_the_dash(installed):
 def test_install_records_the_files_it_wrote(tmp_path):
     """A catalog entry imported from NCBI's summary names no files; installing one has
     to record what actually arrived, or verify and link cannot see it."""
-    from leishref.cli import _install, cache_key
+    from leishref.cli import _install
 
     source = tmp_path / "GCA_9_genomic.fna"
     source.write_text(">c1\nACGT\n")
@@ -1088,9 +1088,6 @@ def test_dev_status_flags_missing_fields_and_bad_checksums(tmp_path):
 
 def test_update_chromosome_map_interactive_confirm(tmp_path, monkeypatch):
     """Test update-chromosome-map command with user confirmation."""
-    import csv
-
-    from leishref.metadata import CATALOG_DIR
 
     catalog_dir = tmp_path / "shared_catalog"
     catalog_dir.mkdir(parents=True, exist_ok=True)
@@ -1135,9 +1132,6 @@ def test_rename_sequences_kraken_with_genome_taxid(installed, tmp_path, monkeypa
     base, fasta = installed
 
     # Create chromosome mapping for the test genome
-    from leishref.metadata import read_genome
-
-    genome = read_genome(base / "data" / "Ltrop.flye")
     catalog_dir = tmp_path / "shared_catalog"
     csv_file = catalog_dir / "chromosome_map.csv"
     import csv
@@ -1289,7 +1283,6 @@ def test_export_all_formats_work(installed, fmt):
 def test_install_ncbi_requires_no_arguments(tmp_path, monkeypatch):
     """install-ncbi bulk-installs all NCBI genomes from catalog."""
     # Mock catalog to return NCBI genomes without downloading
-    from leishref.cli import _install_many_parallel
 
     ncbi_genomes = [
         Genome(identifier="GCA_001", source="NCBI", accession="GCA_001", species="Leishmania major"),
@@ -1501,7 +1494,7 @@ def test_rename_sequences_resolves_by_filename_stem(installed, tmp_path, monkeyp
     base, fasta = installed
 
     # Can pass the .fna filename
-    result = run(["rename-sequences", f"Ltrop.flye.fna", "--flavor", "number", "--local-dir", "data"], base)
+    result = run(["rename-sequences", "Ltrop.flye.fna", "--flavor", "number", "--local-dir", "data"], base)
     assert result.exit_code == 0
 
 

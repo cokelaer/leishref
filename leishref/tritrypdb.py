@@ -61,7 +61,9 @@ def entry_name(release, name: str) -> str:
     return f"TriTrypDB-{release}_{name}"
 
 
-def build_genome(release, name: str, directory: Path, doi: str, downloaded: str, gff_name: Optional[str] = None) -> Genome:
+def build_genome(
+    release, name: str, directory: Path, doi: str, downloaded: str, gff_name: Optional[str] = None
+) -> Genome:
     """The catalog entry for one genome of a release, measured from the staged files.
 
     ``name`` is TriTrypDB's own genome name ('LmajorFriedlin'). Its FASTA is
