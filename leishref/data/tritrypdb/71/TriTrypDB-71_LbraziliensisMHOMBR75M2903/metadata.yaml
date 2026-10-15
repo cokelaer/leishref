@@ -1,0 +1,41 @@
+identifier: TriTrypDB-71_LbraziliensisMHOMBR75M2903
+source: TriTrypDB
+taxon_id: 5660
+species: Leishmania braziliensis
+strain: MHOM/BR/75/M2903
+assembly_level: Chromosome
+release_date: '2016-09-30'
+files:
+  fasta: TriTrypDB-71_LbraziliensisMHOMBR75M2903_Genome.fasta
+  gff: TriTrypDB-71_LbraziliensisMHOMBR75M2903.gff
+checksums:
+  fasta: 39f10a69e8db780ab65ab3f733d85a93
+  gff: 9d69df31895bea7170dc78ab6ecfedff
+stats:
+  num_bases: 35210150
+  num_ungapped: 32474153
+  num_scaffolds: 744
+  num_contigs: 3934
+  gc_percent: 57.78
+  scaffold_n50: 1030512
+  scaffold_l50: 11
+  contig_n50: 62201
+  contig_l50: 160
+  num_ambiguous: 2735997
+  num_gaps: 3190
+provenance:
+  original_source: TriTrypDB
+  zenodo_doi: 10.5281/zenodo.23377097
+tritrypdb:
+  release: 71
+  source_url: https://tritrypdb.org/common/downloads/release-71
+  downloaded: '2026-10-14'
+license:
+  name: VEuPathDB data access policy
+  url: https://veupathdb.org/veupathdb/app/static-content/data_license.html
+  note: Freely available for public use; cite the original publications and VEuPathDB.
+access:
+  downloadable: true
+date_added: '2026-10-15'
+notes: TriTrypDB release 71 genome, redistributed unmodified on Zenodo (see the license
+  block).

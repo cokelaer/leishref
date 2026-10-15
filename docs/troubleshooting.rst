@@ -97,16 +97,16 @@ creation for that command.
 ``TriTrypDB needs a login``
 ----------------------------------
 
-TriTrypDB requires an account to download FASTA/GFF files, so leishref can't fetch
-them automatically the way it does for NCBI or Zenodo. ``leishref install`` on a
-TriTrypDB catalog entry prints::
+TriTrypDB requires an account to download FASTA/GFF files, so leishref doesn't fetch
+from it. Releases published on Zenodo install normally; a TriTrypDB catalog entry with
+no Zenodo DOI prints::
 
     TriTrypDB needs a login; get the file manually, then 'leishref dev add'
 
 Download the files by hand from `tritrypdb.org <https://tritrypdb.org>`_, then add
 them as a local assembly::
 
-    leishref dev add TriTrypDB-68_LamazonensisPH8_Genome.fasta --alias LamPH8
+    leishref dev add TriTrypDB-<release>_LmajorFriedlin_Genome.fasta --alias LmjF
 
 Checksum mismatch after ``leishref verify``
 -------------------------------------------------

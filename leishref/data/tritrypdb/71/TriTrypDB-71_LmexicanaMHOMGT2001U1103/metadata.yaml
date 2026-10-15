@@ -1,0 +1,41 @@
+identifier: TriTrypDB-71_LmexicanaMHOMGT2001U1103
+source: TriTrypDB
+taxon_id: 5665
+species: Leishmania mexicana
+strain: MHOM/GT/2001/U1103
+assembly_level: Chromosome
+release_date: '2016-05-28'
+files:
+  fasta: TriTrypDB-71_LmexicanaMHOMGT2001U1103_Genome.fasta
+  gff: TriTrypDB-71_LmexicanaMHOMGT2001U1103.gff
+checksums:
+  fasta: 5430e68d59831e14e3955c2aa09fea9e
+  gff: 072a497d04549607dc3e2c05ebbab115
+stats:
+  num_bases: 32108741
+  num_ungapped: 32074854
+  num_scaffolds: 588
+  num_contigs: 937
+  gc_percent: 59.81
+  scaffold_n50: 1044075
+  scaffold_l50: 10
+  contig_n50: 164930
+  contig_l50: 56
+  num_ambiguous: 34238
+  num_gaps: 349
+provenance:
+  original_source: TriTrypDB
+  zenodo_doi: 10.5281/zenodo.23377097
+tritrypdb:
+  release: 71
+  source_url: https://tritrypdb.org/common/downloads/release-71
+  downloaded: '2026-10-14'
+license:
+  name: VEuPathDB data access policy
+  url: https://veupathdb.org/veupathdb/app/static-content/data_license.html
+  note: Freely available for public use; cite the original publications and VEuPathDB.
+access:
+  downloadable: true
+date_added: '2026-10-15'
+notes: TriTrypDB release 71 genome, redistributed unmodified on Zenodo (see the license
+  block).

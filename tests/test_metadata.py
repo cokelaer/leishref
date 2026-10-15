@@ -247,11 +247,10 @@ def test_strain_is_taken_from_the_organism_name_when_ncbi_leaves_it_empty():
 
 def test_catalog_entries_are_grouped_by_origin():
     """Every shipped entry sits in the subdirectory its origin calls for."""
-    from leishref.metadata import CATALOG_DIR, catalog_group
+    from leishref.metadata import CATALOG_DIR, catalog_subdir
 
     for entry in catalog():
-        assert entry.path.parent.name == catalog_group(entry), entry.identifier
-        assert entry.path.parent.parent == CATALOG_DIR, entry.identifier
+        assert entry.path.parent == CATALOG_DIR / catalog_subdir(entry), entry.identifier
 
 
 def test_grouping_follows_how_a_genome_was_made(genome):
@@ -300,3 +299,40 @@ def test_a_flat_directory_is_still_read(tmp_path):
 
     found = {entry.identifier for entry in read_catalog(tmp_path)}
     assert found == {"flat", "GCA_1.1"}
+
+
+def test_cache_dir_mirrors_the_catalog_layout(tmp_path):
+    from leishref.metadata import cache_dir, catalog_entry_dir
+
+    ncbi = Genome(identifier="GCA_1.1", accession="GCA_1.1", source="NCBI")
+    custom = Genome(identifier="Lx.custom", source="Custom")
+    assert cache_dir(tmp_path, ncbi) == tmp_path / "ncbi" / "GCA_1.1"
+    assert cache_dir(tmp_path, custom) == tmp_path / "custom" / "Lx.custom"
+    assert catalog_entry_dir(tmp_path, ncbi) == tmp_path / "ncbi" / "GCA_1.1"
+
+
+def test_tritrypdb_entries_are_grouped_by_release(tmp_path):
+    from leishref.metadata import cache_dir, catalog_entry_dir, tritrypdb_release
+
+    from_identifier = Genome(identifier="TriTrypDB-71_LmajorFriedlin", source="TriTrypDB")
+    from_metadata = Genome(identifier="Lx", source="TriTrypDB", tritrypdb={"release": 68})
+    assert tritrypdb_release(from_identifier) == "71"
+    assert tritrypdb_release(from_metadata) == "68"
+    assert cache_dir(tmp_path, from_identifier) == tmp_path / "tritrypdb" / "71" / "TriTrypDB-71_LmajorFriedlin"
+    assert catalog_entry_dir(tmp_path, from_metadata) == tmp_path / "tritrypdb" / "68" / "Lx"
+
+
+def test_iter_genomes_walks_release_directories_and_legacy_flat_caches(tmp_path):
+    write_genome(tmp_path / "tritrypdb" / "71" / "TriTrypDB-71_A", Genome(identifier="TriTrypDB-71_A"))
+    write_genome(tmp_path / "ncbi" / "GCA_1.1", Genome(identifier="GCA_1.1"))
+    write_genome(tmp_path / "GCA_2.1", Genome(identifier="GCA_2.1"))
+    found = {g.identifier for g in iter_genomes(tmp_path)}
+    assert found == {"TriTrypDB-71_A", "GCA_1.1", "GCA_2.1"}
+
+
+def test_tritrypdb_fields_survive_a_round_trip(tmp_path):
+    genome = Genome(identifier="TriTrypDB-71_A", tritrypdb={"release": 71}, superseded_by="TriTrypDB-72_A")
+    write_genome(tmp_path / "A", genome)
+    loaded = read_genome(tmp_path / "A")
+    assert loaded.tritrypdb == {"release": 71}
+    assert loaded.superseded_by == "TriTrypDB-72_A"

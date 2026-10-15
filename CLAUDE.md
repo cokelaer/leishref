@@ -11,7 +11,8 @@
   for `ncbi/`. `source: NCBI-Nucleotide`.
 - `leishref/data/scaffolds/` — Scaffolds made from RefSeq genomes using ragtag
 - `leishref/data/custom/` — All custom genomes, including experimental scaffolds (source="Custom", even if published on Zenodo)
-- `leishref/data/tritrypdb/` — TriTrypDB genomes
+- `leishref/data/tritrypdb/<release>/` — TriTrypDB genomes, one directory per TriTrypDB release (`tritrypdb/71/TriTrypDB-71_…`).
+  A release is one Zenodo record holding all its genomes; an entry installs only its own files.
 
 **Key rule:** If an entry has `source: Custom`, it stays in `custom/` regardless of whether it has Zenodo DOI or files. Do not reorganize by grouping logic—use the source field to determine placement.
 
@@ -28,8 +29,12 @@ provenance:
 
 ## Local Cache Is Keyed by Accession, Not Alias
 
+The cache mirrors the catalog layout: `~/.config/leishref/<group>/[<release>/]<accession-or-identifier>/`
+(`ncbi/GCA_…`, `custom/…`, `tritrypdb/71/TriTrypDB-71_…`), computed by `metadata.cache_dir()`; never build
+cache paths by hand. `iter_genomes()` also still reads a flat, pre-grouping cache.
+
 `leishref install NAME --alias ALIAS` caches the genome under
-`~/.config/leishref/<accession-or-catalog-identifier>/` - never under `<ALIAS>/`.
+`~/.config/leishref/<group>/<accession-or-catalog-identifier>/` - never under `<ALIAS>/`.
 ALIAS only names the symlink `install` leaves in the current directory. This is
 deliberate, not an implementation detail to "simplify":
 

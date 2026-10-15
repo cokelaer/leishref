@@ -202,7 +202,7 @@ record count does. `search` shows the scaffold figures; both levels are in the r
 | `NCBI` | fetched by accession through the `datasets` CLI |
 | `NCBI-Nucleotide` | a standalone nuccore record (not a GCA/GCF assembly), fetched via `dev fetch-nucleotide` over NCBI EUtils |
 | `Zenodo` | published to Zenodo; retrieved by DOI, no token needed |
-| `TriTrypDB` | downloaded by hand, because their downloads require a login |
+| `TriTrypDB` | a release of TriTrypDB, redistributed on Zenodo with VEuPathDB's permission; retrieved by DOI like any Zenodo genome, one release per directory (`tritrypdb/71/`) |
 | `Local` | added from disk and not published anywhere yet |
 | `Scaffold` | produced by `dev scaffold` and not published yet |
 
@@ -247,8 +247,14 @@ Installed into /home/you/.config/leishref/GCA_000410715.1
 
 leishref prefers a Zenodo DOI where the catalog records one and falls back to the NCBI
 accession, then checks what arrived against the recorded checksum. Zenodo downloads need
-no token. TriTrypDB genomes have neither identifier, because their downloads now require
-a login; fetch those by hand and register them with `leishref dev add`.
+no token. A TriTrypDB release is one Zenodo record holding every genome, so installing one
+entry downloads only that genome's own files. Entries of a release that is not on Zenodo
+yet cannot be fetched (TriTrypDB itself needs a login); download those by hand and
+register them with `leishref dev add`.
+
+The cache under `~/.config/leishref/` has the same layout as the catalog
+(`ncbi/GCA_…`, `custom/…`, `tritrypdb/71/TriTrypDB-71_…`), with each genome stored under
+its accession or identifier, never under a project's alias.
 
 The result:
 
@@ -358,8 +364,10 @@ sequence data never enters the repository.
 
 ### TriTrypDB access
 
-TriTrypDB downloads now require a login, so leishref can't fetch them unattended.
-Download the release by hand, then register it with `leishref dev add`.
+TriTrypDB itself requires a login, so leishref doesn't download from it. The catalog
+instead points at the Zenodo copy of each release (`tritrypdb/<release>/`), which
+`leishref install` fetches without a login. For a release not yet on Zenodo, download the
+files by hand and register them with `leishref dev add`.
 
 ---
 
@@ -389,7 +397,6 @@ leishref/
   links.py      alias-named symlinks
   checksums.py  md5, length, contig count, GC
   ncbi.py       datasets CLI wrapper
-  tritrypdb.py  TriTrypDB download (needs a login; see above)
   scaffold.py   ragtag wrapper and AGP-based cleaning
   zenodo.py     deposition and record download
   data/         THE CATALOG, one directory per genome
@@ -406,8 +413,8 @@ leishref/
 **Zenodo auth fails** — check `ZENODO_TOKEN` (or `ZENODO_SANDBOX_TOKEN` for `--sandbox`).
 In fish, `set -x` is needed to export.
 
-**A genome will not download** — TriTrypDB entries have no DOI or accession by design.
-Download by hand and use `leishref dev add`.
+**A genome will not download** — an entry with neither a Zenodo DOI nor an accession (e.g. a TriTrypDB
+release not yet published on Zenodo) cannot be fetched. Download by hand and use `leishref dev add`.
 
 ---
 

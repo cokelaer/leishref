@@ -2,6 +2,7 @@
 
 import csv
 import os
+import shutil
 
 import pytest
 from click.testing import CliRunner
@@ -265,7 +266,7 @@ def test_search_output_shows_the_dash(installed):
 def test_install_records_the_files_it_wrote(tmp_path):
     """A catalog entry imported from NCBI's summary names no files; installing one has
     to record what actually arrived, or verify and link cannot see it."""
-    from leishref.cli import _install, cache_key
+    from leishref.cli import _install
 
     source = tmp_path / "GCA_9_genomic.fna"
     source.write_text(">c1\nACGT\n")
@@ -275,7 +276,7 @@ def test_install_records_the_files_it_wrote(tmp_path):
     catalog_entry = Genome(identifier="GCA_9.1", source="NCBI", accession="GCA_9.1")
     assert catalog_entry.files == {}
 
-    target = _install(catalog_entry, cache_key(catalog_entry), [source, gff], tmp_path / "data")
+    target = _install(catalog_entry, [source, gff], tmp_path / "data")
     written = read_genome(target)
 
     assert written.files == {"fasta": "GCA_9_genomic.fna", "gff": "GCA_9_genomic.gff"}
@@ -294,11 +295,27 @@ def test_organism_does_not_repeat_a_strain_already_in_the_species():
 
 
 @pytest.fixture
-def recorded(tmp_path):
-    """A local database holding one genome installed from a real catalog entry."""
+def recorded(tmp_path, monkeypatch):
+    """A local database holding one genome installed from a real catalog entry.
+
+    The entry is a Zenodo genome, so the download is replaced by a tiny local file and the
+    checksum recorded for it is dropped: the tests exercise restore, not Zenodo's uptime.
+    """
+    import dataclasses
+
     from leishref.metadata import catalog as read_catalog
 
     origin = read_catalog()[0]
+    offline = dataclasses.replace(origin, checksums={})
+
+    def fake_download(record_id, outdir, sandbox=False, only=None):
+        outdir.mkdir(parents=True, exist_ok=True)
+        fasta = outdir / origin.files["fasta"]
+        fasta.write_text(">c1\nACGT\n")
+        return [fasta]
+
+    monkeypatch.setattr("leishref.cli.catalog", lambda *a, **kw: [offline])
+    monkeypatch.setattr("leishref.cli.download_record_files", fake_download)
     directory = tmp_path / "data" / "mine"
     directory.mkdir(parents=True)
     write_genome(
@@ -338,7 +355,7 @@ def test_restore_lists_what_it_would_do(recorded):
 
 def test_restore_reports_a_genome_that_is_no_longer_there(recorded):
     """A recorded alias whose cache entry was deleted shows up as missing."""
-    from leishref.cli import cache_key
+    from leishref.metadata import cache_dir
     from leishref.metadata import catalog as read_catalog
     from leishref.metadata import find
 
@@ -348,8 +365,7 @@ def test_restore_reports_a_genome_that_is_no_longer_there(recorded):
     # The cache is keyed by accession/identifier, not by the alias just used to
     # install it - find the real cache directory to delete.
     entries = read_catalog()
-    key = cache_key(find(entries, name))
-    (base / "data" / key / "metadata.yaml").unlink()
+    (cache_dir(base / "data", find(entries, name)) / "metadata.yaml").unlink()
 
     result = run(["restore", "--local-dir", "data", "--dry-run"], base)
     assert "missing" in result.output
@@ -509,6 +525,7 @@ def test_scaffold_requires_query_to_be_catalog_genome(installed):
     assert "catalog genome" in result.output
 
 
+@pytest.mark.skipif(shutil.which("ragtag.py") is None, reason="ragtag.py is not installed")
 def test_scaffold_refuses_to_overwrite_existing_metadata(tmp_path, monkeypatch):
     """Scaffold refuses to write over existing metadata.yaml in catalog entry."""
     from leishref.cli import catalog_entry_dir
@@ -1089,9 +1106,6 @@ def test_dev_status_flags_missing_fields_and_bad_checksums(tmp_path):
 
 def test_update_chromosome_map_interactive_confirm(tmp_path, monkeypatch):
     """Test update-chromosome-map command with user confirmation."""
-    import csv
-
-    from leishref.metadata import CATALOG_DIR
 
     catalog_dir = tmp_path / "shared_catalog"
     catalog_dir.mkdir(parents=True, exist_ok=True)
@@ -1136,9 +1150,6 @@ def test_rename_sequences_kraken_with_genome_taxid(installed, tmp_path, monkeypa
     base, fasta = installed
 
     # Create chromosome mapping for the test genome
-    from leishref.metadata import read_genome
-
-    genome = read_genome(base / "data" / "Ltrop.flye")
     catalog_dir = tmp_path / "shared_catalog"
     csv_file = catalog_dir / "chromosome_map.csv"
     import csv
@@ -1290,7 +1301,6 @@ def test_export_all_formats_work(installed, fmt):
 def test_install_ncbi_requires_no_arguments(tmp_path, monkeypatch):
     """install-ncbi bulk-installs all NCBI genomes from catalog."""
     # Mock catalog to return NCBI genomes without downloading
-    from leishref.cli import _install_many_parallel
 
     ncbi_genomes = [
         Genome(identifier="GCA_001", source="NCBI", accession="GCA_001", species="Leishmania major"),
@@ -1502,7 +1512,7 @@ def test_rename_sequences_resolves_by_filename_stem(installed, tmp_path, monkeyp
     base, fasta = installed
 
     # Can pass the .fna filename
-    result = run(["rename-sequences", f"Ltrop.flye.fna", "--flavor", "number", "--local-dir", "data"], base)
+    result = run(["rename-sequences", "Ltrop.flye.fna", "--flavor", "number", "--local-dir", "data"], base)
     assert result.exit_code == 0
 
 
@@ -1811,3 +1821,24 @@ def test_parent_record_includes_checksum_and_filename(tmp_path):
     assert "md5" in record
     assert record["name"] == "GCA_123"
     assert record["species"] == "Leishmania donovani"
+
+
+def test_zenodo_files_picks_only_a_tritrypdb_entrys_own_files():
+    """A TriTrypDB release is one Zenodo record for every genome, so an entry must not download the lot."""
+    from leishref.cli import _zenodo_files
+
+    tryp = Genome(identifier="TriTrypDB-71_A", source="TriTrypDB", files={"fasta": "a.fasta", "gff": "a.gff"})
+    custom = Genome(identifier="c", source="Custom", files={"fasta": "c.fasta"})
+    assert _zenodo_files(tryp) == ["a.fasta", "a.gff"]
+    assert _zenodo_files(custom) is None
+
+
+def test_install_places_a_tritrypdb_genome_under_its_release(tmp_path):
+    from leishref.cli import _install
+
+    fasta = tmp_path / "TriTrypDB-71_A_Genome.fasta"
+    fasta.write_text(">s\nACGT\n")
+    genome = Genome(identifier="TriTrypDB-71_A", source="TriTrypDB")
+    target = _install(genome, [fasta], tmp_path / "data")
+    assert target == tmp_path / "data" / "tritrypdb" / "71" / "TriTrypDB-71_A"
+    assert (target / "TriTrypDB-71_A_Genome.fasta").exists()
