@@ -1,0 +1,41 @@
+identifier: TriTrypDB-71_LorientalisMHOMTH2014LSCM4
+source: TriTrypDB
+taxon_id: 2249476
+species: Leishmania orientalis
+strain: MHOM/TH/2014/LSCM4
+assembly_level: Chromosome
+release_date: '2021-04-15'
+files:
+  fasta: TriTrypDB-71_LorientalisMHOMTH2014LSCM4_Genome.fasta
+  gff: TriTrypDB-71_LorientalisMHOMTH2014LSCM4.gff
+checksums:
+  fasta: 93dee765e5ce1f6bf3ea72be8d77b3f0
+  gff: ec0e947d610a5119eb56b150e0e86452
+stats:
+  num_bases: 34194276
+  num_ungapped: 34192569
+  num_scaffolds: 98
+  num_contigs: 109
+  gc_percent: 59.72
+  scaffold_n50: 1120138
+  scaffold_l50: 11
+  contig_n50: 871047
+  contig_l50: 13
+  num_ambiguous: 1707
+  num_gaps: 11
+provenance:
+  original_source: TriTrypDB
+  zenodo_doi: 10.5281/zenodo.23377097
+tritrypdb:
+  release: 71
+  source_url: https://tritrypdb.org/common/downloads/release-71
+  downloaded: '2026-10-14'
+license:
+  name: VEuPathDB data access policy
+  url: https://veupathdb.org/veupathdb/app/static-content/data_license.html
+  note: Freely available for public use; cite the original publications and VEuPathDB.
+access:
+  downloadable: true
+date_added: '2026-10-15'
+notes: TriTrypDB release 71 genome, redistributed unmodified on Zenodo (see the license
+  block).

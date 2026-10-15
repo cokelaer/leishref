@@ -1,0 +1,41 @@
+identifier: TriTrypDB-71_LdonovaniLV9
+source: TriTrypDB
+taxon_id: 5661
+species: Leishmania donovani
+strain: LV9
+assembly_level: Chromosome
+release_date: '2019-02-27'
+files:
+  fasta: TriTrypDB-71_LdonovaniLV9_Genome.fasta
+  gff: TriTrypDB-71_LdonovaniLV9.gff
+checksums:
+  fasta: bea1275be75b5caef6c37c28bce1db95
+  gff: 5e83353b3272183bf704194abdd8ddd3
+stats:
+  num_bases: 34818393
+  num_ungapped: 34768309
+  num_scaffolds: 145
+  num_contigs: 147
+  gc_percent: 59.45
+  scaffold_n50: 908201
+  scaffold_l50: 12
+  contig_n50: 908201
+  contig_l50: 12
+  num_ambiguous: 50084
+  num_gaps: 2
+provenance:
+  original_source: TriTrypDB
+  zenodo_doi: 10.5281/zenodo.23377097
+tritrypdb:
+  release: 71
+  source_url: https://tritrypdb.org/common/downloads/release-71
+  downloaded: '2026-10-14'
+license:
+  name: VEuPathDB data access policy
+  url: https://veupathdb.org/veupathdb/app/static-content/data_license.html
+  note: Freely available for public use; cite the original publications and VEuPathDB.
+access:
+  downloadable: true
+date_added: '2026-10-15'
+notes: TriTrypDB release 71 genome, redistributed unmodified on Zenodo (see the license
+  block).

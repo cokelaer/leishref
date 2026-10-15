@@ -1,0 +1,41 @@
+identifier: TriTrypDB-71_LinfantumJPCM5
+source: TriTrypDB
+taxon_id: 5671
+species: Leishmania infantum
+strain: JPCM5
+assembly_level: Chromosome
+release_date: '2018-07-13'
+files:
+  fasta: TriTrypDB-71_LinfantumJPCM5_Genome.fasta
+  gff: TriTrypDB-71_LinfantumJPCM5.gff
+checksums:
+  fasta: 547b2b9701e0906413fd3638e445dc34
+  gff: 94ec26b6cc35821d48624bb65fffcaa9
+stats:
+  num_bases: 32803248
+  num_ungapped: 32803248
+  num_scaffolds: 36
+  num_contigs: 36
+  gc_percent: 59.74
+  scaffold_n50: 1055293
+  scaffold_l50: 11
+  contig_n50: 1055293
+  contig_l50: 11
+  num_ambiguous: 0
+  num_gaps: 0
+provenance:
+  original_source: TriTrypDB
+  zenodo_doi: 10.5281/zenodo.23377097
+tritrypdb:
+  release: 71
+  source_url: https://tritrypdb.org/common/downloads/release-71
+  downloaded: '2026-10-14'
+license:
+  name: VEuPathDB data access policy
+  url: https://veupathdb.org/veupathdb/app/static-content/data_license.html
+  note: Freely available for public use; cite the original publications and VEuPathDB.
+access:
+  downloadable: true
+date_added: '2026-10-15'
+notes: TriTrypDB release 71 genome, redistributed unmodified on Zenodo (see the license
+  block).

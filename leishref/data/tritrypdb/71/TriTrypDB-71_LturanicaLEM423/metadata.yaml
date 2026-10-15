@@ -1,0 +1,41 @@
+identifier: TriTrypDB-71_LturanicaLEM423
+source: TriTrypDB
+taxon_id: 62297
+species: Leishmania turanica
+strain: LEM423
+assembly_level: Chromosome
+release_date: '2014-12-16'
+files:
+  fasta: TriTrypDB-71_LturanicaLEM423_Genome.fasta
+  gff: TriTrypDB-71_LturanicaLEM423.gff
+checksums:
+  fasta: b0e46e1e46bc203be28b294226aff72c
+  gff: 56193171782bded69f34820272524e50
+stats:
+  num_bases: 31506157
+  num_ungapped: 30871081
+  num_scaffolds: 219
+  num_contigs: 1869
+  gc_percent: 60.01
+  scaffold_n50: 1033691
+  scaffold_l50: 11
+  contig_n50: 38003
+  contig_l50: 229
+  num_ambiguous: 635212
+  num_gaps: 1650
+provenance:
+  original_source: TriTrypDB
+  zenodo_doi: 10.5281/zenodo.23377097
+tritrypdb:
+  release: 71
+  source_url: https://tritrypdb.org/common/downloads/release-71
+  downloaded: '2026-10-14'
+license:
+  name: VEuPathDB data access policy
+  url: https://veupathdb.org/veupathdb/app/static-content/data_license.html
+  note: Freely available for public use; cite the original publications and VEuPathDB.
+access:
+  downloadable: true
+date_added: '2026-10-15'
+notes: TriTrypDB release 71 genome, redistributed unmodified on Zenodo (see the license
+  block).

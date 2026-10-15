@@ -1,0 +1,41 @@
+identifier: TriTrypDB-71_LtarentolaeParrotTarII
+source: TriTrypDB
+taxon_id: 5689
+species: Leishmania tarentolae
+strain: Parrot-TarII
+assembly_level: Chromosome
+release_date: '2011-06-22'
+files:
+  fasta: TriTrypDB-71_LtarentolaeParrotTarII_Genome.fasta
+  gff: TriTrypDB-71_LtarentolaeParrotTarII.gff
+checksums:
+  fasta: 5e9fd1df1a2eebbd2debd2aae0fa2997
+  gff: bfec0b4ce8364952627f0e3ef2876138
+stats:
+  num_bases: 31634726
+  num_ungapped: 30440912
+  num_scaffolds: 1351
+  num_contigs: 5711
+  gc_percent: 56.66
+  scaffold_n50: 1034558
+  scaffold_l50: 11
+  contig_n50: 16949
+  contig_l50: 522
+  num_ambiguous: 1194007
+  num_gaps: 4431
+provenance:
+  original_source: TriTrypDB
+  zenodo_doi: 10.5281/zenodo.23377097
+tritrypdb:
+  release: 71
+  source_url: https://tritrypdb.org/common/downloads/release-71
+  downloaded: '2026-10-14'
+license:
+  name: VEuPathDB data access policy
+  url: https://veupathdb.org/veupathdb/app/static-content/data_license.html
+  note: Freely available for public use; cite the original publications and VEuPathDB.
+access:
+  downloadable: true
+date_added: '2026-10-15'
+notes: TriTrypDB release 71 genome, redistributed unmodified on Zenodo (see the license
+  block).

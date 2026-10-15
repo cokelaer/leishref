@@ -1,0 +1,41 @@
+identifier: TriTrypDB-71_LamazonensisMHOMBR71973M2269
+source: TriTrypDB
+taxon_id: 5659
+species: Leishmania amazonensis
+strain: MHOM/BR/71973/M2269
+assembly_level: Scaffold
+release_date: '2018-12-06'
+files:
+  fasta: TriTrypDB-71_LamazonensisMHOMBR71973M2269_Genome.fasta
+  gff: TriTrypDB-71_LamazonensisMHOMBR71973M2269.gff
+checksums:
+  fasta: fda92745015f3af8b257e62cc093c563
+  gff: f57658524689cf296a7e73a33efa5b74
+stats:
+  num_bases: 29029348
+  num_ungapped: 29004374
+  num_scaffolds: 2627
+  num_contigs: 3199
+  gc_percent: 59.27
+  scaffold_n50: 22901
+  scaffold_l50: 368
+  contig_n50: 17272
+  contig_l50: 479
+  num_ambiguous: 25494
+  num_gaps: 572
+provenance:
+  original_source: TriTrypDB
+  zenodo_doi: 10.5281/zenodo.23377097
+tritrypdb:
+  release: 71
+  source_url: https://tritrypdb.org/common/downloads/release-71
+  downloaded: '2026-10-14'
+license:
+  name: VEuPathDB data access policy
+  url: https://veupathdb.org/veupathdb/app/static-content/data_license.html
+  note: Freely available for public use; cite the original publications and VEuPathDB.
+access:
+  downloadable: true
+date_added: '2026-10-15'
+notes: TriTrypDB release 71 genome, redistributed unmodified on Zenodo (see the license
+  block).
