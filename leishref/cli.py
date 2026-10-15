@@ -14,6 +14,7 @@ import tarfile
 import tempfile
 import textwrap
 from pathlib import Path
+from typing import Optional
 
 import rich_click as click
 import yaml
@@ -27,10 +28,12 @@ from leishref import __version__
 from leishref.checksums import genome_stats, md5_file
 from leishref.chromosomes import get_genome_sequences, get_taxid_from_species, rename_fasta_sequences
 from leishref.links import LinkConflict, link_paths
-from leishref.metadata import (
+from leishref.metadata import (  # noqa: F401  (cache_key is re-exported)
     CATALOG_DIR,
     LOCAL_DIR,
     Genome,
+    cache_dir,
+    cache_key,
     catalog,
     catalog_entry_dir,
     catalog_group,
@@ -428,26 +431,14 @@ def _link(alias: str, paths, no_link: bool) -> None:
         click.echo(f"  not linked: {exc}", err=True)
 
 
-def cache_key(genome: Genome) -> str:
-    """The shared cache's own name for this genome: its accession, or its catalog
-    identifier when there isn't one (scaffolds, local/custom entries).
+def _install(genome: Genome, sources, local_root: Path, move: bool = False) -> Path:
+    """Put a genome into the shared cache (see cache_dir()), metadata and files together.
 
-    Never a user-chosen alias. The cache is shared across every project on the
-    machine, so it's keyed by what a genome *is*, not by what any one project calls
-    it - two aliases (or two projects) for the same accession share one download
-    instead of duplicating it, and an alias can never collide with a different
-    genome's cached copy.
+    The directory is named by the cache key, not a user-chosen alias - the genome's own
+    identifier is left untouched, so the same cache entry stays correct however many
+    different local aliases end up pointing at it.
     """
-    return genome.accession or genome.identifier
-
-
-def _install(genome: Genome, key: str, sources, local_root: Path, move: bool = False) -> Path:
-    """Put a genome into the shared cache at <local_root>/<key>/, metadata and files
-    together. `key` is the cache key (see cache_key()), not a user-chosen alias - the
-    genome's own identifier is left untouched, so the same cache entry stays correct
-    however many different local aliases end up pointing at it.
-    """
-    target = Path(local_root) / key
+    target = cache_dir(local_root, genome)
     target.mkdir(parents=True, exist_ok=True)
 
     genome = Genome.from_dict(genome.to_dict())
@@ -474,6 +465,17 @@ def _install(genome: Genome, key: str, sources, local_root: Path, move: bool = F
     return target
 
 
+def _zenodo_files(genome: Genome) -> Optional[list]:
+    """The files to take from a genome's Zenodo record, or None for all of them.
+
+    A TriTrypDB release is one record holding every genome, so an entry must pick out
+    its own files instead of downloading the whole release.
+    """
+    if (genome.source or "").lower() == "tritrypdb" and genome.files:
+        return list(genome.files.values())
+    return None
+
+
 def _fetch_genome_files(genome: Genome, name: str, tmp: Path) -> tuple[list, str]:
     """Download a genome's files into tmp, without any click I/O.
 
@@ -485,7 +487,9 @@ def _fetch_genome_files(genome: Genome, name: str, tmp: Path) -> tuple[list, str
     doi = genome.zenodo_doi
     accession = genome.accession
     if doi:
-        written = download_record_files(record_id_from_doi(doi), tmp, sandbox=is_sandbox_doi(doi))
+        written = download_record_files(
+            record_id_from_doi(doi), tmp, sandbox=is_sandbox_doi(doi), only=_zenodo_files(genome)
+        )
         return written, "" if written else "Zenodo record has no files"
     if accession and genome.source == "NCBI-Nucleotide":
         try:
@@ -517,8 +521,7 @@ def _install_many_parallel(pairs, local_dir: Path, force: bool, no_link: bool, w
     local_dir = Path(local_dir)
     todo = []
     for genome, alias in pairs:
-        key = cache_key(genome)
-        target = local_dir / key
+        target = cache_dir(local_dir, genome)
         if (target / "metadata.yaml").exists() and not force:
             echo(f"Already installed: {alias}")
             _link(alias, [p for _, p, _ in read_genome(target).file_paths() if p.exists()], no_link)
@@ -552,7 +555,7 @@ def _install_many_parallel(pairs, local_dir: Path, force: bool, no_link: bool, w
                     failed.append(alias)
                     continue
 
-                installed = _install(genome, cache_key(genome), written, local_dir)
+                installed = _install(genome, written, local_dir)
                 echo(f"  {alias}: installed into {installed}")
                 _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
                 _record_download(local_dir, genome.identifier, alias)
@@ -704,8 +707,7 @@ def install(name, alias, local_dir, force, no_link, hard_copy):
         click.echo(f"  leishref install {name} --alias {suggested}", err=True)
         raise SystemExit(2)
 
-    key = cache_key(genome)
-    target = Path(local_dir) / key
+    target = cache_dir(Path(local_dir), genome)
     if (target / "metadata.yaml").exists() and not force:
         existing = read_genome(target)
         # Cache is keyed by accession/identifier, so if it's here at all it's
@@ -753,7 +755,9 @@ def install(name, alias, local_dir, force, no_link, hard_copy):
         tmp = Path(tmp)
         if doi:
             click.echo(f"{name} -> {doi} (Zenodo)")
-            written = download_record_files(record_id_from_doi(doi), tmp, sandbox=is_sandbox_doi(doi))
+            written = download_record_files(
+                record_id_from_doi(doi), tmp, sandbox=is_sandbox_doi(doi), only=_zenodo_files(genome)
+            )
         elif accession and genome.source == "NCBI-Nucleotide":
             click.echo(f"{name} -> {accession} (NCBI nuccore)")
             try:
@@ -781,7 +785,7 @@ def install(name, alias, local_dir, force, no_link, hard_copy):
                 click.echo("TriTrypDB needs a login; get the file manually, then 'leishref dev add'", err=True)
             raise SystemExit(1)
 
-        installed = _install(genome, key, written, Path(local_dir))
+        installed = _install(genome, written, Path(local_dir))
 
     click.echo(f"Installed into {installed}")
 
@@ -1469,8 +1473,8 @@ def restore(accessions, local_dir, force, no_link, dry_run, from_installed, verb
         entries = catalog()
         for name, alias in pairs:
             genome = find(entries, name)
-            key = cache_key(genome) if genome else name
-            state = "installed" if (Path(local_dir) / key / "metadata.yaml").exists() else "missing"
+            cached = cache_dir(Path(local_dir), genome) if genome else Path(local_dir) / name
+            state = "installed" if (cached / "metadata.yaml").exists() else "missing"
             console.print(f"  [bold cyan]{escape(alias):<24}[/] {escape(name):<34} [dim]{state}[/]")
         return
 
@@ -1694,12 +1698,11 @@ def link(local_dir, basedir):
     made, conflicts = [], []
     for name, alias in _read_accessions(accessions_path):
         genome = find(entries, name)
-        key = cache_key(genome) if genome else name
-        cache_dir = local_dir / key
-        if not (cache_dir / "metadata.yaml").exists():
-            conflicts.append(f"{alias}: {name} is not installed ({cache_dir} missing)")
+        cached_dir = cache_dir(local_dir, genome) if genome else local_dir / name
+        if not (cached_dir / "metadata.yaml").exists():
+            conflicts.append(f"{alias}: {name} is not installed ({cached_dir} missing)")
             continue
-        paths = [p for _, p, _ in read_genome(cache_dir).file_paths() if p.exists()]
+        paths = [p for _, p, _ in read_genome(cached_dir).file_paths() if p.exists()]
         try:
             made.extend(link_paths(alias, paths, Path(basedir)))
         except LinkConflict as exc:
@@ -2187,7 +2190,7 @@ def fetch_genome(accession, alias, species, strain, molecule_type, catalog_dir, 
         click.echo(f"Catalog entry: {entry}")
 
         if alias:
-            installed = _install(genome, cache_key(genome), [fasta, gff], Path(local_dir))
+            installed = _install(genome, [fasta, gff], Path(local_dir))
             click.echo(f"Installed into {installed}")
             _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
 
@@ -2262,7 +2265,7 @@ def fetch_nucleotide(accession, alias, species, strain, molecule_type, email, ca
         click.echo(f"Catalog entry: {entry}")
 
         if alias:
-            installed = _install(genome, cache_key(genome), [fasta], Path(local_dir))
+            installed = _install(genome, [fasta], Path(local_dir))
             click.echo(f"Installed into {installed}")
             _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
 
@@ -2546,7 +2549,7 @@ def scaffold(query, reference, alias, clean, catalog_dir, local_dir, no_link):
         write_genome(entry, genome)
         click.echo(f"Catalog entry: {entry}")
 
-        installed = _install(genome, cache_key(genome), [result, agp], local_root, move=True)
+        installed = _install(genome, [result, agp], local_root, move=True)
 
     click.echo(f"Installed into {installed}")
     _link(alias, [p for _, p, _ in read_genome(installed).file_paths() if p.exists()], no_link)
@@ -2955,6 +2958,63 @@ def status(catalog_dir):
 
     if errors:
         raise SystemExit(1)
+
+
+@dev.command("import-tritrypdb")
+@click.argument("directory", type=click.Path(exists=True, file_okay=False))
+@click.option("--release", required=True, type=int, help="TriTrypDB release number, e.g. 71")
+@click.option("--doi", required=True, help="DOI of the Zenodo record that holds the staged files")
+@click.option("--downloaded", required=True, help="Date the files were downloaded from TriTrypDB (YYYY-MM-DD)")
+@click.option(
+    "--gff",
+    "gff_overrides",
+    multiple=True,
+    metavar="NAME=FILE",
+    help="Use FILE as the GFF of genome NAME when it is not TriTrypDB's own, e.g. LdonovaniBHU1220=x.gff",
+)
+@click.option("--catalog-dir", type=click.Path(), default=None, help="Catalog root to write into")
+@click.option("--dry-run", is_flag=True, help="List the entries without writing them")
+def import_tritrypdb(directory, release, doi, downloaded, gff_overrides, catalog_dir, dry_run):
+    """Write the catalog entries for a TriTrypDB release staged in DIRECTORY.
+
+    DIRECTORY holds TriTrypDB-<release>_<name>_Genome.fasta and TriTrypDB-<release>_<name>.gff
+    files, already deposited as one Zenodo record (DOI). One entry per genome is written to
+    <catalog>/tritrypdb/<release>/, measured from the files (checksums, assembly statistics)
+    and all pointing at that record; installing an entry downloads only its own files.
+
+    Examples:
+
+    \b
+      leishref dev import-tritrypdb upload/ --release 71 --doi 10.5281/zenodo.23377097 \\
+          --downloaded 2026-10-14 --gff LdonovaniBHU1220=LdonovaniBHU1220.liftoff-HU3.gff
+    """
+    from leishref.tritrypdb import build_genome, genome_names
+
+    root = Path(catalog_dir) if catalog_dir else CATALOG_DIR
+    overrides = {}
+    for item in gff_overrides:
+        name, _, filename = item.partition("=")
+        if not filename:
+            raise click.BadParameter(f"{item!r} is not NAME=FILE", param_hint="--gff")
+        overrides[name] = filename
+
+    names = genome_names(directory, release)
+    if not names:
+        click.echo(f"No TriTrypDB-{release}_*_Genome.fasta files in {directory}", err=True)
+        raise SystemExit(1)
+    unknown = set(overrides) - set(names)
+    if unknown:
+        click.echo(f"--gff names no genome in {directory}: {', '.join(sorted(unknown))}", err=True)
+        raise SystemExit(1)
+
+    for name in names:
+        genome = build_genome(release, name, Path(directory), doi, downloaded, gff_name=overrides.get(name))
+        target = catalog_entry_dir(root, genome)
+        gff = "gff" if genome.gff else "NO gff"
+        click.echo(f"{genome.identifier:<46} {genome.species} {genome.strain or ''} ({gff}) -> {target}")
+        if not dry_run:
+            write_genome(target, genome)
+    click.echo(f"{len(names)} entries {'listed' if dry_run else 'written'}")
 
 
 @dev.command("assembly-table")

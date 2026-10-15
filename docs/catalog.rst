@@ -22,13 +22,14 @@ named by accession for NCBI genomes and by alias for everything else::
     │   └── Ltropica.Ld1S.scaffold.flye/
     │       └── metadata.yaml
     ├── tritrypdb/
-    │   └── TriTrypDB-68_LamazonensisPH8/
-    │       └── metadata.yaml
+    │   └── 71/
+    │       └── TriTrypDB-71_LmajorFriedlin/
+    │           └── metadata.yaml
     └── zenodo/
 
 ``leishref dev fetch-genome`` writes into ``ncbi/``, ``leishref dev scaffold`` into
 ``scaffold/``, ``leishref dev add`` + ``leishref dev publish`` into ``custom/``, and
-a TriTrypDB or Zenodo genome into the directory of the same name. Grouping follows
+a TriTrypDB genome into ``tritrypdb/<release>/`` and a Zenodo genome into ``zenodo/``. The local cache under ``~/.config/leishref`` has the same layout, each genome stored under its accession or identifier. Grouping follows
 how a genome was *made*, not where its files currently live: publishing a scaffold
 deposits it on Zenodo and records the DOI, but the entry stays under ``scaffold/``
 rather than moving - likewise a ``custom/`` entry stays there even once published.

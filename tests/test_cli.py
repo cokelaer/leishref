@@ -275,7 +275,7 @@ def test_install_records_the_files_it_wrote(tmp_path):
     catalog_entry = Genome(identifier="GCA_9.1", source="NCBI", accession="GCA_9.1")
     assert catalog_entry.files == {}
 
-    target = _install(catalog_entry, cache_key(catalog_entry), [source, gff], tmp_path / "data")
+    target = _install(catalog_entry, [source, gff], tmp_path / "data")
     written = read_genome(target)
 
     assert written.files == {"fasta": "GCA_9_genomic.fna", "gff": "GCA_9_genomic.gff"}
@@ -338,7 +338,7 @@ def test_restore_lists_what_it_would_do(recorded):
 
 def test_restore_reports_a_genome_that_is_no_longer_there(recorded):
     """A recorded alias whose cache entry was deleted shows up as missing."""
-    from leishref.cli import cache_key
+    from leishref.metadata import cache_dir
     from leishref.metadata import catalog as read_catalog
     from leishref.metadata import find
 
@@ -348,8 +348,7 @@ def test_restore_reports_a_genome_that_is_no_longer_there(recorded):
     # The cache is keyed by accession/identifier, not by the alias just used to
     # install it - find the real cache directory to delete.
     entries = read_catalog()
-    key = cache_key(find(entries, name))
-    (base / "data" / key / "metadata.yaml").unlink()
+    (cache_dir(base / "data", find(entries, name)) / "metadata.yaml").unlink()
 
     result = run(["restore", "--local-dir", "data", "--dry-run"], base)
     assert "missing" in result.output
@@ -1811,3 +1810,24 @@ def test_parent_record_includes_checksum_and_filename(tmp_path):
     assert "md5" in record
     assert record["name"] == "GCA_123"
     assert record["species"] == "Leishmania donovani"
+
+
+def test_zenodo_files_picks_only_a_tritrypdb_entrys_own_files():
+    """A TriTrypDB release is one Zenodo record for every genome, so an entry must not download the lot."""
+    from leishref.cli import _zenodo_files
+
+    tryp = Genome(identifier="TriTrypDB-71_A", source="TriTrypDB", files={"fasta": "a.fasta", "gff": "a.gff"})
+    custom = Genome(identifier="c", source="Custom", files={"fasta": "c.fasta"})
+    assert _zenodo_files(tryp) == ["a.fasta", "a.gff"]
+    assert _zenodo_files(custom) is None
+
+
+def test_install_places_a_tritrypdb_genome_under_its_release(tmp_path):
+    from leishref.cli import _install
+
+    fasta = tmp_path / "TriTrypDB-71_A_Genome.fasta"
+    fasta.write_text(">s\nACGT\n")
+    genome = Genome(identifier="TriTrypDB-71_A", source="TriTrypDB")
+    target = _install(genome, [fasta], tmp_path / "data")
+    assert target == tmp_path / "data" / "tritrypdb" / "71" / "TriTrypDB-71_A"
+    assert (target / "TriTrypDB-71_A_Genome.fasta").exists()

@@ -1,12 +1,13 @@
 """Per-genome metadata: one directory, one metadata.yaml.
 
-The shipped catalog lives at ``leishref/data/<id>/metadata.yaml``, where ``<id>`` is the
-accession when there is one. A local database mirrors that shape at ``data/<alias>/``,
-named by whatever alias the user chose, so the directory name *is* the alias and nothing
-has to be kept in sync with a separate index.
+The shipped catalog lives at ``leishref/data/<group>/<id>/metadata.yaml`` (TriTrypDB
+entries one level deeper, by release: ``tritrypdb/71/<id>``). The shared cache under
+``~/.config/leishref`` mirrors that layout, with each genome stored under its cache key
+(see cache_key()) rather than under any project's alias.
 """
 
 import fnmatch
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -72,10 +73,16 @@ class Genome:
     molecule_type: Optional[str] = None
     release_date: Optional[str] = None
     release_version: Optional[str] = None
+    #: Set on a TriTrypDB entry superseded by the same strain in a later release.
+    superseded_by: Optional[str] = None
     files: dict = field(default_factory=dict)
     checksums: dict = field(default_factory=dict)
     stats: dict = field(default_factory=dict)
     provenance: dict = field(default_factory=dict)
+    #: TriTrypDB specifics (release number, source URL, download date).
+    tritrypdb: dict = field(default_factory=dict)
+    license: dict = field(default_factory=dict)
+    access: dict = field(default_factory=dict)
     scaffold: dict = field(default_factory=dict)
     date_added: Optional[str] = None
     notes: Optional[str] = None
@@ -153,10 +160,14 @@ class Genome:
             "molecule_type": self.molecule_type,
             "release_date": self.release_date,
             "release_version": self.release_version,
+            "superseded_by": self.superseded_by,
             "files": self.files,
             "checksums": self.checksums,
             "stats": self.stats,
             "provenance": self.provenance,
+            "tritrypdb": self.tritrypdb,
+            "license": self.license,
+            "access": self.access,
             "scaffold": self.scaffold,
             "date_added": self.date_added,
             "notes": self.notes,
@@ -216,27 +227,68 @@ def catalog_group(genome) -> str:
     return "local"
 
 
+def tritrypdb_release(genome) -> Optional[str]:
+    """The TriTrypDB release number of an entry, from its metadata or else its identifier."""
+    release = (genome.tritrypdb or {}).get("release")
+    if release is not None:
+        return str(release)
+    match = re.match(r"TriTrypDB-(\d+)_", genome.identifier or "")
+    return match.group(1) if match else None
+
+
+def catalog_subdir(genome) -> Path:
+    """The directory, relative to a catalog or cache root, that holds this genome's own
+    directory: its group, plus the release for TriTrypDB (``tritrypdb/71``)."""
+    group = catalog_group(genome)
+    if group == "tritrypdb":
+        release = tritrypdb_release(genome)
+        if release:
+            return Path(group) / release
+    return Path(group)
+
+
+def cache_key(genome) -> str:
+    """The shared cache's own name for this genome: its accession, or its catalog
+    identifier when there isn't one (scaffolds, local/custom entries, TriTrypDB).
+
+    Never a user-chosen alias. The cache is shared across every project on the
+    machine, so it's keyed by what a genome *is*, not by what any one project calls
+    it - two aliases (or two projects) for the same accession share one download
+    instead of duplicating it, and an alias can never collide with a different
+    genome's cached copy.
+    """
+    return genome.accession or genome.identifier
+
+
 def catalog_entry_dir(root: Path, genome) -> Path:
     """Where this genome's metadata.yaml belongs under a catalog root."""
-    return Path(root) / catalog_group(genome) / genome.identifier
+    return Path(root) / catalog_subdir(genome) / genome.identifier
+
+
+def cache_dir(root: Path, genome) -> Path:
+    """Where this genome is cached under a local-database root: the catalog's own
+    layout (``ncbi/``, ``tritrypdb/71/``, ...) with the genome stored under its cache key."""
+    return Path(root) / catalog_subdir(genome) / cache_key(genome)
 
 
 def iter_genomes(root: Path) -> Iterator[Genome]:
     """Every genome directory under root, in name order.
 
-    A catalog groups its entries one level deep (``data/ncbi/GCA_*``, ``data/scaffold/*``),
-    while a local database is flat (``data/<alias>``), so both shapes are walked.
+    Entries sit one level down (``ncbi/GCA_*``), two for TriTrypDB (``tritrypdb/71/*``),
+    or directly under the root in a cache that predates the grouped layout, so the tree
+    is walked down to the first directory holding a metadata.yaml.
     """
     root = Path(root)
     if not root.is_dir():
         return
-    for directory in sorted(root.iterdir()):
-        if (directory / METADATA_FILE).is_file():
-            yield read_genome(directory)
-        elif directory.is_dir():
-            for entry in sorted(directory.iterdir()):
-                if (entry / METADATA_FILE).is_file():
-                    yield read_genome(entry)
+    stack = [(root, 0)]
+    while stack:
+        directory, depth = stack.pop(0)
+        for entry in sorted(directory.iterdir()):
+            if (entry / METADATA_FILE).is_file():
+                yield read_genome(entry)
+            elif entry.is_dir() and depth < 2:
+                stack.append((entry, depth + 1))
 
 
 def catalog(root: Optional[Path] = None) -> list[Genome]:
